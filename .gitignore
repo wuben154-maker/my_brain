@@ -8,6 +8,10 @@ src-tauri/target
 !.env.example
 .data
 
+# Visual regression artifacts (references stay in assets/)
+artifacts/visual-feedback/*
+!artifacts/visual-feedback/.gitkeep
+
 # Logs
 
 # Editor directories and files

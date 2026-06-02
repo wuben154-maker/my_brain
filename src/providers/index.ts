@@ -1,5 +1,7 @@
 import { OpenAiRealtimeVoiceProvider } from "./voice/openaiRealtimeVoiceProvider";
+import { MockVoiceProvider } from "./voice/mockVoiceProvider";
 import { createOpenAiLlmProvider } from "./llm/openaiLlmProvider";
+import { createMockLlmProvider } from "./llm/mockLlmProvider";
 import { GitHubTrendingNewsSource } from "./news/githubTrendingSource";
 import { RssNewsSource } from "./news/rssNewsSource";
 import {
@@ -8,6 +10,8 @@ import {
 } from "./news/types";
 import type { LlmProvider } from "./llm/types";
 import type { VoiceProvider } from "./voice/types";
+import { readVoiceProviderMode } from "@/lib/voiceProviderMode";
+import { readLlmProviderMode } from "@/lib/llmProviderMode";
 
 export interface AppProviders {
   voice: VoiceProvider;
@@ -21,13 +25,25 @@ export interface ProviderEnv {
   openAiRealtimeModel?: string;
 }
 
+export function createVoiceProvider(): VoiceProvider {
+  return readVoiceProviderMode() === "openai-realtime"
+    ? new OpenAiRealtimeVoiceProvider()
+    : new MockVoiceProvider();
+}
+
+export function createLlmProvider(env: ProviderEnv): LlmProvider {
+  return readLlmProviderMode() === "openai"
+    ? createOpenAiLlmProvider({
+        apiKey: env.openAiApiKey,
+        model: env.openAiLlmModel,
+      })
+    : createMockLlmProvider();
+}
+
 export function createAppProviders(env: ProviderEnv): AppProviders {
   return {
-    voice: new OpenAiRealtimeVoiceProvider(),
-    llm: createOpenAiLlmProvider({
-      apiKey: env.openAiApiKey,
-      model: env.openAiLlmModel,
-    }),
+    voice: createVoiceProvider(),
+    llm: createLlmProvider(env),
     news: createNewsSourceRegistry([
       new RssNewsSource(),
       new GitHubTrendingNewsSource(),
@@ -35,6 +51,8 @@ export function createAppProviders(env: ProviderEnv): AppProviders {
   };
 }
 
+export { isMockVoiceProvider, MockVoiceProvider } from "./voice/mockVoiceProvider";
+export { MockLlmProvider, createMockLlmProvider } from "./llm/mockLlmProvider";
 export type { VoiceProvider } from "./voice/types";
 export type { LlmProvider } from "./llm/types";
 export type { NewsSource, NewsSourceRegistry } from "./news/types";

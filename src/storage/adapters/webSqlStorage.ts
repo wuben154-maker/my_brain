@@ -4,11 +4,20 @@ import type { StorageProvider } from "../types";
 
 const STORAGE_BASE = "/__my_brain/storage";
 
-async function postJson<T>(path: string, body?: unknown): Promise<T> {
+async function storageFetch<T>(
+  path: string,
+  options: { method?: "GET" | "POST"; body?: unknown } = {},
+): Promise<T> {
+  const method =
+    options.method ?? (options.body !== undefined ? "POST" : "GET");
   const response = await fetch(`${STORAGE_BASE}${path}`, {
-    method: body === undefined ? "GET" : "POST",
-    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    method,
+    headers:
+      options.body === undefined
+        ? undefined
+        : { "Content-Type": "application/json" },
+    body:
+      options.body === undefined ? undefined : JSON.stringify(options.body),
   });
 
   if (!response.ok) {
@@ -21,30 +30,38 @@ async function postJson<T>(path: string, body?: unknown): Promise<T> {
 /** Web-dev storage client — talks to Vite middleware backed by better-sqlite3. */
 export class WebSqlStorageProvider implements StorageProvider {
   async init(): Promise<void> {
-    await postJson("/init");
+    await storageFetch("/init", { method: "POST" });
   }
 
   async close(): Promise<void> {
-    await postJson("/close");
+    await storageFetch("/close", { method: "POST" });
   }
 
   loadGraph(): Promise<BrainGraphSnapshot> {
-    return postJson("/graph");
+    return storageFetch("/graph");
+  }
+
+  loadGraphForDisplay(): Promise<BrainGraphSnapshot> {
+    return storageFetch("/graph/display");
   }
 
   saveConcept(node: ConceptNode): Promise<void> {
-    return postJson("/concept", node);
+    return storageFetch("/concept", { body: node });
   }
 
   saveEdge(edge: GraphEdge): Promise<void> {
-    return postJson("/edge", edge);
+    return storageFetch("/edge", { body: edge });
+  }
+
+  deleteEdge(edgeId: string): Promise<void> {
+    return storageFetch("/edge/delete", { method: "POST", body: { id: edgeId } });
   }
 
   loadUserProfile(): Promise<UserProfile> {
-    return postJson("/profile");
+    return storageFetch("/profile");
   }
 
   saveUserProfile(profile: UserProfile): Promise<void> {
-    return postJson("/profile", profile);
+    return storageFetch("/profile", { body: profile });
   }
 }

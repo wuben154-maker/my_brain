@@ -1,14 +1,15 @@
 import { create } from "zustand";
 import type { BrainGraphSnapshot, ConceptNode, GraphEdge } from "@/domain/graph";
-
 interface GraphState extends BrainGraphSnapshot {
   highlightedNodeIds: string[];
   highlightedEdgeIds: string[];
+  selectedNodeId: string | null;
   setGraph: (snapshot: BrainGraphSnapshot) => void;
   upsertNode: (node: ConceptNode) => void;
   upsertEdge: (edge: GraphEdge) => void;
   setHighlights: (nodeIds: string[], edgeIds: string[]) => void;
   clearHighlights: () => void;
+  selectNode: (nodeId: string | null) => void;
 }
 
 export const useGraphStore = create<GraphState>((set) => ({
@@ -16,6 +17,7 @@ export const useGraphStore = create<GraphState>((set) => ({
   edges: [],
   highlightedNodeIds: [],
   highlightedEdgeIds: [],
+  selectedNodeId: null,
   setGraph: (snapshot) =>
     set({
       nodes: snapshot.nodes,
@@ -45,4 +47,5 @@ export const useGraphStore = create<GraphState>((set) => ({
     set({ highlightedNodeIds, highlightedEdgeIds }),
   clearHighlights: () =>
     set({ highlightedNodeIds: [], highlightedEdgeIds: [] }),
+  selectNode: (selectedNodeId) => set({ selectedNodeId }),
 }));

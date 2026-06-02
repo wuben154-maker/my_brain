@@ -44,6 +44,11 @@ export function myBrainStoragePlugin(): Plugin {
             return;
           }
 
+          if (path === "/graph/display" && req.method === "GET") {
+            res.end(JSON.stringify(backend!.loadGraphForDisplay()));
+            return;
+          }
+
           if (path === "/profile" && req.method === "GET") {
             res.end(JSON.stringify(backend!.loadUserProfile()));
             return;
@@ -64,6 +69,12 @@ export function myBrainStoragePlugin(): Plugin {
 
             if (path === "/edge") {
               backend!.saveEdge(body);
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
+            if (path === "/edge/delete") {
+              backend!.deleteEdge(String(body.id));
               res.end(JSON.stringify({ ok: true }));
               return;
             }

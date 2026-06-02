@@ -20,7 +20,8 @@ export class OpenAiLlmProvider implements LlmProvider {
     return `关于「${topic}」的讲解（${style}）将在 LLM 接入后生成。`;
   }
 
-  async proposeGraphMutations(): Promise<GraphMutationProposal[]> {
+  async proposeGraphMutations(_context: string): Promise<GraphMutationProposal[]> {
+    void _context;
     return [];
   }
 

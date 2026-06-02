@@ -1,18 +1,52 @@
-import { useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ForceGraph2D, {
   type ForceGraphMethods,
   type LinkObject,
   type NodeObject,
 } from "react-force-graph-2d";
+import { GraphMinimap, type MinimapNode } from "@/components/brain/GraphMinimap";
+import { GraphZoomControls } from "@/components/brain/GraphZoomControls";
+import {
+  clusterColorForNodeId,
+  graphAccentCyan,
+  graphEdgeColor,
+  invalidateGraphVisualTokenCache,
+} from "@/lib/graphVisualTokens";
+import { readVisualSnapshotId } from "@/lib/visualSnapshotMode";
+import { VISUAL_GRAPH_PINNED_POSITIONS } from "@/lib/visualSnapshotFixtures";
 import { useGraphStore } from "@/stores/graphStore";
+
+const HOVER_SCALE = 1.06;
+const BASE_RADIUS = 5;
+const ACTIVE_RADIUS = 8;
+const ARCHIVED_OPACITY = 0.35;
+const LINK_DISTANCE_MIN = 36;
+const LINK_DISTANCE_MAX = 140;
 
 interface GraphNode extends NodeObject {
   id: string;
   title: string;
+  archived: boolean;
 }
 
 interface GraphLink extends LinkObject {
+  id: string;
   relationType: string;
+}
+
+function nodeVisualState(
+  archived: boolean,
+  highlighted: boolean,
+  selected: boolean,
+  hovered: boolean,
+): "archived" | "active" | "emphasis" {
+  if (archived) {
+    return "archived";
+  }
+  if (highlighted || selected || hovered) {
+    return "emphasis";
+  }
+  return "active";
 }
 
 export function BrainGraphView() {
@@ -20,62 +54,296 @@ export function BrainGraphView() {
   const graphRef = useRef<ForceGraphMethods<GraphNode, GraphLink> | undefined>(
     undefined,
   );
+  const [dimensions, setDimensions] = useState({ width: 800, height: 520 });
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [layerDepth, setLayerDepth] = useState(45);
+  const [minimapTick, setMinimapTick] = useState(0);
+  const nodePositionsRef = useRef<Map<string, { x: number; y: number }>>(
+    new Map(),
+  );
+
   const nodes = useGraphStore((state) => state.nodes);
   const edges = useGraphStore((state) => state.edges);
-  const highlightedNodeIds = useGraphStore(
-    (state) => state.highlightedNodeIds,
+  const highlightedNodeIds = useGraphStore((state) => state.highlightedNodeIds);
+  const highlightedEdgeIds = useGraphStore(
+    (state) => state.highlightedEdgeIds,
   );
+  const selectedNodeId = useGraphStore((state) => state.selectedNodeId);
+  const selectNode = useGraphStore((state) => state.selectNode);
+
+  const activeCount = useMemo(
+    () => nodes.filter((node) => !node.archived).length,
+    [nodes],
+  );
+  const archivedCount = nodes.length - activeCount;
+
+  const linkDistance = useMemo(() => {
+    const t = layerDepth / 100;
+    return LINK_DISTANCE_MIN + (LINK_DISTANCE_MAX - LINK_DISTANCE_MIN) * t;
+  }, [layerDepth]);
+
+  const pinGraphLayout = readVisualSnapshotId() === "main";
 
   const graphData = useMemo(
     () => ({
-      nodes: nodes.map((node) => ({
-        id: node.id,
-        title: node.title,
-      })),
+      nodes: nodes.map((node) => {
+        const pinned = pinGraphLayout
+          ? VISUAL_GRAPH_PINNED_POSITIONS[node.id]
+          : undefined;
+        return {
+          id: node.id,
+          title: node.title,
+          archived: node.archived,
+          ...(pinned ? { fx: pinned.x, fy: pinned.y } : {}),
+        };
+      }),
       links: edges.map((edge) => ({
+        id: edge.id,
         source: edge.sourceId,
         target: edge.targetId,
         relationType: edge.relationType,
       })),
     }),
-    [nodes, edges],
+    [nodes, edges, pinGraphLayout],
   );
+
+  const minimapNodes: MinimapNode[] = useMemo(() => {
+    void minimapTick;
+    return graphData.nodes
+      .map((node) => {
+        const position = nodePositionsRef.current.get(node.id);
+        if (!position) {
+          return null;
+        }
+        return {
+          id: node.id,
+          x: position.x,
+          y: position.y,
+          archived: node.archived,
+          color: clusterColorForNodeId(node.id),
+        };
+      })
+      .filter((node): node is MinimapNode => node !== null);
+  }, [graphData.nodes, minimapTick]);
+
+  useEffect(() => {
+    invalidateGraphVisualTokenCache();
+  }, []);
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) {
+      return;
+    }
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setDimensions({
+        width: Math.max(320, Math.floor(width)),
+        height: Math.max(320, Math.floor(height)),
+      });
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (highlightedNodeIds.length === 0) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      useGraphStore.getState().clearHighlights();
+    }, 4000);
+    return () => window.clearTimeout(timer);
+  }, [highlightedNodeIds]);
+
+  useEffect(() => {
+    if (graphData.nodes.length === 0) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      if (pinGraphLayout) {
+        graphRef.current?.zoom(1.15, 0);
+        graphRef.current?.centerAt(0, 20, 0);
+      } else {
+        graphRef.current?.zoomToFit(320, 48);
+      }
+    }, pinGraphLayout ? 80 : 320);
+    return () => window.clearTimeout(timer);
+  }, [graphData.nodes.length, pinGraphLayout]);
+
+  useEffect(() => {
+    const graph = graphRef.current;
+    if (!graph) {
+      return;
+    }
+    const linkForce = graph.d3Force("link");
+    if (linkForce && typeof linkForce === "object" && "distance" in linkForce) {
+      const force = linkForce as { distance: (value: number) => unknown };
+      force.distance(linkDistance);
+      graph.d3ReheatSimulation();
+    }
+  }, [linkDistance, graphData.nodes.length]);
+
+  const handleZoomIn = useCallback(() => {
+    const graph = graphRef.current;
+    if (!graph) {
+      return;
+    }
+    graph.zoom(graph.zoom() * 1.2, 150);
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    const graph = graphRef.current;
+    if (!graph) {
+      return;
+    }
+    graph.zoom(graph.zoom() / 1.2, 150);
+  }, []);
+
+  const handleReset = useCallback(() => {
+    graphRef.current?.zoomToFit(280, 48);
+  }, []);
 
   return (
     <div
       ref={containerRef}
-      className="relative h-full min-h-[420px] w-full overflow-hidden rounded-2xl border border-white/10 bg-black/40"
+      className="graph-canvas-shell relative h-full min-h-[420px] w-full overflow-hidden rounded-md border border-hud bg-bg-base/80"
     >
+      <div className="pointer-events-none absolute left-4 top-4 z-[1] font-hud text-label uppercase tracking-hud text-muted">
+        大脑星图 · {activeCount} 概念
+        {archivedCount > 0 ? ` · ${archivedCount} 归档` : ""} · {edges.length}{" "}
+        关联
+      </div>
+
       {graphData.nodes.length === 0 ? (
-        <div className="flex h-full items-center justify-center text-sm text-slate-500">
+        <div className="flex h-full items-center justify-center text-body text-muted">
           大脑星图等待第一颗星…
+          <br />
+          <span className="mt-2 text-caption">
+            处理资讯并确认「入库?」后点亮节点
+          </span>
         </div>
       ) : (
-        <ForceGraph2D
-          ref={graphRef}
-          graphData={graphData}
-          backgroundColor="rgba(0,0,0,0)"
-          nodeLabel="title"
-          linkDirectionalArrowLength={4}
-          linkDirectionalArrowRelPos={1}
-          nodeCanvasObject={(node, ctx, globalScale) => {
-            const active = highlightedNodeIds.includes(String(node.id));
-            const radius = active ? 7 : 5;
-            ctx.beginPath();
-            ctx.arc(node.x ?? 0, node.y ?? 0, radius, 0, 2 * Math.PI, false);
-            ctx.fillStyle = active ? "#93c5fd" : "#3b82f6";
-            ctx.fill();
-            if (globalScale > 1.2) {
-              ctx.font = `${10 / globalScale}px sans-serif`;
-              ctx.fillStyle = "#e2e8f0";
-              ctx.fillText(
-                (node as GraphNode).title,
-                (node.x ?? 0) + 8,
-                (node.y ?? 0) + 3,
-              );
+        <>
+          <ForceGraph2D
+            ref={graphRef}
+            width={dimensions.width}
+            height={dimensions.height}
+            graphData={graphData}
+            backgroundColor="rgba(0,0,0,0)"
+            enableNodeDrag
+            enableZoomInteraction
+            enablePanInteraction
+            cooldownTicks={80}
+            onEngineStop={() => setMinimapTick((value) => value + 1)}
+            onRenderFramePost={() => {
+              setMinimapTick((value) => (value + 1) % 240);
+            }}
+            onNodeHover={(node) =>
+              setHoveredNodeId(node ? String(node.id) : null)
             }
-          }}
-        />
+            linkColor={(link) => {
+              const linkId = String((link as GraphLink).id);
+              return highlightedEdgeIds.includes(linkId)
+                ? graphAccentCyan()
+                : graphEdgeColor();
+            }}
+            linkWidth={(link) =>
+              highlightedEdgeIds.includes(String((link as GraphLink).id))
+                ? 2
+                : 1
+            }
+            linkDirectionalArrowLength={4}
+            linkDirectionalArrowRelPos={1}
+            nodeLabel="title"
+            onNodeClick={(node) => {
+              selectNode(String(node.id));
+            }}
+            nodePointerAreaPaint={(node, color, ctx) => {
+              const graphNode = node as GraphNode;
+              const emphasis =
+                highlightedNodeIds.includes(String(node.id)) ||
+                selectedNodeId === String(node.id) ||
+                hoveredNodeId === String(node.id);
+              const radius =
+                (graphNode.archived ? BASE_RADIUS - 1 : BASE_RADIUS) *
+                (emphasis ? HOVER_SCALE : 1);
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              ctx.arc(node.x ?? 0, node.y ?? 0, radius + 4, 0, 2 * Math.PI);
+              ctx.fill();
+            }}
+            nodeCanvasObject={(node, ctx, globalScale) => {
+              const graphNode = node as GraphNode;
+              const nodeId = String(node.id);
+              if (node.x !== undefined && node.y !== undefined) {
+                nodePositionsRef.current.set(nodeId, { x: node.x, y: node.y });
+              }
+              const visual = nodeVisualState(
+                graphNode.archived,
+                highlightedNodeIds.includes(nodeId),
+                selectedNodeId === nodeId,
+                hoveredNodeId === nodeId,
+              );
+              const emphasis = visual === "emphasis";
+              const scale = emphasis ? HOVER_SCALE : 1;
+              const baseRadius = graphNode.archived
+                ? BASE_RADIUS - 1
+                : emphasis
+                  ? ACTIVE_RADIUS
+                  : BASE_RADIUS;
+              const radius = baseRadius * scale;
+              const x = node.x ?? 0;
+              const y = node.y ?? 0;
+              const clusterColor = clusterColorForNodeId(nodeId);
+
+              ctx.save();
+              if (graphNode.archived) {
+                ctx.globalAlpha = ARCHIVED_OPACITY;
+              }
+
+              if (emphasis && !graphNode.archived) {
+                ctx.beginPath();
+                ctx.arc(x, y, radius + 8, 0, 2 * Math.PI, false);
+                ctx.fillStyle = "rgba(34, 211, 238, 0.12)";
+                ctx.fill();
+                ctx.shadowColor = clusterColor;
+                ctx.shadowBlur = 16;
+              } else if (!graphNode.archived) {
+                ctx.shadowColor = clusterColor;
+                ctx.shadowBlur = 8;
+              }
+
+              ctx.beginPath();
+              ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
+              ctx.fillStyle =
+                emphasis && !graphNode.archived ? "#e0f2fe" : clusterColor;
+              ctx.fill();
+              ctx.shadowBlur = 0;
+
+              if (globalScale > 0.75) {
+                ctx.font = `${12 / globalScale}px var(--font-sans)`;
+                ctx.fillStyle =
+                  graphNode.archived
+                    ? "rgba(154, 172, 196, 0.55)"
+                    : emphasis
+                      ? "#f8fafc"
+                      : "#cbd5e1";
+                ctx.fillText(graphNode.title, x + radius + 4, y + 4);
+              }
+              ctx.restore();
+            }}
+          />
+
+          <GraphMinimap nodes={minimapNodes} />
+          <GraphZoomControls
+            layerDepth={layerDepth}
+            onLayerDepthChange={setLayerDepth}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onReset={handleReset}
+          />
+        </>
       )}
     </div>
   );

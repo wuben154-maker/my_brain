@@ -24,7 +24,7 @@ export interface BrainGraphSnapshot {
 
 export interface GraphMutationProposal {
   id: string;
-  kind: "merge" | "archive" | "link" | "create" | "attach";
+  kind: "merge" | "archive" | "link" | "create" | "attach" | "update";
   summary: string;
   payload: Record<string, unknown>;
 }

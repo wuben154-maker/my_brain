@@ -19,14 +19,30 @@ export class TauriSqlStorageProvider implements StorageProvider {
   }
 
   async loadGraph(): Promise<BrainGraphSnapshot> {
+    const snapshot = await this.loadAllConceptsAndEdges();
+    const activeIds = new Set(
+      snapshot.nodes.filter((node) => !node.archived).map((node) => node.id),
+    );
+    return {
+      nodes: snapshot.nodes.filter((node) => !node.archived),
+      edges: snapshot.edges.filter(
+        (edge) => activeIds.has(edge.sourceId) && activeIds.has(edge.targetId),
+      ),
+    };
+  }
+
+  async loadGraphForDisplay(): Promise<BrainGraphSnapshot> {
+    return this.loadAllConceptsAndEdges();
+  }
+
+  private async loadAllConceptsAndEdges(): Promise<BrainGraphSnapshot> {
     const db = this.requireDb();
     const nodes = await db.select<
       Array<Omit<ConceptNode, "archived"> & { archived: number }>
     >(
       `SELECT id, title, intro, source_url AS sourceUrl, archived,
               created_at AS createdAt, updated_at AS updatedAt
-       FROM concepts
-       WHERE archived = 0`,
+       FROM concepts`,
     );
 
     const edges = await db.select<GraphEdge[]>(
@@ -35,9 +51,15 @@ export class TauriSqlStorageProvider implements StorageProvider {
        FROM edges`,
     );
 
+    const conceptIds = new Set(nodes.map((node) => node.id));
+    const displayEdges = edges.filter(
+      (edge) =>
+        conceptIds.has(edge.sourceId) && conceptIds.has(edge.targetId),
+    );
+
     return {
       nodes: nodes.map((row) => ({ ...row, archived: row.archived === 1 })),
-      edges,
+      edges: displayEdges,
     };
   }
 
@@ -75,6 +97,11 @@ export class TauriSqlStorageProvider implements StorageProvider {
          relation_type = $4`,
       [edge.id, edge.sourceId, edge.targetId, edge.relationType],
     );
+  }
+
+  async deleteEdge(edgeId: string): Promise<void> {
+    const db = this.requireDb();
+    await db.execute("DELETE FROM edges WHERE id = $1", [edgeId]);
   }
 
   async loadUserProfile(): Promise<UserProfile> {
