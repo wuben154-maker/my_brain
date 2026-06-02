@@ -35,4 +35,11 @@ describe("MainSectionContent (N0 AppShell routing)", () => {
     expect(screen.getByTestId("section-agent")).toBeTruthy();
     expect(screen.getByTestId("proposal-inbox-inline")).toBeTruthy();
   });
+
+  it("renders settings panel when activeSection is settings (N4)", () => {
+    useUiStore.setState({ activeSection: "settings" });
+    render(createElement(MainSectionContent));
+    expect(screen.getByTestId("section-settings")).toBeTruthy();
+    expect(screen.getByTestId("settings-scheduler")).toBeTruthy();
+  });
 });

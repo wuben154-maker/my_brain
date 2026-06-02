@@ -55,8 +55,8 @@ export const NAV_SECTIONS: NavSectionDef[] = [
   {
     id: "settings",
     label: "设置",
-    status: "planned",
-    specRef: "specs/N4-settings.md",
+    status: "live",
+    specRef: null,
   },
 ];
 

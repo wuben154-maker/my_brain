@@ -1,5 +1,6 @@
 import { AgentSection } from "@/components/agent/AgentSection";
 import { ExploreFeed } from "@/components/explore/ExploreFeed";
+import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { GraphMainSection } from "@/components/layout/GraphMainSection";
 import { SectionPlaceholder } from "@/components/layout/SectionPlaceholder";
 import { getNavSection, type NavSectionId } from "@/lib/navSections";
@@ -14,6 +15,9 @@ function renderSection(id: NavSectionId) {
   }
   if (id === "explore") {
     return <ExploreFeed />;
+  }
+  if (id === "settings") {
+    return <SettingsPanel />;
   }
   return <SectionPlaceholder section={getNavSection(id)} />;
 }
