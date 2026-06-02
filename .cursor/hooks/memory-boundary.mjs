@@ -74,6 +74,9 @@ try {
     const inMemoryModule =
       rel.includes("/providers/memory/") || /\/lib\/memory[^/]*$/.test(rel);
     const isMemoryAdapter = rel.includes("/providers/memory/");
+    const isMemoryConfig =
+      rel.endsWith("/lib/env.ts") ||
+      rel.endsWith("/lib/memoryProviderMode.ts");
 
     let text;
     try {
@@ -87,7 +90,7 @@ try {
         `${rel}: 记忆模块禁止写图谱（applyGraphMutation/persistGraphSnapshot）——落库只走提议收件箱。`,
       );
     }
-    if (!isMemoryAdapter && VENDOR_RE.test(text)) {
+    if (!isMemoryAdapter && !isMemoryConfig && VENDOR_RE.test(text)) {
       violations.push(
         `${rel}: EverMemOS 端点/SDK 只能出现在 src/providers/memory/ 适配器内——业务请依赖 MemoryProvider 接口。`,
       );

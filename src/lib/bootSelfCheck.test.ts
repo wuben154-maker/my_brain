@@ -10,7 +10,14 @@ describe("bootSelfCheck", () => {
   });
 
   it("creates five pending checks including news source", () => {
-    const defs = createBootCheckDefinitions({ openAiApiKey: "", openAiLlmModel: "", openAiRealtimeModel: "" });
+    const defs = createBootCheckDefinitions({
+      openAiApiKey: "",
+      openAiLlmModel: "",
+      openAiRealtimeModel: "",
+      everMemOsBaseUrl: "http://localhost:1995",
+      everMemOsApiKey: "",
+      everMemOsUserId: "my_brain_local",
+    });
     const pending = toPendingChecks(defs);
     expect(pending).toHaveLength(4);
     expect(pending.every((c) => c.status === "pending")).toBe(true);

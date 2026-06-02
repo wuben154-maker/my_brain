@@ -13,6 +13,7 @@ import {
 import { finalizeVoiceSession } from "@/lib/voiceSessionFinalize";
 import { createMockLlmProvider } from "@/providers/llm/mockLlmProvider";
 import type { LlmProvider } from "@/providers/llm/types";
+import { createAppProviders } from "@/providers";
 import { MockVoiceProvider } from "@/providers/voice/mockVoiceProvider";
 import { INITIAL_MIGRATION_SQL } from "@/storage/migrations";
 import { useIngestStore } from "@/stores/ingestStore";
@@ -375,6 +376,55 @@ describe("Product invariants (AGENTS.md core)", () => {
         publishedAt: null,
       });
       expect(summary.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("8 · Memory engine boundary (M0)", () => {
+    it("memory module does not write graph or storage", () => {
+      const mockProvider = readRepoSource(
+        "src/providers/memory/mockMemoryProvider.ts",
+      );
+      const everProvider = readRepoSource(
+        "src/providers/memory/everMemOsProvider.ts",
+      );
+      for (const source of [mockProvider, everProvider]) {
+        expect(source).not.toContain("applyGraphMutation");
+        expect(source).not.toContain("persistGraphSnapshot");
+        expect(source).not.toMatch(/\bStorageProvider\b/);
+      }
+    });
+
+    it("EverMemOS vendor surface stays inside memory adapter", () => {
+      const vendorRe = /localhost:1995|EVERMEMOS|evermemos|EverMemOS/;
+      const adapter = readRepoSource("src/providers/memory/everMemOsProvider.ts");
+      expect(vendorRe.test(adapter)).toBe(true);
+
+      const businessPaths = [
+        "src/hooks/useVoiceSession.ts",
+        "src/hooks/useNewsIngestSession.ts",
+        "src/lib/runLaunchSequence.ts",
+        "src/providers/index.ts",
+      ];
+      for (const path of businessPaths) {
+        const source = readRepoSource(path);
+        expect(vendorRe.test(source)).toBe(false);
+      }
+    });
+
+    it("createAppProviders exposes memory without requiring sidecar", async () => {
+      const providers = createAppProviders({ openAiApiKey: "" });
+      expect(providers.memory).toBeDefined();
+      const health = await providers.memory.health();
+      expect(health.ok).toBe(true);
+      await providers.memory.remember([
+        {
+          kind: "episode",
+          text: "蒸馏摘要：用户关心 LLM",
+          timestamp: Date.now(),
+        },
+      ]);
+      const recalled = await providers.memory.recall({ query: "LLM", topK: 1 });
+      expect(recalled.length).toBeGreaterThan(0);
     });
   });
 });

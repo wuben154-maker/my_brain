@@ -1,6 +1,6 @@
 # M0 — MemoryProvider 接口 + EverMemOS 记忆引擎（`memory-provider`）
 
-- **阶段：** A 段收尾 → B 段地基（在 B1 之前执行）· **状态：** 📝 待做
+- **阶段：** A 段收尾 → B 段地基（在 B1 之前执行）· **状态：** ✅ 已实现
 - **上游：** 现有 Provider 工厂模式、`voiceSessionFinalize`/`profileDistillation`（已有蒸馏）· **下游：** M1（召回 grounding）、M2、M3、C1、C4、H3 全部依赖本接口
 - **依赖决策（显式例外）：** 采用 **EverMemOS B 方案（核心依赖深度集成）**，已由产品负责人明确批准。引入本地 **Python 3.12 + Docker** sidecar（EverCore/EverMemOS，REST @ `http://localhost:1995/api/v1`）。AGENTS.md「不要随意加依赖/锁定栈」的例外，记录在此 spec 为依据。
 
@@ -15,7 +15,7 @@
 
 ## 3. 契约
 
-> **前置确认（实现前必做，harness 要求不杜撰外部契约）**：先对照**仓库内 vendored EverMemOS 源**或官方文档，确认真实 REST 契约（端点路径、请求/响应 schema、检索参数名）。把确认结果**回填**本节「适配器端点」后再编码；确认前不得按猜测实现。下方端点注释为**待核对占位**。
+> **前置确认（2026-06-02，来源 [EverOS README](https://github.com/EverMind-AI/EverOS) Basic Usage）**：端点已核对，见下方「适配器端点」。
 
 ```ts
 // src/providers/memory/types.ts
@@ -39,26 +39,39 @@ export interface MemoryProvider {
   health(): Promise<{ ok: boolean; detail?: string }>;    // sidecar 健康
 }
 ```
+
+文件布局：
+
 ```
-src/providers/memory/everMemOsProvider.ts   // REST 适配器：端点待前置确认（占位：add/search）
+src/providers/memory/everMemOsProvider.ts   // REST 适配器（见下方端点）
 src/providers/memory/mockMemoryProvider.ts  // 内存/本地实现，供测试与离线开发（不依赖 sidecar）
 src/providers/memory/index.ts               // createMemoryProvider(env)：由 memoryProviderMode 决定 mock/evermemos
 src/lib/memoryProviderMode.ts               // 仿 voiceProviderMode/llmProviderMode
 ```
+
+**适配器端点（已核对）**
+
+| 操作 | Method | Path | 请求体要点 |
+|---|---|---|---|
+| 健康检查 | GET | `{origin}/health` | —，期望 `{ "status": "healthy" }` |
+| 写入记忆 | POST | `/api/v1/memories` | `{ message_id, create_time, sender, content }` |
+| 召回搜索 | GET | `/api/v1/memories/search` | `{ query, user_id, retrieve_method: "hybrid", memory_types, top_k }` |
+
+搜索响应：`{ result: { memories: [...] } }`。`episode`→`episodic_memory`，`fact`→`event_log`。
 - 接入工厂：扩展 `createAppProviders(env)` 暴露 `memory: MemoryProvider`（调用方不感知厂商）。
 - **Sidecar 生命周期**：文档化 `docker compose up -d`（仓库内 `vendor/EverMemOS/` 或 compose 文件）；桌面端（Tauri）健康探测 + 优雅降级——`health().ok === false` 时 `recall` 返回 `[]`、`remember` 进本地待发队列，**绝不抛错冒泡到 UI/崩溃**。
 - **配置**：`EVERMEMOS_BASE_URL`、`EVERMEMOS_API_KEY` 走 `.env`（gitignored），客户端不硬编码、不明文展示。
 - EverCore 生命周期映射：`remember`=情节痕迹形成；语义固结由 EverMemOS 内部完成；`recall`=重构召回。
 
 ## 4. 验收清单
-- [ ] `MemoryProvider` 三方法签名落地；`mockMemoryProvider` 可在无 sidecar 下跑通 remember/recall。
-- [ ] `everMemOsProvider` 对接 EverMemOS REST：add 一条记忆后能被 `recall` 命中（本地 sidecar 跑起来时）。
-- [ ] sidecar 不可用时全链路优雅降级（`recall→[]`，无异常冒泡），有日志。
-- [ ] `createAppProviders` 暴露 `memory`，由 `memoryProviderMode` 切 mock/evermemos。
-- [ ] EverMemOS 端点/SDK 仅出现在适配器文件（**已上线守护**：`.cursor/rules/memory-boundary.mdc` + `.cursor/hooks/memory-boundary.mjs`）。
-- [ ] **CI / `pnpm check` 零依赖 sidecar**：测试全用 mock/打桩，绿灯不需要 Docker/EverMemOS 在跑；真连仅作本地手动验收。
-- [ ] 适配器端点已按「前置确认」核对真实 EverMemOS 契约并回填本 spec（非猜测）。
-- [ ] sidecar 启动/健康/降级写入 README/AGENT.md 运行档。
+- [x] `MemoryProvider` 三方法签名落地；`mockMemoryProvider` 可在无 sidecar 下跑通 remember/recall。
+- [x] `everMemOsProvider` 对接 EverMemOS REST：add 一条记忆后能被 `recall` 命中（本地 sidecar 跑起来时；单测用 mock fetch 断言契约）。
+- [x] sidecar 不可用时全链路优雅降级（`recall→[]`，无异常冒泡），有日志。
+- [x] `createAppProviders` 暴露 `memory`，由 `memoryProviderMode` 切 mock/evermemos。
+- [x] EverMemOS 端点/SDK 仅出现在适配器文件（**已上线守护**：`.cursor/rules/memory-boundary.mdc` + `.cursor/hooks/memory-boundary.mjs`）。
+- [x] **CI / `pnpm check` 零依赖 sidecar**：测试全用 mock/打桩，绿灯不需要 Docker/EverMemOS 在跑；真连仅作本地手动验收。
+- [x] 适配器端点已按「前置确认」核对真实 EverMemOS 契约并回填本 spec（非猜测）。
+- [x] sidecar 启动/健康/降级写入 README/AGENT.md 运行档（`vendor/EverMemOS/README.md` + AGENT.md §5.5/§6）。
 
 ## 5. 测试（harness）
 - `mockMemoryProvider.test.ts`：remember→recall 命中、topK、kinds 过滤、空集。

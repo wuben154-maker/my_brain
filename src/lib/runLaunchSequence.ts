@@ -99,7 +99,14 @@ export async function runLaunchSequence(): Promise<void> {
 
   store.setPhase("loading");
 
-  const providers = createAppProviders(env);
+  const providers = createAppProviders({
+    openAiApiKey: env.openAiApiKey,
+    openAiLlmModel: env.openAiLlmModel,
+    openAiRealtimeModel: env.openAiRealtimeModel,
+    everMemOsBaseUrl: env.everMemOsBaseUrl,
+    everMemOsApiKey: env.everMemOsApiKey,
+    everMemOsUserId: env.everMemOsUserId,
+  });
   store.setProviders(providers);
 
   store.setLoadingMessage("正在抓取今日 AI 资讯与 GitHub 趋势…");

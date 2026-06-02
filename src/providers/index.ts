@@ -12,17 +12,25 @@ import type { LlmProvider } from "./llm/types";
 import type { VoiceProvider } from "./voice/types";
 import { readVoiceProviderMode } from "@/lib/voiceProviderMode";
 import { readLlmProviderMode } from "@/lib/llmProviderMode";
+import {
+  createMemoryProvider,
+  type MemoryProvider,
+} from "./memory";
 
 export interface AppProviders {
   voice: VoiceProvider;
   llm: LlmProvider;
   news: NewsSourceRegistry;
+  memory: MemoryProvider;
 }
 
 export interface ProviderEnv {
   openAiApiKey: string;
   openAiLlmModel?: string;
   openAiRealtimeModel?: string;
+  everMemOsBaseUrl?: string;
+  everMemOsApiKey?: string;
+  everMemOsUserId?: string;
 }
 
 export function createVoiceProvider(): VoiceProvider {
@@ -48,6 +56,11 @@ export function createAppProviders(env: ProviderEnv): AppProviders {
       new RssNewsSource(),
       new GitHubTrendingNewsSource(),
     ]),
+    memory: createMemoryProvider({
+      everMemOsBaseUrl: env.everMemOsBaseUrl,
+      everMemOsApiKey: env.everMemOsApiKey,
+      everMemOsUserId: env.everMemOsUserId,
+    }),
   };
 }
 
@@ -56,3 +69,9 @@ export { MockLlmProvider, createMockLlmProvider } from "./llm/mockLlmProvider";
 export type { VoiceProvider } from "./voice/types";
 export type { LlmProvider } from "./llm/types";
 export type { NewsSource, NewsSourceRegistry } from "./news/types";
+export type {
+  MemoryProvider,
+  MemoryItem,
+  RecallQuery,
+  RecalledMemory,
+} from "./memory";
