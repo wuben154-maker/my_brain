@@ -1,0 +1,26 @@
+---
+description: Agent 内核只读护栏——禁止任何直接写图谱/画像的能力
+globs: src/agent/**
+alwaysApply: false
+---
+
+# Agent 无写能力（核心不变量）
+
+Agent 唯一的落库出口是：**产出 `ProposalEnvelope` → 提议收件箱 → 用户确认 → `applyGraphMutation` + `persistGraphSnapshot`**。
+Agent 自身**不得**持有或调用任何写图谱/画像的句柄。
+
+铁律：
+
+- `AgentTools` 只暴露读 + LLM/news 能力（`fetchNews`/`summarize`/`explain`/`propose`/`readGraph`/`readProfile`）。**绝不**加 `save*`/`delete*`。
+- `src/agent/**` 不得 import `StorageProvider`、不得出现 `persistGraphSnapshot`/`applyGraphMutation`。
+- 任何 `AgentJob.run` 只组装 `AgentRunResult{proposals, digest, trace}`，不触碰存储写。
+- 新增能力必须保留三重护栏：编译期类型 `AssertAgentToolsReadOnly` + 运行期 `assertAgentToolsReadOnly` + 源码扫描测试（`readRepoSource`）。
+
+```ts
+// ❌ 禁止
+interface AgentTools { saveConcept(n: ConceptNode): Promise<void>; }
+// ✅ 只读
+interface AgentTools { readGraph(): Promise<BrainGraphSnapshot>; }
+```
+
+改这里务必新增/保留「无写能力」断言测试。

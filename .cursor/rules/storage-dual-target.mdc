@@ -1,0 +1,24 @@
+---
+description: 存储双目标必须对齐，迁移幂等，本地优先
+globs: src/storage/**
+alwaysApply: false
+---
+
+# 存储双目标对齐（local-first）
+
+同一份数据有两套实现，必须**行为一致、同步演进**：
+
+- **better-sqlite3**（web-dev：`webSqlStorage` / `betterSqliteBackend`）
+- **Tauri SQL**（desktop：`tauriSqlStorage`）
+
+约束：
+
+- 任何 `StorageProvider` 接口变更，**两套适配器都要实现且行为对齐**，不可只改一边。
+- 迁移（`migrations.ts`）必须**幂等**（`CREATE TABLE IF NOT EXISTS` / 重复运行无副作用）。
+- 用共享夹具（`invariants/testStorage.ts`）对两套实现跑同一组测试，证明一致。
+- **本地优先 / 隐私**：用户数据只存本机；只存纯文字（概念/简介/关系/来源链接/画像），**不存原始音频、不存新闻全文**。
+- 写入前对 JSON 字段（如 proposal payload）用 `domain/` 的 `read*Payload` 校验，非法即拒绝。
+
+```text
+改了 StorageProvider 却只动一套适配器 → 视为未完成；CI/验收不通过。
+```

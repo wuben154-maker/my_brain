@@ -59,13 +59,15 @@ These encode the product's soul. Breaking them breaks the product.
 
 ## Commands
 - `pnpm install` — install dependencies
+- `pnpm visual:browser` — Playwright Chromium for screenshot regression
+- `pnpm visual:loop` / `pnpm visual:loop --watch` — capture app, pixel-compare vs `assets/*.png`, iterate (see `docs/VISUAL_FEEDBACK.md`)
 - `pnpm dev` — web dev server (Vite, port 1420) with local SQLite via better-sqlite3
 - `pnpm build` — production web build to `dist/`
 - `pnpm preview` — preview production web build
 - `pnpm tauri dev` — desktop app (requires [Rust + Tauri prerequisites](https://tauri.app/start/prerequisites/))
 - `pnpm tauri build` — desktop production bundle
 - `pnpm lint` — ESLint on `src/`
-- `pnpm test` — Vitest unit tests
+- `pnpm check` — lint + test (also runs on pre-commit / pre-push via Husky)
 
 ## Pointers
 - `PRODUCT.md` — full agreed spec (mechanics, data flow, UI, cold start, memory model).

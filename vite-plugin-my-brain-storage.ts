@@ -44,8 +44,18 @@ export function myBrainStoragePlugin(): Plugin {
             return;
           }
 
+          if (path === "/graph/display" && req.method === "GET") {
+            res.end(JSON.stringify(backend!.loadGraphForDisplay()));
+            return;
+          }
+
           if (path === "/profile" && req.method === "GET") {
             res.end(JSON.stringify(backend!.loadUserProfile()));
+            return;
+          }
+
+          if (path === "/proposals/pending" && req.method === "GET") {
+            res.end(JSON.stringify(backend!.listPendingProposals()));
             return;
           }
 
@@ -68,8 +78,26 @@ export function myBrainStoragePlugin(): Plugin {
               return;
             }
 
+            if (path === "/edge/delete") {
+              backend!.deleteEdge(String(body.id));
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
             if (path === "/profile") {
               backend!.saveUserProfile(body);
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
+            if (path === "/proposals/save") {
+              backend!.saveProposal(body);
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
+            if (path === "/proposals/status") {
+              backend!.setProposalStatus(String(body.id), body.status);
               res.end(JSON.stringify({ ok: true }));
               return;
             }

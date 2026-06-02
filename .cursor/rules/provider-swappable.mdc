@@ -1,0 +1,23 @@
+---
+description: Provider 必须接口可替换，业务不直接依赖厂商 SDK
+globs: src/providers/**
+alwaysApply: false
+---
+
+# Provider 可替换（接口优先）
+
+`VoiceProvider` / `LlmProvider` / `NewsSource` 是接口，业务逻辑只依赖接口，**永不**直接依赖厂商 SDK——这是日后接云端 Agent 后端、换模型的地基。
+
+约束：
+
+- 每个 Provider 至少有 **mock + 真实**两套实现，开发与测试优先用 mock（不依赖真实网络/API key）。
+- 新增能力以**接口方法**形式加入（如给 `LlmProvider` 加 `planResearch`），mock 与真实实现同步落地。
+- 真实实现解析外部输出要健壮：非法/截断 JSON 不抛未捕获异常，降级 + 记录。
+- 上层通过 `createAppProviders(env)` / `create*Provider` 工厂拿实例，由 `*ProviderMode` 决定 mock 还是真实，调用方不感知厂商。
+
+```ts
+// ✅ 依赖接口
+function summarize(llm: LlmProvider, item: NewsItem) { return llm.summarizeNews(item); }
+// ❌ 依赖厂商
+import OpenAI from "openai"; const r = await new OpenAI().chat.completions.create(...);
+```

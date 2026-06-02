@@ -3,7 +3,16 @@ import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { BrainGraphSnapshot, ConceptNode, GraphEdge } from "../../domain/graph";
 import { DEFAULT_USER_PROFILE, type UserProfile } from "../../domain/profile";
+import type { ProposalEnvelope, ProposalStatus } from "../../agent/types";
 import { INITIAL_MIGRATION_SQL } from "../migrations";
+import {
+  assertProposalStatus,
+  assertProposalStatusUpdated,
+  LIST_PENDING_PROPOSALS_SQL,
+  mapStoredProposalRows,
+  prepareProposalUpsertRow,
+  type StoredProposalRow,
+} from "../proposalPersistence";
 
 export interface BetterSqliteBackendOptions {
   dbPath: string;
@@ -32,13 +41,20 @@ export class BetterSqliteBackend {
   }
 
   loadGraph(): BrainGraphSnapshot {
+    return this.filterActiveGraph(this.loadAllConceptsAndEdges());
+  }
+
+  loadGraphForDisplay(): BrainGraphSnapshot {
+    return this.loadAllConceptsAndEdges();
+  }
+
+  private loadAllConceptsAndEdges(): BrainGraphSnapshot {
     const db = this.requireDb();
     const nodes = db
       .prepare(
         `SELECT id, title, intro, source_url AS sourceUrl, archived,
                 created_at AS createdAt, updated_at AS updatedAt
-         FROM concepts
-         WHERE archived = 0`,
+         FROM concepts`,
       )
       .all() as Array<
       Omit<ConceptNode, "archived"> & { archived: number }
@@ -52,10 +68,33 @@ export class BetterSqliteBackend {
       )
       .all() as GraphEdge[];
 
+    const conceptIds = new Set(nodes.map((node) => node.id));
+    const displayEdges = edges.filter(
+      (edge) =>
+        conceptIds.has(edge.sourceId) && conceptIds.has(edge.targetId),
+    );
+
     return {
       nodes: nodes.map((row) => ({ ...row, archived: row.archived === 1 })),
-      edges,
+      edges: displayEdges,
     };
+  }
+
+  private filterActiveGraph(snapshot: BrainGraphSnapshot): BrainGraphSnapshot {
+    const activeIds = new Set(
+      snapshot.nodes.filter((node) => !node.archived).map((node) => node.id),
+    );
+    return {
+      nodes: snapshot.nodes.filter((node) => !node.archived),
+      edges: snapshot.edges.filter(
+        (edge) => activeIds.has(edge.sourceId) && activeIds.has(edge.targetId),
+      ),
+    };
+  }
+
+  deleteEdge(edgeId: string): void {
+    const db = this.requireDb();
+    db.prepare("DELETE FROM edges WHERE id = ?").run(edgeId);
   }
 
   saveConcept(node: ConceptNode): void {
@@ -136,6 +175,43 @@ export class BetterSqliteBackend {
     });
 
     tx(entries);
+  }
+
+  listPendingProposals(): ProposalEnvelope[] {
+    const db = this.requireDb();
+    const rows = db
+      .prepare(LIST_PENDING_PROPOSALS_SQL)
+      .all() as StoredProposalRow[];
+
+    return mapStoredProposalRows(rows);
+  }
+
+  saveProposal(p: ProposalEnvelope): void {
+    const row = prepareProposalUpsertRow(p);
+    const db = this.requireDb();
+    db.prepare(
+      `INSERT INTO agent_proposals
+         (id, run_id, created_at, kind, summary, payload, source, status)
+       VALUES
+         (@id, @run_id, @created_at, @kind, @summary, @payload, @source, @status)
+       ON CONFLICT(id) DO UPDATE SET
+         run_id = excluded.run_id,
+         created_at = excluded.created_at,
+         kind = excluded.kind,
+         summary = excluded.summary,
+         payload = excluded.payload,
+         source = excluded.source,
+         status = excluded.status`,
+    ).run(row);
+  }
+
+  setProposalStatus(id: string, status: ProposalStatus): void {
+    assertProposalStatus(status);
+    const db = this.requireDb();
+    const result = db
+      .prepare("UPDATE agent_proposals SET status = ? WHERE id = ?")
+      .run(status, id);
+    assertProposalStatusUpdated(id, result.changes);
   }
 
   private requireDb(): Database.Database {
