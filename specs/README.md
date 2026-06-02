@@ -48,7 +48,7 @@
 | Spec | 代号 | 阶段/时机 | 状态 | 一句话 | 对应导航项 |
 |---|---|---|---|---|---|
 | [N0-navigation-shell](./N0-navigation-shell.md) | `navigation-shell` | **H0 之后、A4 之前** | ✅ 已实现 | 分区路由外壳：点击即跳转 + 规划中占位 + 死链守卫测试 | （全部，基建） |
-| [N1-explore-feed](./N1-explore-feed.md) | `explore-feed` | A（跟 A4 前后） | 📝 待做 | 今日资讯/趋势浏览区，复用 ingest 建议→确认 | 探索 |
+| [N1-explore-feed](./N1-explore-feed.md) | `explore-feed` | A（跟 A4 前后） | ✅ 已实现 | 今日资讯/趋势浏览区，复用 ingest 建议→确认 | 探索 |
 | [N4-settings](./N4-settings.md) | `settings` | A（跟 A5） | 📝 待做 | 设置区：调度开关/Provider 模式/人格/隐私 | 设置 |
 | [G1-graph-3d](./G1-graph-3d.md) | `graph-3d` | A 段收尾 / B（B3 前或同期） | 📝 待做 | 真 3D 星图（three.js），2D 默认+基线不动，3D 走「3D 视图」开关 | 知识图谱 |
 | [N2-docs-library](./N2-docs-library.md) | `docs-library` | B（穿插） | 📝 待做 | 来源/出处索引区，回链星图定位 | 文档库 |

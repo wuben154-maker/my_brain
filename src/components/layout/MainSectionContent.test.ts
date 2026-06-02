@@ -22,12 +22,11 @@ describe("MainSectionContent (N0 AppShell routing)", () => {
     expect(screen.getByTestId("section-graph")).toBeTruthy();
   });
 
-  it("renders planned placeholder when activeSection is explore", () => {
+  it("renders explore feed when activeSection is explore", () => {
     useUiStore.setState({ activeSection: "explore" });
     render(createElement(MainSectionContent));
-    expect(screen.getByTestId("section-placeholder-explore")).toBeTruthy();
-    expect(screen.getByText("探索")).toBeTruthy();
-    expect(screen.getByText("specs/N1-explore-feed.md")).toBeTruthy();
+    expect(screen.getByTestId("section-explore")).toBeTruthy();
+    expect(screen.getByTestId("explore-feed-empty")).toBeTruthy();
   });
 
   it("renders agent inbox section when activeSection is agent", () => {

@@ -60,5 +60,6 @@ describe("navSections (N0 invariants)", () => {
       ).toBe(true);
     }
     expect(NAV_SECTIONS.find((s) => s.id === "agent")?.status).toBe("live");
+    expect(NAV_SECTIONS.find((s) => s.id === "explore")?.status).toBe("live");
   });
 });

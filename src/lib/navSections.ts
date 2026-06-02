@@ -25,8 +25,8 @@ export const NAV_SECTIONS: NavSectionDef[] = [
   {
     id: "explore",
     label: "探索",
-    status: "planned",
-    specRef: "specs/N1-explore-feed.md",
+    status: "live",
+    specRef: null,
   },
   {
     id: "docs",

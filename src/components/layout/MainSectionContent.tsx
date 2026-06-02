@@ -1,4 +1,5 @@
 import { AgentSection } from "@/components/agent/AgentSection";
+import { ExploreFeed } from "@/components/explore/ExploreFeed";
 import { GraphMainSection } from "@/components/layout/GraphMainSection";
 import { SectionPlaceholder } from "@/components/layout/SectionPlaceholder";
 import { getNavSection, type NavSectionId } from "@/lib/navSections";
@@ -10,6 +11,9 @@ function renderSection(id: NavSectionId) {
   }
   if (id === "agent") {
     return <AgentSection />;
+  }
+  if (id === "explore") {
+    return <ExploreFeed />;
   }
   return <SectionPlaceholder section={getNavSection(id)} />;
 }
