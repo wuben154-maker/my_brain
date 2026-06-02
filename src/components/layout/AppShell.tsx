@@ -1,21 +1,29 @@
-import { BrainGraphView } from "@/components/brain/BrainGraphView";
-import { GraphHeader } from "@/components/brain/GraphHeader";
-import { GraphStatsCard } from "@/components/brain/GraphStatsCard";
-import { ManualGraphPanel } from "@/components/brain/ManualGraphPanel";
-import { NewsIngestPanel } from "@/components/brain/NewsIngestPanel";
+import { useEffect } from "react";
 import { LoadingScreen } from "@/components/launch/LoadingScreen";
 import { BootSelfCheck } from "@/components/launch/BootSelfCheck";
+import { MainSectionContent } from "@/components/layout/MainSectionContent";
 import { NavRail } from "@/components/layout/NavRail";
 import { TopBar } from "@/components/layout/TopBar";
+import { BrainGraphView } from "@/components/brain/BrainGraphView";
+import { ManualGraphPanel } from "@/components/brain/ManualGraphPanel";
+import { NewsIngestPanel } from "@/components/brain/NewsIngestPanel";
 import { VoicePanel } from "@/components/voice/VoicePanel";
 import { readVisualSnapshotId } from "@/lib/visualSnapshotMode";
 import { useAppStore } from "@/stores/appStore";
+import { bindUiStoreHashSync } from "@/stores/uiStore";
 
 export function AppShell() {
   const phase = useAppStore((state) => state.phase);
   const errorMessage = useAppStore((state) => state.errorMessage);
   // Keep the frozen `?visual=main` baseline untouched for visual regression.
   const visualMain = readVisualSnapshotId() === "main";
+
+  useEffect(() => {
+    if (visualMain) {
+      return;
+    }
+    return bindUiStoreHashSync();
+  }, [visualMain]);
 
   if (phase === "self_check") {
     return <BootSelfCheck />;
@@ -58,15 +66,7 @@ export function AppShell() {
       <div className="flex min-h-0 flex-1">
         <NavRail />
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 p-3 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-          <section className="relative flex min-h-0 flex-col gap-2">
-            <GraphHeader />
-            <div className="relative min-h-0 flex-1">
-              <BrainGraphView />
-              <GraphStatsCard />
-              <ManualGraphPanel />
-              <NewsIngestPanel />
-            </div>
-          </section>
+          <MainSectionContent />
           <VoicePanel />
         </div>
       </div>

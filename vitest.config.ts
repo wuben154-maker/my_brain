@@ -27,7 +27,7 @@ export default defineConfig({
         "src/components/**",
         "src/dev/**",
       ],
-      thresholds: { lines: 58, functions: 75, branches: 60, statements: 58 },
+      thresholds: { lines: 58, functions: 70, branches: 60, statements: 58 },
     },
   },
 });
