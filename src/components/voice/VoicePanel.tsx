@@ -4,7 +4,11 @@ import {
   VisualListeningBar,
   VisualVoiceOrb,
 } from "@/components/voice/VisualVoiceChrome";
-import { VISUAL_VOICE_TRANSCRIPTS } from "@/lib/visualSnapshotFixtures";
+import {
+  DEMO_VOICE_TRANSCRIPTS,
+  VISUAL_VOICE_TRANSCRIPTS,
+} from "@/lib/visualSnapshotFixtures";
+import { isGraphDemoMode } from "@/lib/graphDemoSeed";
 import {
   isVisualSnapshotMode,
   readVisualSnapshotId,
@@ -39,9 +43,14 @@ export function VoicePanel() {
     simulateUserSpeech,
   } = useVoiceSession();
 
+  // Dev-only: when launched via `?graphDemo`, seed a believable conversation so
+  // the first screen reads as a live session. Display only — no real session
+  // state, no persistence, and it yields the moment a real connection starts.
+  const demoMode = !visualSnapshot && !isConnected && isGraphDemoMode();
   const showConnected = visualMain || isConnected;
   const isActive =
     visualMain ||
+    demoMode ||
     voiceState === "listening" ||
     voiceState === "speaking";
   const canSimulate =
@@ -56,16 +65,21 @@ export function VoicePanel() {
     if (visualSnapshot) {
       return visualWaveformHeights;
     }
+    if (demoMode) {
+      return visualWaveformHeights;
+    }
     if (!isActive) {
       return waveformLevels.map(() => 12);
     }
     const boost = voiceState === "speaking" ? 1 : 0.75;
     return waveformLevels.map((level) => 24 + level * 72 * boost);
-  }, [isActive, visualSnapshot, voiceState]);
+  }, [demoMode, isActive, visualSnapshot, voiceState]);
 
   const displayTranscripts = visualSnapshot
     ? VISUAL_VOICE_TRANSCRIPTS
-    : transcripts;
+    : demoMode
+      ? DEMO_VOICE_TRANSCRIPTS
+      : transcripts;
 
   useEffect(() => {
     if (!isMockVoice || !isConnected) {
@@ -189,7 +203,7 @@ export function VoicePanel() {
                 key={index}
                 className={[
                   "w-2 rounded-full transition-all duration-150",
-                  visualMain || voiceState === "speaking"
+                  visualMain || demoMode || voiceState === "speaking"
                     ? "bg-accent-cyan"
                     : "bg-accent-blue",
                 ].join(" ")}

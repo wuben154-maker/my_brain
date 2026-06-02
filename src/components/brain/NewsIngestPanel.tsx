@@ -1,11 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { SuggestConfirmDialog } from "@/components/brain/SuggestConfirmDialog";
 import { useNewsIngestSession } from "@/hooks/useNewsIngestSession";
 import { useIngestStore } from "@/stores/ingestStore";
 
+/** The session-complete banner is a transient welcome, not a resident bar. */
+const COMPLETION_VISIBLE_MS = 4500;
+const COMPLETION_FADE_MS = 500;
+
 export function NewsIngestPanel() {
   const [isApplying, setIsApplying] = useState(false);
+  const [completionPhase, setCompletionPhase] = useState<
+    "visible" | "fading" | "hidden"
+  >("visible");
   const pendingQueue = useIngestStore((state) => state.pendingProposalQueue);
 
   const {
@@ -24,7 +31,33 @@ export function NewsIngestPanel() {
     totalCount,
   } = useNewsIngestSession();
 
+  // Auto-dismiss the "今日资讯 已处理完毕" banner: show on entry, then fade out
+  // after ~5s. A fresh session (new items to process) resets it.
+  useEffect(() => {
+    if (!sessionComplete) {
+      setCompletionPhase("visible");
+      return;
+    }
+    const fadeTimer = window.setTimeout(
+      () => setCompletionPhase("fading"),
+      COMPLETION_VISIBLE_MS,
+    );
+    const hideTimer = window.setTimeout(
+      () => setCompletionPhase("hidden"),
+      COMPLETION_VISIBLE_MS + COMPLETION_FADE_MS,
+    );
+    return () => {
+      window.clearTimeout(fadeTimer);
+      window.clearTimeout(hideTimer);
+    };
+  }, [sessionComplete]);
+
   if (!isActive) {
+    return null;
+  }
+
+  // Completion banner has timed out — nothing left to surface.
+  if (sessionComplete && completionPhase === "hidden") {
     return null;
   }
 
@@ -45,7 +78,12 @@ export function NewsIngestPanel() {
     <>
       <GlassCard
         active={isConfirming}
-        className="absolute bottom-4 left-4 right-4 z-10 mx-auto max-w-2xl p-4 lg:right-auto"
+        className={[
+          "absolute bottom-4 left-1/2 z-10 w-[min(36rem,calc(100%-13rem))] -translate-x-1/2 p-4 transition-all duration-500",
+          sessionComplete && completionPhase === "fading"
+            ? "translate-y-3 opacity-0"
+            : "opacity-100",
+        ].join(" ")}
       >
         {sessionComplete ? (
           <div className="text-center">

@@ -71,6 +71,34 @@ export const VISUAL_GRAPH_PINNED_POSITIONS: Record<
   "demo-bert": { x: 200, y: -40 },
 };
 
+/** Dev-only sample conversation for the `?graphDemo` first screen. Display only. */
+export const DEMO_VOICE_TRANSCRIPTS = [
+  {
+    id: "demo-user-1",
+    role: "user" as const,
+    text: "帮我理一下 RAG 和 AI Agent 的关系？",
+    final: true,
+  },
+  {
+    id: "demo-assistant-1",
+    role: "assistant" as const,
+    text: "RAG 给模型外接知识检索；AI Agent 更进一步，让模型调用工具、规划多步任务。两者底层都依赖 LLM。",
+    final: true,
+  },
+  {
+    id: "demo-user-2",
+    role: "user" as const,
+    text: "那 MCP 是做什么的？",
+    final: true,
+  },
+  {
+    id: "demo-assistant-2",
+    role: "assistant" as const,
+    text: "MCP 是让 Agent 统一接入外部工具与数据源的协议，配合 Tool Use 把能力做成可插拔的。要把它入库到你的大脑吗？",
+    final: false,
+  },
+];
+
 export const VISUAL_VOICE_TRANSCRIPTS = [
   {
     id: "visual-user-1",

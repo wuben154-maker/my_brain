@@ -1,0 +1,24 @@
+---
+description: Harness 工作单契约——改 src 前必须按 specs/ 对应 spec 执行
+globs: src/**
+alwaysApply: false
+---
+
+# Spec-Driven Execution（工作单契约）
+
+本仓库采用 harness engineering：`PRODUCT.md`(PRD) → `AGENT.md`(架构) → `specs/*`(单里程碑工作单) → 代码。
+**代码只是 spec 的机械翻译。**
+
+修改 `src/**` 前：
+
+1. **先读对应 spec**：在 `specs/` 找到当前里程碑（见 `specs/README.md` 索引），完整读它。
+2. **复述契约**：开工前先列出该 spec 的「验收清单 + 不变量」，确认理解。
+3. **严格按签名实现**：接口名/数据结构以 spec 为准，**不做 spec「非目标」之外的任何事**（不顺手重构、不扩范围）。
+4. **完工自检**：逐条对照验收清单贴证据，并跑 `pnpm check`（lint + test）必须全绿。
+
+```text
+✅ 「实现 specs/A2-proposal-inbox.md，先读 spec，按其接口签名实现，不越非目标，完工跑 pnpm check 并对照验收清单自检」
+❌ 「给 StorageProvider 加几个提议相关的方法」  // 无契约、无验收、易跑偏
+```
+
+找不到对应 spec 时：先补 spec（按 `specs/README.md` 的硬模板），再写代码。

@@ -6,6 +6,11 @@
         "command": "node .cursor/hooks/verify.mjs",
         "timeout": 180,
         "loop_limit": 2
+      },
+      {
+        "command": "node .cursor/hooks/memory-boundary.mjs",
+        "timeout": 30,
+        "loop_limit": 2
       }
     ]
   }

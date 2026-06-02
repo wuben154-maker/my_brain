@@ -11,6 +11,7 @@ import {
   graphAccentCyan,
   graphEdgeColor,
   invalidateGraphVisualTokenCache,
+  withAlpha,
 } from "@/lib/graphVisualTokens";
 import { readVisualSnapshotId } from "@/lib/visualSnapshotMode";
 import { VISUAL_GRAPH_PINNED_POSITIONS } from "@/lib/visualSnapshotFixtures";
@@ -160,14 +161,15 @@ export function BrainGraphView() {
     if (graphData.nodes.length === 0) {
       return;
     }
+    // Pinned (visual=main) needs a deterministic frame; the live force layout
+    // is fit on `onEngineStop` instead so we never freeze a pre-settle view.
+    if (!pinGraphLayout) {
+      return;
+    }
     const timer = window.setTimeout(() => {
-      if (pinGraphLayout) {
-        graphRef.current?.zoom(1.15, 0);
-        graphRef.current?.centerAt(0, 20, 0);
-      } else {
-        graphRef.current?.zoomToFit(320, 48);
-      }
-    }, pinGraphLayout ? 80 : 320);
+      graphRef.current?.zoom(1.15, 0);
+      graphRef.current?.centerAt(0, 20, 0);
+    }, 80);
     return () => window.clearTimeout(timer);
   }, [graphData.nodes.length, pinGraphLayout]);
 
@@ -235,7 +237,16 @@ export function BrainGraphView() {
             enableZoomInteraction
             enablePanInteraction
             cooldownTicks={80}
-            onEngineStop={() => setMinimapTick((value) => value + 1)}
+            minZoom={0.4}
+            maxZoom={3.2}
+            onEngineStop={() => {
+              setMinimapTick((value) => value + 1);
+              // Fit once the simulation settles so we never freeze a half-laid-out
+              // (and therefore wildly over-zoomed) view.
+              if (!pinGraphLayout) {
+                graphRef.current?.zoomToFit(500, 90);
+              }
+            }}
             onRenderFramePost={() => {
               setMinimapTick((value) => (value + 1) % 240);
             }}
@@ -302,16 +313,37 @@ export function BrainGraphView() {
                 ctx.globalAlpha = ARCHIVED_OPACITY;
               }
 
+              // Soft radial bloom behind every live node so the starfield glows
+              // as a whole, not just on hover. Falls off to fully transparent.
+              if (!graphNode.archived) {
+                const bloomRadius = radius * (emphasis ? 5.2 : 3.6);
+                const bloom = ctx.createRadialGradient(
+                  x,
+                  y,
+                  radius * 0.4,
+                  x,
+                  y,
+                  bloomRadius,
+                );
+                bloom.addColorStop(0, withAlpha(clusterColor, emphasis ? 0.5 : 0.28));
+                bloom.addColorStop(0.6, withAlpha(clusterColor, emphasis ? 0.18 : 0.1));
+                bloom.addColorStop(1, withAlpha(clusterColor, 0));
+                ctx.beginPath();
+                ctx.arc(x, y, bloomRadius, 0, 2 * Math.PI, false);
+                ctx.fillStyle = bloom;
+                ctx.fill();
+              }
+
               if (emphasis && !graphNode.archived) {
                 ctx.beginPath();
                 ctx.arc(x, y, radius + 8, 0, 2 * Math.PI, false);
-                ctx.fillStyle = "rgba(34, 211, 238, 0.12)";
+                ctx.fillStyle = withAlpha(graphAccentCyan(), 0.12);
                 ctx.fill();
                 ctx.shadowColor = clusterColor;
-                ctx.shadowBlur = 16;
+                ctx.shadowBlur = 22;
               } else if (!graphNode.archived) {
                 ctx.shadowColor = clusterColor;
-                ctx.shadowBlur = 8;
+                ctx.shadowBlur = 12;
               }
 
               ctx.beginPath();
@@ -321,15 +353,20 @@ export function BrainGraphView() {
               ctx.fill();
               ctx.shadowBlur = 0;
 
-              if (globalScale > 0.75) {
-                ctx.font = `${12 / globalScale}px var(--font-sans)`;
+              // Tie the label size to the node radius (graph units) so it scales
+              // with the graph and never balloons relative to the dot, whatever
+              // the current zoom. Hide it only when zoomed far out.
+              if (globalScale > 0.45) {
+                const labelSize = radius * 1.5;
+                ctx.font = `500 ${labelSize}px var(--font-sans)`;
+                ctx.textBaseline = "middle";
                 ctx.fillStyle =
                   graphNode.archived
                     ? "rgba(154, 172, 196, 0.55)"
                     : emphasis
                       ? "#f8fafc"
                       : "#cbd5e1";
-                ctx.fillText(graphNode.title, x + radius + 4, y + 4);
+                ctx.fillText(graphNode.title, x + radius + labelSize * 0.4, y);
               }
               ctx.restore();
             }}

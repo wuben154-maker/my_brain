@@ -59,6 +59,28 @@ export function clusterColorForNodeId(nodeId: string): string {
   return colors[clusterIndexForNodeId(nodeId)] ?? colors[0];
 }
 
+/** Convert a `#rgb` / `#rrggbb` token to `rgba(...)`; pass other formats through. */
+export function withAlpha(color: string, alpha: number): string {
+  const value = color.trim();
+  if (!value.startsWith("#")) {
+    return value;
+  }
+  let hex = value.slice(1);
+  if (hex.length === 3) {
+    hex = hex
+      .split("")
+      .map((char) => char + char)
+      .join("");
+  }
+  if (hex.length !== 6) {
+    return value;
+  }
+  const r = Number.parseInt(hex.slice(0, 2), 16);
+  const g = Number.parseInt(hex.slice(2, 4), 16);
+  const b = Number.parseInt(hex.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export function invalidateGraphVisualTokenCache(): void {
   cachedClusterColors = null;
   cachedEdgeColor = null;

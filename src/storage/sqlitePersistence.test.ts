@@ -2,45 +2,38 @@ import Database from "better-sqlite3";
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { GraphMutationProposal } from "@/domain/graph";
-import { createTempStorage } from "@/invariants/testStorage";
+import {
+  createTempStorage,
+  reopenStorage,
+  STORAGE_BACKEND_KINDS,
+  type StorageBackendKind,
+} from "@/invariants/testStorage";
 import {
   applyGraphMutation,
   persistGraphSnapshot,
 } from "@/lib/graphMutations";
 import { distillAndPersistUserProfile } from "@/lib/profileDistillation";
 import { createMockLlmProvider } from "@/providers/llm/mockLlmProvider";
-import { BetterSqliteBackend } from "@/storage/adapters/betterSqliteBackend";
-import type { StorageProvider } from "@/storage/types";
+import type { ProposalEnvelope } from "@/agent/types";
+import { InvalidProposalError } from "@/storage/proposalPersistence";
 
-function wrapBackend(backend: BetterSqliteBackend): StorageProvider {
-  return {
-    init: async () => {
-      backend.init();
+const sampleProposalEnvelope: ProposalEnvelope = {
+  id: "prop-create-1",
+  runId: "run-1",
+  createdAt: "2026-06-01T00:00:00.000Z",
+  source: "background_ingest",
+  status: "pending",
+  proposal: {
+    id: "prop-create-1",
+    kind: "create",
+    summary: "新建 RAG 概念",
+    payload: {
+      title: "RAG",
+      intro: "检索增强生成",
+      sourceUrl: "https://example.com/rag",
     },
-    close: async () => {
-      backend.close();
-    },
-    loadGraph: async () => backend.loadGraph(),
-    loadGraphForDisplay: async () => backend.loadGraphForDisplay(),
-    saveConcept: async (node) => {
-      backend.saveConcept(node);
-    },
-    saveEdge: async (edge) => {
-      backend.saveEdge(edge);
-    },
-    deleteEdge: async (edgeId) => {
-      backend.deleteEdge(edgeId);
-    },
-    loadUserProfile: async () => backend.loadUserProfile(),
-    saveUserProfile: async (profile) => {
-      backend.saveUserProfile(profile);
-    },
-  };
-}
-
-function reopenStorage(dbPath: string): StorageProvider {
-  return wrapBackend(new BetterSqliteBackend({ dbPath }));
-}
+  },
+};
 
 function countArchivedConcepts(dbPath: string): number {
   const db = new Database(dbPath, { readonly: true });
@@ -84,7 +77,7 @@ describe("SQLite persistence (better-sqlite3)", () => {
 
       await storage.close();
 
-      const reopened = reopenStorage(dbPath);
+      const reopened = reopenStorage(dbPath, "better-sqlite3");
       await reopened.init();
       graph = await reopened.loadGraph();
       expect(graph.nodes).toHaveLength(1);
@@ -185,7 +178,7 @@ describe("SQLite persistence (better-sqlite3)", () => {
 
       await storage.close();
 
-      const reopened = reopenStorage(dbPath);
+      const reopened = reopenStorage(dbPath, "better-sqlite3");
       await reopened.init();
       const reloaded = await reopened.loadGraph();
       expect(reloaded.nodes.find((node) => node.title === "节点A-更新")?.sourceUrl).toBe(
@@ -198,7 +191,226 @@ describe("SQLite persistence (better-sqlite3)", () => {
       cleanup();
     }
   });
+});
 
+describe.each(STORAGE_BACKEND_KINDS)(
+  "proposal inbox persistence (%s)",
+  (kind: StorageBackendKind) => {
+  it("creates agent_proposals table idempotently on init", async () => {
+    const { storage, dbPath, cleanup } = createTempStorage(kind);
+    try {
+      await storage.init();
+      await storage.init();
+
+      const db = new Database(dbPath, { readonly: true });
+      try {
+        const table = db
+          .prepare(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'agent_proposals'",
+          )
+          .get() as { name: string } | undefined;
+        expect(table?.name).toBe("agent_proposals");
+
+        const index = db
+          .prepare(
+            "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_agent_proposals_status'",
+          )
+          .get() as { name: string } | undefined;
+        expect(index?.name).toBe("idx_agent_proposals_status");
+      } finally {
+        db.close();
+      }
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("round-trips proposals across close/reopen with payload JSON normalization", async () => {
+    const { storage, dbPath, cleanup } = createTempStorage(kind);
+    try {
+      await storage.init();
+      await storage.saveProposal(sampleProposalEnvelope);
+      await storage.close();
+
+      const reopened = reopenStorage(dbPath, kind);
+      await reopened.init();
+      const pending = await reopened.listPendingProposals();
+      expect(pending).toHaveLength(1);
+      expect(pending[0]).toMatchObject({
+        id: "prop-create-1",
+        runId: "run-1",
+        source: "background_ingest",
+        status: "pending",
+        proposal: {
+          kind: "create",
+          summary: "新建 RAG 概念",
+          payload: {
+            title: "RAG",
+            intro: "检索增强生成",
+            sourceUrl: "https://example.com/rag",
+          },
+        },
+      });
+      await reopened.close();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("upserts proposals by id", async () => {
+    const { storage, cleanup } = createTempStorage(kind);
+    try {
+      await storage.init();
+      await storage.saveProposal(sampleProposalEnvelope);
+      await storage.saveProposal({
+        ...sampleProposalEnvelope,
+        proposal: {
+          ...sampleProposalEnvelope.proposal,
+          summary: "更新后的摘要",
+          payload: {
+            title: "RAG",
+            intro: "更新后的简介",
+            sourceUrl: null,
+          },
+        },
+      });
+
+      const pending = await storage.listPendingProposals();
+      expect(pending).toHaveLength(1);
+      expect(pending[0]?.proposal.summary).toBe("更新后的摘要");
+      expect(pending[0]?.proposal.payload.intro).toBe("更新后的简介");
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("lists pending proposals oldest-first", async () => {
+    const { storage, cleanup } = createTempStorage(kind);
+    try {
+      await storage.init();
+      await storage.saveProposal({
+        ...sampleProposalEnvelope,
+        id: "prop-newer",
+        createdAt: "2026-06-02T00:00:00.000Z",
+        proposal: {
+          ...sampleProposalEnvelope.proposal,
+          id: "prop-newer",
+        },
+      });
+      await storage.saveProposal(sampleProposalEnvelope);
+
+      const pending = await storage.listPendingProposals();
+      expect(pending.map((row) => row.id)).toEqual([
+        "prop-create-1",
+        "prop-newer",
+      ]);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("removes approved and rejected proposals from listPendingProposals", async () => {
+    const { storage, cleanup } = createTempStorage(kind);
+    try {
+      await storage.init();
+      await storage.saveProposal(sampleProposalEnvelope);
+      await storage.saveProposal({
+        ...sampleProposalEnvelope,
+        id: "prop-reject-me",
+        proposal: {
+          ...sampleProposalEnvelope.proposal,
+          id: "prop-reject-me",
+        },
+      });
+
+      await storage.setProposalStatus("prop-create-1", "approved");
+      await storage.setProposalStatus("prop-reject-me", "rejected");
+
+      expect(await storage.listPendingProposals()).toHaveLength(0);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("does not mutate graph tables when saving a proposal", async () => {
+    const { storage, cleanup } = createTempStorage(kind);
+    try {
+      await storage.init();
+      const before = await storage.loadGraph();
+      await storage.saveProposal(sampleProposalEnvelope);
+      const after = await storage.loadGraph();
+      expect(after).toEqual(before);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("rejects invalid proposal payload on save", async () => {
+    const { storage, cleanup } = createTempStorage(kind);
+    try {
+      await storage.init();
+      const invalid: ProposalEnvelope = {
+        ...sampleProposalEnvelope,
+        id: "prop-invalid",
+        proposal: {
+          ...sampleProposalEnvelope.proposal,
+          id: "prop-invalid",
+          payload: { title: "", intro: "" },
+        },
+      };
+      await expect(storage.saveProposal(invalid)).rejects.toBeInstanceOf(
+        InvalidProposalError,
+      );
+      expect(await storage.listPendingProposals()).toHaveLength(0);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("rejects invalid link relationType via readLinkPayload validation", async () => {
+    const { storage, cleanup } = createTempStorage(kind);
+    try {
+      await storage.init();
+      const invalid: ProposalEnvelope = {
+        id: "prop-bad-link",
+        runId: "run-1",
+        createdAt: "2026-06-01T00:00:00.000Z",
+        source: "background_ingest",
+        status: "pending",
+        proposal: {
+          id: "prop-bad-link",
+          kind: "link",
+          summary: "非法连边",
+          payload: {
+            sourceId: "a",
+            targetId: "b",
+            relationType: "not_a_relation",
+          },
+        },
+      };
+      await expect(storage.saveProposal(invalid)).rejects.toBeInstanceOf(
+        InvalidProposalError,
+      );
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("throws when setProposalStatus targets a missing proposal", async () => {
+    const { storage, cleanup } = createTempStorage(kind);
+    try {
+      await storage.init();
+      await expect(
+        storage.setProposalStatus("missing-id", "approved"),
+      ).rejects.toThrow(/Proposal not found/);
+    } finally {
+      cleanup();
+    }
+  });
+  },
+);
+
+describe("SQLite persistence (better-sqlite3)", () => {
   it("persists distilled user profile across close/reopen", async () => {
     const { storage, dbPath, cleanup } = createTempStorage();
     try {
@@ -213,7 +425,7 @@ describe("SQLite persistence (better-sqlite3)", () => {
 
       await storage.close();
 
-      const reopened = reopenStorage(dbPath);
+      const reopened = reopenStorage(dbPath, "better-sqlite3");
       await reopened.init();
       profile = await reopened.loadUserProfile();
       expect(profile.displayName).toBe("测试员");

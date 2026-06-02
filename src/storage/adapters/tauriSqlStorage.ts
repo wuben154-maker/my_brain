@@ -1,15 +1,35 @@
 import Database from "@tauri-apps/plugin-sql";
+import type { TauriSqlDatabaseLike } from "./tauriSqlDatabase";
 import type { BrainGraphSnapshot, ConceptNode, GraphEdge } from "@/domain/graph";
 import { DEFAULT_USER_PROFILE, type UserProfile } from "@/domain/profile";
+import type { ProposalEnvelope, ProposalStatus } from "@/agent/types";
 import { INITIAL_MIGRATION_SQL, STORAGE_DB_NAME } from "../migrations";
+import {
+  assertProposalStatus,
+  assertProposalStatusUpdated,
+  LIST_PENDING_PROPOSALS_SQL,
+  mapStoredProposalRows,
+  prepareProposalUpsertRow,
+  type StoredProposalRow,
+} from "../proposalPersistence";
 import type { StorageProvider } from "../types";
+
+export type TauriSqlDatabase = Database | TauriSqlDatabaseLike;
+
+export interface TauriSqlStorageOptions {
+  /** Test-only: run Tauri SQL paths against better-sqlite3 (see `tauriSqlTestDatabase.ts`). */
+  loadDatabase?: (uri: string) => Promise<TauriSqlDatabase>;
+}
 
 /** Desktop storage via Tauri SQL plugin. */
 export class TauriSqlStorageProvider implements StorageProvider {
-  private db: Database | null = null;
+  private db: TauriSqlDatabase | null = null;
+
+  constructor(private readonly options: TauriSqlStorageOptions = {}) {}
 
   async init(): Promise<void> {
-    this.db = await Database.load(`sqlite:${STORAGE_DB_NAME}`);
+    const load = this.options.loadDatabase ?? ((uri) => Database.load(uri));
+    this.db = await load(`sqlite:${STORAGE_DB_NAME}`);
     await this.db.execute(INITIAL_MIGRATION_SQL);
   }
 
@@ -150,7 +170,51 @@ export class TauriSqlStorageProvider implements StorageProvider {
     }
   }
 
-  private requireDb(): Database {
+  async listPendingProposals(): Promise<ProposalEnvelope[]> {
+    const db = this.requireDb();
+    const rows = await db.select<StoredProposalRow[]>(LIST_PENDING_PROPOSALS_SQL);
+    return mapStoredProposalRows(rows);
+  }
+
+  async saveProposal(p: ProposalEnvelope): Promise<void> {
+    const row = prepareProposalUpsertRow(p);
+    const db = this.requireDb();
+    await db.execute(
+      `INSERT INTO agent_proposals
+         (id, run_id, created_at, kind, summary, payload, source, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       ON CONFLICT(id) DO UPDATE SET
+         run_id = $2,
+         created_at = $3,
+         kind = $4,
+         summary = $5,
+         payload = $6,
+         source = $7,
+         status = $8`,
+      [
+        row.id,
+        row.run_id,
+        row.created_at,
+        row.kind,
+        row.summary,
+        row.payload,
+        row.source,
+        row.status,
+      ],
+    );
+  }
+
+  async setProposalStatus(id: string, status: ProposalStatus): Promise<void> {
+    assertProposalStatus(status);
+    const db = this.requireDb();
+    const result = await db.execute(
+      "UPDATE agent_proposals SET status = $1 WHERE id = $2",
+      [status, id],
+    );
+    assertProposalStatusUpdated(id, result.rowsAffected ?? 0);
+  }
+
+  private requireDb(): TauriSqlDatabase {
     if (!this.db) {
       throw new Error("TauriSqlStorageProvider is not initialized");
     }

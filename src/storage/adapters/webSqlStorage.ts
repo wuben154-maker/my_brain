@@ -1,5 +1,6 @@
 import type { BrainGraphSnapshot, ConceptNode, GraphEdge } from "@/domain/graph";
 import type { UserProfile } from "@/domain/profile";
+import type { ProposalEnvelope, ProposalStatus } from "@/agent/types";
 import type { StorageProvider } from "../types";
 
 const STORAGE_BASE = "/__my_brain/storage";
@@ -63,5 +64,17 @@ export class WebSqlStorageProvider implements StorageProvider {
 
   saveUserProfile(profile: UserProfile): Promise<void> {
     return storageFetch("/profile", { body: profile });
+  }
+
+  listPendingProposals(): Promise<ProposalEnvelope[]> {
+    return storageFetch("/proposals/pending");
+  }
+
+  saveProposal(p: ProposalEnvelope): Promise<void> {
+    return storageFetch("/proposals/save", { body: p });
+  }
+
+  setProposalStatus(id: string, status: ProposalStatus): Promise<void> {
+    return storageFetch("/proposals/status", { body: { id, status } });
   }
 }

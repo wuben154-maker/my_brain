@@ -1,0 +1,24 @@
+---
+description: 图谱变更必须先建议后确认，且只经唯一落库通道
+globs: src/{lib/graphMutations.ts,stores/**,components/brain/**,agent/**}
+alwaysApply: false
+---
+
+# 图谱变更：先建议后确认 + 唯一落库通道
+
+产品灵魂（`AGENTS.md` 不变量 #2/#3/#4）：
+
+- **任何图谱结构变更（merge/archive/link/create/attach/update）一律先建议、用户确认后才执行。** 严禁自动改图谱。
+- **唯一落库通道**：`applyGraphMutation(snapshot, proposal)`（纯函数）→ `persistGraphSnapshot(storage, before, after)`。不要绕过它直接写表。
+- **删除 = 归档**（`archived=true`，可找回），不做硬删除。
+- 节点被替换/归档时，边经 `migrateEdges` **迁移**，不断裂。
+- 节点 = 概念 + 简介，不是新闻碎片；多条新闻喂养同一概念。
+
+```ts
+// ✅ 确认后落库的唯一姿势
+const after = applyGraphMutation(before, proposal);
+await persistGraphSnapshot(storage, before, after);
+// ❌ 不要：storage.saveConcept(...) 直接拼一套新的变更逻辑
+```
+
+新增变更类型时，同步更新 `graphMutationPayloads.ts` 的 `read*Payload` 校验与 `graphMutations.test.ts`。

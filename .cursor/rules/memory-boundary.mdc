@@ -1,0 +1,29 @@
+---
+description: 记忆引擎边界——只读召回、只写蒸馏文本、厂商隔离在适配器内
+globs: src/providers/memory/**,src/lib/memory*,src/agent/**
+alwaysApply: false
+---
+
+# 记忆引擎边界（M 系列 / EverMemOS B 方案）
+
+长期记忆引擎是**派生的联想召回层**，不是用户拥有的大脑。它**只读注入上下文**，绝不动权威真源（图谱②/画像③）。落实 `AGENTS.md` 不变量 1/5/6/7。
+
+铁律：
+
+- **只写蒸馏纯文本**：`MemoryProvider.remember` 入参只能是蒸馏后的情节摘要/抽取事实。**严禁**写入原始音频、音频 buffer、新闻/文章全文、密钥（守不变量 1）。复用既有 `profileDistillation`/`voiceSessionFinalize` 的蒸馏产物，不另存原文。
+- **只读召回、绝不写图谱/画像**：`src/providers/memory/**` 与记忆相关模块**不得**出现 `applyGraphMutation` / `persistGraphSnapshot` / `StorageProvider` 写方法。图谱落库永远只走「提议收件箱 → 用户确认」（守不变量 6/2）。
+- **厂商隔离**：EverMemOS 的 REST 端点/SDK（如 `localhost:1995`、`EVERMEMOS*`、其客户端包）**只允许**出现在 `src/providers/memory/everMemOsProvider.ts` 适配器内。业务逻辑只依赖 `MemoryProvider` 接口（守不变量 5）。
+- **mock + 真实双实现**：`mockMemoryProvider` 必须可在**无 sidecar**下跑通测试/离线开发；上层经 `createMemoryProvider(env)` 拿实例，由 `memoryProviderMode` 切换，调用方不感知厂商。
+- **优雅降级**：sidecar 不可用时 `recall` 返回 `[]`、`remember` 入队/丢弃，**不抛异常冒泡到 UI**，应用照常可用。
+- **本地优先 / 隐私**：EverMemOS 本机自部署；`EVERMEMOS_BASE_URL`/`EVERMEMOS_API_KEY` 走 `.env`（gitignored），客户端不硬编码、不渲染密钥（守不变量 7）。
+
+```ts
+// ❌ 禁止：记忆模块直接改图谱
+import { applyGraphMutation } from "@/lib/graphMutations"; // in src/providers/memory/**
+// ❌ 禁止：业务里直连厂商
+fetch("http://localhost:1995/api/v1/memories"); // 出现在适配器之外
+// ✅ 只读召回，依赖接口
+const recalled = await memory.recall({ query, topK: 5 });
+```
+
+改记忆相关代码务必新增/保留「记忆边界」断言测试（`productInvariants.test.ts` 用 `readRepoSource` 扫描）。

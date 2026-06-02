@@ -29,6 +29,18 @@ CREATE TABLE IF NOT EXISTS app_meta (
   value TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS agent_proposals (
+  id          TEXT PRIMARY KEY NOT NULL,
+  run_id      TEXT NOT NULL,
+  created_at  TEXT NOT NULL,
+  kind        TEXT NOT NULL,
+  summary     TEXT NOT NULL,
+  payload     TEXT NOT NULL,
+  source      TEXT NOT NULL,
+  status      TEXT NOT NULL DEFAULT 'pending'
+);
+
 CREATE INDEX IF NOT EXISTS idx_concepts_archived ON concepts(archived);
 CREATE INDEX IF NOT EXISTS idx_edges_source ON edges(source_id);
 CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target_id);
+CREATE INDEX IF NOT EXISTS idx_agent_proposals_status ON agent_proposals(status);
