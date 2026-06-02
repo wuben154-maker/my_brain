@@ -12,5 +12,22 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
+    coverage: {
+      provider: "v8",
+      include: [
+        "src/lib/**",
+        "src/agent/**",
+        "src/domain/**",
+        "src/stores/**",
+        "src/storage/**",
+      ],
+      exclude: [
+        "**/*.test.ts",
+        "src/**/types.ts",
+        "src/components/**",
+        "src/dev/**",
+      ],
+      thresholds: { lines: 58, functions: 75, branches: 60, statements: 58 },
+    },
   },
 });

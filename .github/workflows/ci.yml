@@ -30,3 +30,6 @@ jobs:
 
       - name: Verify (typecheck + lint + invariant tests)
         run: pnpm check
+
+      - name: Coverage ratchet (logic-layer thresholds)
+        run: pnpm coverage
