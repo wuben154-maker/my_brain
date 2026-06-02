@@ -25,7 +25,8 @@ export class SchedulerBusyError extends Error {
 const TICK_MS = 60_000;
 
 export function createAgentScheduler(deps: {
-  job: AgentJob;
+  /** Resolved per run so H1 budgets reload daily usage each trigger. */
+  getJob: () => AgentJob | Promise<AgentJob>;
   tools: AgentTools;
   persist: (result: AgentRunResult) => Promise<void>;
   getConfig: () => SchedulerConfig;
@@ -47,17 +48,18 @@ export function createAgentScheduler(deps: {
     if (running) {
       throw new SchedulerBusyError();
     }
-    if (deps.job.id !== deps.getConfig().jobId) {
-      throw new Error(
-        `Scheduler job mismatch: expected ${deps.getConfig().jobId}, got ${deps.job.id}`,
-      );
-    }
-
     running = true;
     abortController = new AbortController();
     try {
+      const job = await Promise.resolve(deps.getJob());
+      if (job.id !== deps.getConfig().jobId) {
+        throw new Error(
+          `Scheduler job mismatch: expected ${deps.getConfig().jobId}, got ${job.id}`,
+        );
+      }
+
       const result = await runAgentJob(
-        deps.job,
+        job,
         deps.tools,
         abortController.signal,
       );

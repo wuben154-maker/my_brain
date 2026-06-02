@@ -232,6 +232,27 @@ export class TauriSqlStorageProvider implements StorageProvider {
     );
   }
 
+  async loadAgentUsage(usageDate: string): Promise<number> {
+    const db = this.requireDb();
+    const rows = await db.select<{ tokens: number }[]>(
+      "SELECT tokens FROM agent_usage WHERE usage_date = $1",
+      [usageDate],
+    );
+    return rows[0]?.tokens ?? 0;
+  }
+
+  async addAgentUsage(usageDate: string, tokens: number): Promise<void> {
+    if (tokens <= 0) {
+      return;
+    }
+    const db = this.requireDb();
+    await db.execute(
+      `INSERT INTO agent_usage (usage_date, tokens) VALUES ($1, $2)
+       ON CONFLICT(usage_date) DO UPDATE SET tokens = agent_usage.tokens + excluded.tokens`,
+      [usageDate, tokens],
+    );
+  }
+
   private requireDb(): TauriSqlDatabase {
     if (!this.db) {
       throw new Error("TauriSqlStorageProvider is not initialized");

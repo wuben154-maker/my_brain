@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { createMorningBriefBudget } from "@/agent/budget";
 import { createMorningBriefJob } from "@/agent/jobs/morningBriefJob";
 import type { AgentScheduler } from "@/agent/scheduler";
 import { createAgentScheduler } from "@/agent/scheduler";
@@ -51,8 +52,6 @@ export function useAgentScheduler(): void {
         providers.news,
         storage,
       );
-      const job = createMorningBriefJob();
-
       const persist = async (
         result: Parameters<typeof persistAgentRunResult>[1],
       ) => {
@@ -61,7 +60,10 @@ export function useAgentScheduler(): void {
       };
 
       const scheduler = createAgentScheduler({
-        job,
+        getJob: async () => {
+          const budget = await createMorningBriefBudget(storage);
+          return createMorningBriefJob({ budget });
+        },
         tools,
         persist,
         getConfig: () => settingsRef.current,

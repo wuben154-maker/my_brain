@@ -18,4 +18,7 @@ export interface StorageProvider {
   setProposalStatus(id: string, status: ProposalStatus): Promise<void>;
   getAppMeta(key: string): Promise<string | null>;
   setAppMeta(key: string, value: string): Promise<void>;
+  /** UTC date key `YYYY-MM-DD` — daily agent token rollup (H1). */
+  loadAgentUsage(usageDate: string): Promise<number>;
+  addAgentUsage(usageDate: string, tokens: number): Promise<void>;
 }

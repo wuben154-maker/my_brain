@@ -85,4 +85,12 @@ export class WebSqlStorageProvider implements StorageProvider {
   setAppMeta(key: string, value: string): Promise<void> {
     return storageFetch("/meta", { body: { key, value } });
   }
+
+  loadAgentUsage(usageDate: string): Promise<number> {
+    return storageFetch(`/agent-usage/${encodeURIComponent(usageDate)}`);
+  }
+
+  addAgentUsage(usageDate: string, tokens: number): Promise<void> {
+    return storageFetch("/agent-usage", { body: { usageDate, tokens } });
+  }
 }

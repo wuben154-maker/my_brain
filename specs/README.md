@@ -21,7 +21,7 @@
 | [A2-proposal-inbox](./A2-proposal-inbox.md) | `proposal-inbox` | A | ✅ 已实现 | 提议收件箱：持久化 + 状态机 + 确认即复用现有落库 |
 | [A3-morning-brief-job](./A3-morning-brief-job.md) | `morning-brief` | A | ✅ 已实现 | 后台抓取→去重→预提炼→产出晨间简报+提议（带预算护栏） |
 | [A4-inbox-ui](./A4-inbox-ui.md) | `inbox-ui` | A | ✅ 已实现 | 星图旁「待办建议」抽屉 + 简报卡片，逐条确认 |
-| [A5-local-scheduler](./A5-local-scheduler.md) | `local-scheduler` | A | 📝 待做 | 本机定时触发（L1），可开关、可中断 |
+| [A5-local-scheduler](./A5-local-scheduler.md) | `local-scheduler` | A | ✅ 已实现 | 本机定时触发（L1），可开关、可中断 |
 | [B1-research-loop-job](./B1-research-loop-job.md) | `research-loop` | B | 📝 待做 | 围绕主题的多步自主研究链，产成批关联提议 |
 | [B2-llm-research-extensions](./B2-llm-research-extensions.md) | `research-llm` | B | 📝 待做 | `LlmProvider` 扩展 `planResearch`/`synthesizeConcepts` |
 | [B3-research-trace-view](./B3-research-trace-view.md) | `research-view` | B | 📝 待做 | 调研轨迹可视化 + 关联提议星图预览高亮 |
@@ -49,7 +49,7 @@
 |---|---|---|---|---|---|
 | [N0-navigation-shell](./N0-navigation-shell.md) | `navigation-shell` | **H0 之后、A4 之前** | ✅ 已实现 | 分区路由外壳：点击即跳转 + 规划中占位 + 死链守卫测试 | （全部，基建） |
 | [N1-explore-feed](./N1-explore-feed.md) | `explore-feed` | A（跟 A4 前后） | ✅ 已实现 | 今日资讯/趋势浏览区，复用 ingest 建议→确认 | 探索 |
-| [N4-settings](./N4-settings.md) | `settings` | A（跟 A5） | 📝 待做 | 设置区：调度开关/Provider 模式/人格/隐私 | 设置 |
+| [N4-settings](./N4-settings.md) | `settings` | A（跟 A5） | ✅ 已实现 | 设置区：调度开关/Provider 模式/人格/隐私 | 设置 |
 | [G1-graph-3d](./G1-graph-3d.md) | `graph-3d` | A 段收尾 / B（B3 前或同期） | 📝 待做 | 真 3D 星图（three.js），2D 默认+基线不动，3D 走「3D 视图」开关 | 知识图谱 |
 | [N2-docs-library](./N2-docs-library.md) | `docs-library` | B（穿插） | 📝 待做 | 来源/出处索引区，回链星图定位 | 文档库 |
 | [N3-mindmap-view](./N3-mindmap-view.md) | `mindmap-view` | B/C（非 MVP 必做，可暂缓） | 📝 待做 | 图谱分层大纲/树视角 | 思维导图 |
@@ -63,7 +63,7 @@
 | Spec | 代号 | 执行时机 | 一句话 |
 |---|---|---|---|
 | [H0-coverage-ratchet](./H0-coverage-ratchet.md) | `coverage-ratchet` | **现在（A4 之前）** | 覆盖率下限 + GitHub 分支保护（基建棘轮，越早越好） |
-| [H1-cost-guardrail](./H1-cost-guardrail.md) | `cost-guardrail` | **跟 A5**（B1 加强） | token 预算变成会失败的断言 + 单日上限，自主调度前焊死 |
+| [H1-cost-guardrail](./H1-cost-guardrail.md) | `cost-guardrail` | **跟 A5**（B1 加强） | ✅ 已实现：token 预算断言化 + 单日上限，自主调度前焊死 |
 | [H2-ci-e2e-and-desktop](./H2-ci-e2e-and-desktop.md) | `ci-e2e-desktop` | **3b 跟 A4 / 3c 跟 B3 / 3d A 段收尾** | e2e 冒烟进 CI + Tauri 桌面构建进 CI |
 | [H3-memory-eval](./H3-memory-eval.md) | `memory-eval` | **起步跟 M1 / 加强跟 C3** | 记忆召回质量 + 自进化曲线 评测断言（mock+固定语料，会红灯） |
 

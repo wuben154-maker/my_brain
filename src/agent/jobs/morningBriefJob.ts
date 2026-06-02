@@ -12,12 +12,15 @@ import type {
   AgentTraceStep,
   ProposalEnvelope,
 } from "@/agent/types";
+import type { TokenBudget } from "@/agent/budget";
 import { dedupeAgainstGraph } from "./dedupeNews";
 
 export interface MorningBriefConfig {
   topN: number;
   tokenBudgetPerRun: number;
   maxProposals: number;
+  /** H1 hard guardrail; when set, charges persist via storage-backed daily cap. */
+  budget?: TokenBudget;
 }
 
 export const DEFAULT_MORNING_BRIEF_CONFIG: MorningBriefConfig = {
@@ -73,6 +76,54 @@ export function createMorningBriefJob(
       const tokensUsed = () => sumTraceTokens(trace);
       const wouldExceedBudget = (nextCost: number) =>
         tokensUsed() + nextCost > cfg.tokenBudgetPerRun;
+      const budget = cfg.budget;
+
+      const emptyResult = () => ({
+        runId,
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        proposals: [] as ProposalEnvelope[],
+        digest: null as AgentDigest | null,
+        trace,
+      });
+
+      const pushBudgetTruncated = (detail: string) => {
+        pushStep(
+          finishTraceStep(beginTraceStep("budget_truncated"), detail),
+        );
+      };
+
+      const cannotAfford = (nextCost: number) => {
+        if (budget) {
+          return (
+            budget.isDayCapReached() || budget.remaining() < nextCost
+          );
+        }
+        return wouldExceedBudget(nextCost);
+      };
+
+      const chargeStep = (cost: number, truncateDetail: string): boolean => {
+        if (!budget) {
+          return true;
+        }
+        try {
+          budget.charge(cost);
+          return true;
+        } catch {
+          pushBudgetTruncated(truncateDetail);
+          return false;
+        }
+      };
+
+      if (budget?.isDayCapReached()) {
+        pushStep(
+          finishTraceStep(
+            beginTraceStep("budget_day_cap"),
+            "daily token cap reached",
+          ),
+        );
+        return emptyResult();
+      }
 
       const fetchDraft = beginTraceStep("fetchNews");
       const fetched = await tools.fetchNews();
@@ -107,13 +158,8 @@ export function createMorningBriefJob(
           break;
         }
 
-        if (wouldExceedBudget(MORNING_BRIEF_STEP_TOKENS.summarize)) {
-          pushStep(
-            finishTraceStep(
-              beginTraceStep("budget_truncated"),
-              `stopped before summarize: ${item.title}`,
-            ),
-          );
+        if (cannotAfford(MORNING_BRIEF_STEP_TOKENS.summarize)) {
+          pushBudgetTruncated(`stopped before summarize: ${item.title}`);
           break;
         }
 
@@ -126,17 +172,20 @@ export function createMorningBriefJob(
             MORNING_BRIEF_STEP_TOKENS.summarize,
           ),
         );
+        if (
+          !chargeStep(
+            MORNING_BRIEF_STEP_TOKENS.summarize,
+            `budget after summarize: ${item.title}`,
+          )
+        ) {
+          break;
+        }
         assertNotAborted(signal);
 
         sections.push({ headline: item.title, body: summary });
 
-        if (wouldExceedBudget(MORNING_BRIEF_STEP_TOKENS.propose)) {
-          pushStep(
-            finishTraceStep(
-              beginTraceStep("budget_truncated"),
-              `stopped before propose: ${item.title}`,
-            ),
-          );
+        if (cannotAfford(MORNING_BRIEF_STEP_TOKENS.propose)) {
+          pushBudgetTruncated(`stopped before propose: ${item.title}`);
           break;
         }
 
@@ -157,6 +206,14 @@ export function createMorningBriefJob(
             MORNING_BRIEF_STEP_TOKENS.propose,
           ),
         );
+        if (
+          !chargeStep(
+            MORNING_BRIEF_STEP_TOKENS.propose,
+            `budget after propose: ${item.title}`,
+          )
+        ) {
+          break;
+        }
         assertNotAborted(signal);
 
         const remaining = cfg.maxProposals - proposals.length;

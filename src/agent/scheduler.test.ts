@@ -36,7 +36,7 @@ describe("createAgentScheduler (A5)", () => {
     };
 
     const scheduler = createAgentScheduler({
-      job: { id: "morning-brief", run: run as AgentJob["run"] },
+      getJob: () => ({ id: "morning-brief", run: run as AgentJob["run"] }),
       tools: {} as never,
       persist,
       getConfig: () => config,
@@ -58,10 +58,10 @@ describe("createAgentScheduler (A5)", () => {
       intervalMs: 60_000,
       jobId: "morning-brief",
     };
-    let lastRunAt = 0;
+    let lastRunAt = -config.intervalMs;
 
     const scheduler = createAgentScheduler({
-      job: { id: "morning-brief", run: run as AgentJob["run"] },
+      getJob: () => ({ id: "morning-brief", run: run as AgentJob["run"] }),
       tools: {} as never,
       persist,
       getConfig: () => config,
@@ -72,9 +72,13 @@ describe("createAgentScheduler (A5)", () => {
     });
 
     scheduler.start();
-    expect(run).toHaveBeenCalledTimes(1);
-    await vi.advanceTimersByTimeAsync(60_000);
-    expect(run).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => {
+      expect(run).toHaveBeenCalledTimes(1);
+    });
+    await vi.advanceTimersByTimeAsync(120_000);
+    await vi.waitFor(() => {
+      expect(run).toHaveBeenCalledTimes(2);
+    });
     expect(persist).toHaveBeenCalledTimes(2);
     scheduler.stop();
   });
@@ -85,7 +89,7 @@ describe("createAgentScheduler (A5)", () => {
     const run = vi.fn(async () => result);
 
     const scheduler = createAgentScheduler({
-      job: { id: "morning-brief", run: run as AgentJob["run"] },
+      getJob: () => ({ id: "morning-brief", run: run as AgentJob["run"] }),
       tools: {} as never,
       persist,
       getConfig: () => ({
@@ -103,6 +107,7 @@ describe("createAgentScheduler (A5)", () => {
   });
 
   it("rejects concurrent triggerNow while running", async () => {
+    vi.useRealTimers();
     let resolveRun: (value: AgentRunResult) => void = () => undefined;
     const runPromise = new Promise<AgentRunResult>((resolve) => {
       resolveRun = resolve;
@@ -110,7 +115,7 @@ describe("createAgentScheduler (A5)", () => {
     const run = vi.fn(() => runPromise);
 
     const scheduler = createAgentScheduler({
-      job: { id: "morning-brief", run: run as AgentJob["run"] },
+      getJob: () => ({ id: "morning-brief", run: run as AgentJob["run"] }),
       tools: {} as never,
       persist: vi.fn(async () => undefined),
       getConfig: () => ({
@@ -131,6 +136,7 @@ describe("createAgentScheduler (A5)", () => {
   });
 
   it("stop aborts an in-flight run", async () => {
+    vi.useRealTimers();
     const run = vi.fn(
       (_tools, signal: AbortSignal) =>
         new Promise<AgentRunResult>((_resolve, reject) => {
@@ -141,7 +147,7 @@ describe("createAgentScheduler (A5)", () => {
     );
 
     const scheduler = createAgentScheduler({
-      job: { id: "morning-brief", run: run as AgentJob["run"] },
+      getJob: () => ({ id: "morning-brief", run: run as AgentJob["run"] }),
       tools: {} as never,
       persist: vi.fn(async () => undefined),
       getConfig: () => ({
@@ -154,9 +160,11 @@ describe("createAgentScheduler (A5)", () => {
     });
 
     const pending = scheduler.triggerNow().catch(() => null);
+    await vi.waitFor(() => {
+      expect(run).toHaveBeenCalled();
+    });
     scheduler.stop();
     await pending;
-    expect(run).toHaveBeenCalled();
   });
 
   it("persistAgentRunResult marks stale pending as expired", async () => {

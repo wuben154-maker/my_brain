@@ -1,6 +1,6 @@
 # H1 — 成本护栏（断言化）（`cost-guardrail`）
 
-- **类型：** 硬化（Hardening）· **状态：** 📝 待做
+- **类型：** 硬化（Hardening）· **状态：** ✅ 已实现
 - **执行时机：** **跟 A5 一起**（自主调度上线前必须焊死）；**B1 时加强**到多步
 - **上游：** A3 的 `tokenBudgetPerRun`、A5 调度 · **下游：** B1 多步研究
 
@@ -31,11 +31,11 @@ export function createTokenBudget(input: {
 - Job（`MorningBriefJob` 等）在每次 `summarize/propose` 后 `budget.charge(step.tokensUsed)`；超限则停止后续步骤、`trace` 记 `budget_truncated`，已产出的正常返回（**绝不**因省钱而绕过"先建议后确认"）。
 
 ## 4. 验收清单
-- [ ] 单次累计超 `perRun` → 截断，`trace` 含 `budget_truncated`，已得提议照常返回。
-- [ ] 当日累计超 `perDay` → 后续运行直接不调用 LLM（早退），记录原因。
-- [ ] 用量持久化在两套适配器一致（跨"今天"边界正确归零）。
-- [ ] **回归断言**：给定 mock 的每步 token，`sum(trace.tokensUsed) ≤ perRun`。
-- [ ] 护栏不引入任何存储写到图谱（沿用 Agent 无写护栏断言）。
+- [x] 单次累计超 `perRun` → 截断，`trace` 含 `budget_truncated`，已得提议照常返回。
+- [x] 当日累计超 `perDay` → 后续运行直接不调用 LLM（早退），记录原因。
+- [x] 用量持久化在两套适配器一致（跨"今天"边界正确归零）。
+- [x] **回归断言**：给定 mock 的每步 token，`sum(trace.tokensUsed) ≤ perRun`。
+- [x] 护栏不引入任何存储写到图谱（沿用 Agent 无写护栏断言）。
 
 ## 5. 测试（`budget.test.ts` / job 集成）
 - 单次/单日上限触发；跨日归零；截断后提议完整性；token 求和回归。

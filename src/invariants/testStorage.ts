@@ -43,6 +43,10 @@ function wrapBetterSqliteBackend(backend: BetterSqliteBackend): StorageProvider 
     setAppMeta: async (key, value) => {
       backend.setAppMeta(key, value);
     },
+    loadAgentUsage: async (usageDate) => backend.loadAgentUsage(usageDate),
+    addAgentUsage: async (usageDate, tokens) => {
+      backend.addAgentUsage(usageDate, tokens);
+    },
   };
 }
 

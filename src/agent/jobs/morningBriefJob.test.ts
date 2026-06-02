@@ -10,8 +10,10 @@ import {
 } from "@/providers/news/types";
 import { assertAgentToolsReadOnly, createAgentTools } from "@/agent/tools";
 import { AgentRunAbortedError, runAgentJob } from "@/agent/runner";
+import { createTokenBudget } from "@/agent/budget";
 import {
   createMorningBriefJob,
+  DEFAULT_MORNING_BRIEF_CONFIG,
   MORNING_BRIEF_STEP_TOKENS,
   sortNewsForBrief,
 } from "./morningBriefJob";
@@ -211,6 +213,55 @@ describe("MorningBriefJob", () => {
     await expect(
       runAgentJob(createMorningBriefJob(), tools, controller.signal),
     ).rejects.toBeInstanceOf(AgentRunAbortedError);
+  });
+
+  it("returns early with budget_day_cap when daily cap is reached (H1)", async () => {
+    const items = [makeNewsItem(0)];
+    const { tools } = createBriefTools(items);
+    const budget = createTokenBudget({
+      perRun: DEFAULT_MORNING_BRIEF_CONFIG.tokenBudgetPerRun,
+      perDay: 50,
+      loadTodaySpent: () => 50,
+      recordSpend: () => undefined,
+    });
+
+    const result = await runAgentJob(
+      createMorningBriefJob({ budget, topN: 5 }),
+      tools,
+      new AbortController().signal,
+    );
+
+    expect(result.trace.some((step) => step.name === "budget_day_cap")).toBe(
+      true,
+    );
+    expect(result.proposals).toHaveLength(0);
+  });
+
+  it("keeps sum(trace.tokensUsed) within perRun when using TokenBudget (H1)", async () => {
+    const items = [makeNewsItem(0), makeNewsItem(1), makeNewsItem(2)];
+    const { tools } = createBriefTools(items);
+    const perRun = 350;
+    const budget = createTokenBudget({
+      perRun,
+      perDay: 50_000,
+      loadTodaySpent: () => 0,
+      recordSpend: () => undefined,
+    });
+
+    const result = await runAgentJob(
+      createMorningBriefJob({ budget, topN: 5 }),
+      tools,
+      new AbortController().signal,
+    );
+
+    const total = result.trace.reduce(
+      (sum, step) => sum + (step.tokensUsed ?? 0),
+      0,
+    );
+    expect(total).toBeLessThanOrEqual(perRun);
+    expect(result.trace.some((step) => step.name === "budget_truncated")).toBe(
+      true,
+    );
   });
 
   it("does not import storage write or graph mutation paths", () => {

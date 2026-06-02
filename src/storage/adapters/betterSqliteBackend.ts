@@ -230,6 +230,25 @@ export class BetterSqliteBackend {
     ).run(key, value);
   }
 
+  loadAgentUsage(usageDate: string): number {
+    const db = this.requireDb();
+    const row = db
+      .prepare("SELECT tokens FROM agent_usage WHERE usage_date = ?")
+      .get(usageDate) as { tokens: number } | undefined;
+    return row?.tokens ?? 0;
+  }
+
+  addAgentUsage(usageDate: string, tokens: number): void {
+    if (tokens <= 0) {
+      return;
+    }
+    const db = this.requireDb();
+    db.prepare(
+      `INSERT INTO agent_usage (usage_date, tokens) VALUES (?, ?)
+       ON CONFLICT(usage_date) DO UPDATE SET tokens = tokens + excluded.tokens`,
+    ).run(usageDate, tokens);
+  }
+
   private requireDb(): Database.Database {
     if (!this.db) {
       throw new Error("BetterSqliteBackend is not initialized");

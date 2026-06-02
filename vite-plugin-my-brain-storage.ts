@@ -66,6 +66,13 @@ export function myBrainStoragePlugin(): Plugin {
             return;
           }
 
+          const usageMatch = path.match(/^\/agent-usage\/(.+)$/);
+          if (usageMatch && req.method === "GET") {
+            const usageDate = decodeURIComponent(usageMatch[1]);
+            res.end(JSON.stringify(backend!.loadAgentUsage(usageDate)));
+            return;
+          }
+
           if (req.method === "POST") {
             const chunks: Buffer[] = [];
             for await (const chunk of req) {
@@ -111,6 +118,15 @@ export function myBrainStoragePlugin(): Plugin {
 
             if (path === "/meta") {
               backend!.setAppMeta(String(body.key), String(body.value));
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
+            if (path === "/agent-usage") {
+              backend!.addAgentUsage(
+                String(body.usageDate),
+                Number(body.tokens),
+              );
               res.end(JSON.stringify({ ok: true }));
               return;
             }
