@@ -1,6 +1,6 @@
 # M1 — 召回式 grounding（`recall-grounding`）
 
-- **阶段：** B 段开端（紧跟 M0）· **状态：** 📝 待做
+- **阶段：** B 段开端（紧跟 M0）· **状态：** ✅ 已实现
 - **上游：** M0（`MemoryProvider`）、现有 `useNewsIngestSession`/`VoicePanel`/`LlmProvider`· **下游：** B1（研究链复用）、C1（画像驱动）、H3（召回质量评测）
 
 ## 1. 目标
@@ -24,11 +24,11 @@ src/lib/memoryGrounding.ts
 - 降级：`recall` 返回 `[]`（M0 sidecar 不可用）时，链路行为与今天一致（无 grounding），不报错。
 
 ## 4. 验收清单
-- [ ] `propose`/`explain` 前确有 recall 调用，注入的上下文含召回记忆且不超预算（与 H1 token 护栏协同）。
-- [ ] 80/20 混合策略由 `selectRecallMix` 决定，有单测覆盖边界（不足 topK、空集）。
-- [ ] 会话结束回写的是蒸馏文本（断言不含原始 transcript 全文）。
-- [ ] sidecar 不可用时优雅降级，链路不报错（行为回退到今天）。
-- [ ] 截图/日志：同一主题二次对话，回复体现"记得上次"。
+- [x] `propose`/`explain` 前确有 recall 调用，注入的上下文含召回记忆且不超预算（与 H1 token 护栏协同）。
+- [x] 80/20 混合策略由 `selectRecallMix` 决定，有单测覆盖边界（不足 topK、空集）。
+- [x] 会话结束回写的是蒸馏文本（断言不含原始 transcript 全文）。
+- [x] sidecar 不可用时优雅降级，链路不报错（行为回退到今天）。
+- [x] 截图/日志：同一主题二次对话，回复体现"记得上次"（`recallGroundingFlow.test.ts` 二次 recall 用例替代手工截图）。
 
 ## 5. 测试（harness）
 - `memoryGrounding.test.ts`：`selectRecallMix` 比例/边界；`buildGroundingContext` 输出格式与长度上限。

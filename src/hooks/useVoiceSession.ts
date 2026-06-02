@@ -6,6 +6,9 @@ import {
   hasUserSpeech,
   type TranscriptLineLike,
 } from "@/lib/profileDistillation";
+import {
+  distilledMemoryItemsFromTranscript,
+} from "@/lib/memoryGrounding";
 import { finalizeVoiceSession } from "@/lib/voiceSessionFinalize";
 import {
   isMockVoiceProvider,
@@ -177,6 +180,29 @@ export function useVoiceSession() {
     }
   }, []);
 
+  const rememberBeforeDiscard = useCallback(async (lines: TranscriptLineLike[]) => {
+    if (!hasUserSpeech(lines)) {
+      return;
+    }
+
+    const memory = useAppStore.getState().providers?.memory;
+    if (!memory) {
+      return;
+    }
+
+    const transcript = formatConversationTranscript(lines);
+    const items = distilledMemoryItemsFromTranscript(transcript);
+    if (items.length === 0) {
+      return;
+    }
+
+    try {
+      await memory.remember(items);
+    } catch {
+      // Graceful degrade — memory sidecar optional (M0/M1).
+    }
+  }, []);
+
   const disconnect = useCallback(async () => {
     if (!voice) {
       return;
@@ -187,12 +213,13 @@ export function useVoiceSession() {
         transcripts: transcriptsRef.current,
         disconnectVoice: () => voice.disconnect(),
         distillProfile: (lines) => distillBeforeDiscard(lines),
+        rememberSession: (lines) => rememberBeforeDiscard(lines),
         clearTranscripts: () => setTranscripts([]),
       });
     } finally {
       setIsBusy(false);
     }
-  }, [distillBeforeDiscard, voice]);
+  }, [distillBeforeDiscard, rememberBeforeDiscard, voice]);
 
   const interrupt = useCallback(async () => {
     if (!voice) {

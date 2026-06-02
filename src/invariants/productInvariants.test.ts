@@ -53,11 +53,14 @@ describe("Product invariants (AGENTS.md core)", () => {
         distillProfile: async () => {
           order.push("distill");
         },
+        rememberSession: async () => {
+          order.push("remember");
+        },
         clearTranscripts: () => {
           order.push("clear");
         },
       });
-      expect(order).toEqual(["disconnect", "distill", "clear"]);
+      expect(order).toEqual(["disconnect", "distill", "remember", "clear"]);
     });
 
     it("persists distilled profile fields without storing full conversation text", async () => {

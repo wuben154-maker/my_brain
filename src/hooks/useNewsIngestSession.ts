@@ -6,6 +6,10 @@ import {
   primaryNodeIdFromProposal,
   visibleGraph,
 } from "@/lib/graphMutations";
+import {
+  prependGrounding,
+  recallGroundingContext,
+} from "@/lib/memoryGrounding";
 import { syncDisplayGraph } from "@/lib/syncDisplayGraph";
 import {
   isNewsSessionComplete,
@@ -14,6 +18,7 @@ import {
 } from "@/stores/ingestStore";
 import { useAppStore } from "@/stores/appStore";
 import { useGraphStore } from "@/stores/graphStore";
+import { useProfileStore } from "@/stores/profileStore";
 
 function resolveLinkTarget(
   proposal: GraphMutationProposal,
@@ -73,7 +78,18 @@ export function useNewsIngestSession() {
     store.setActiveNewsId(currentItem.id);
     store.setPhase("explaining");
     try {
-      const summary = await providers.llm.summarizeNews(currentItem);
+      const query = `${currentItem.title} ${currentItem.summary}`.trim();
+      const grounding = await recallGroundingContext(providers.memory, query);
+      const profile = useProfileStore.getState().profile;
+      const summary = grounding
+        ? await providers.llm.explainConcept(
+            prependGrounding(
+              `请用通俗中文讲解这条资讯：${currentItem.title}\n${currentItem.summary}`,
+              grounding,
+            ),
+            profile,
+          )
+        : await providers.llm.summarizeNews(currentItem);
       store.setExplanation(summary);
       store.setPhase("awaiting_ingest");
     } catch (error) {
@@ -82,7 +98,7 @@ export function useNewsIngestSession() {
       );
       store.setPhase("awaiting_ingest");
     }
-  }, [currentItem, providers?.llm]);
+  }, [currentItem, providers?.llm, providers?.memory]);
 
   const requestIngest = useCallback(async () => {
     if (!providers?.llm || !currentItem || !storage) {
@@ -93,7 +109,9 @@ export function useNewsIngestSession() {
     store.setActiveNewsId(currentItem.id);
     try {
       const graph = visibleGraph(await storage.loadGraph());
-      const context = JSON.stringify({
+      const query = `${currentItem.title} ${currentItem.summary}`.trim();
+      const grounding = await recallGroundingContext(providers.memory, query);
+      const payload = JSON.stringify({
         newsItem: currentItem,
         nodes: graph.nodes.map((node) => ({
           id: node.id,
@@ -101,6 +119,7 @@ export function useNewsIngestSession() {
           intro: node.intro,
         })),
       });
+      const context = prependGrounding(payload, grounding);
       const proposals = await providers.llm.proposeGraphMutations(context);
       if (proposals.length === 0) {
         store.setError("Mock LLM 未生成入库建议");
@@ -112,7 +131,7 @@ export function useNewsIngestSession() {
         error instanceof Error ? error.message : "生成入库建议失败",
       );
     }
-  }, [currentItem, providers?.llm, storage]);
+  }, [currentItem, providers?.llm, providers?.memory, storage]);
 
   const applyProposal = useCallback(
     async (proposal: GraphMutationProposal) => {

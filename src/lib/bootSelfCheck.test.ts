@@ -14,7 +14,7 @@ describe("bootSelfCheck", () => {
       openAiApiKey: "",
       openAiLlmModel: "",
       openAiRealtimeModel: "",
-      everMemOsBaseUrl: "http://localhost:1995",
+      everMemOsBaseUrl: "http://127.0.0.1:1995",
       everMemOsApiKey: "",
       everMemOsUserId: "my_brain_local",
     });

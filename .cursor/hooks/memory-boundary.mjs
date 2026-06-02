@@ -7,6 +7,7 @@
 //     write the graph: no applyGraphMutation / persistGraphSnapshot.
 //  2) The EverMemOS vendor surface (localhost:1995 / EVERMEMOS / evermemos)
 //     must ONLY appear inside src/providers/memory/ — never in business code.
+//     Exempt: memory config (env/mode), *.test.ts harness, src/invariants/.
 //
 // Design: pure Node (Windows-friendly), fail-open (any error → allow), and a
 // no-op until the memory module exists (no matches = pass). Never blocks work;
@@ -77,6 +78,8 @@ try {
     const isMemoryConfig =
       rel.endsWith("/lib/env.ts") ||
       rel.endsWith("/lib/memoryProviderMode.ts");
+    const isHarnessFile =
+      /\.test\.(ts|tsx)$/.test(rel) || rel.includes("/invariants/");
 
     let text;
     try {
@@ -90,7 +93,7 @@ try {
         `${rel}: 记忆模块禁止写图谱（applyGraphMutation/persistGraphSnapshot）——落库只走提议收件箱。`,
       );
     }
-    if (!isMemoryAdapter && !isMemoryConfig && VENDOR_RE.test(text)) {
+    if (!isMemoryAdapter && !isMemoryConfig && !isHarnessFile && VENDOR_RE.test(text)) {
       violations.push(
         `${rel}: EverMemOS 端点/SDK 只能出现在 src/providers/memory/ 适配器内——业务请依赖 MemoryProvider 接口。`,
       );

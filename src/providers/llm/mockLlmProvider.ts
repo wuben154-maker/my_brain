@@ -2,6 +2,7 @@ import type { GraphMutationProposal } from "@/domain/graph";
 import type { NewsItem } from "@/domain/news";
 import type { UserProfile } from "@/domain/profile";
 import { extractProfileSignalsFromTranscript } from "@/lib/extractProfileSignals";
+import { stripMemoryPrefixFromContext } from "@/lib/memoryGrounding";
 import type { LlmProvider } from "./types";
 
 export interface IngestProposalContext {
@@ -11,7 +12,8 @@ export interface IngestProposalContext {
 
 function parseIngestContext(context: string): IngestProposalContext | null {
   try {
-    const parsed = JSON.parse(context) as IngestProposalContext;
+    const stripped = stripMemoryPrefixFromContext(context);
+    const parsed = JSON.parse(stripped) as IngestProposalContext;
     if (!parsed?.newsItem?.title) {
       return null;
     }
