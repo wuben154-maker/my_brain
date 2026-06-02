@@ -44,18 +44,24 @@ function writeHashSection(id: NavSectionId): void {
   }
 }
 
+export type GraphViewMode = "2d" | "3d";
+
 interface UiState {
   activeSection: NavSectionId;
+  graphViewMode: GraphViewMode;
   setSection: (id: NavSectionId) => void;
+  setGraphViewMode: (mode: GraphViewMode) => void;
   syncFromHash: () => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
   activeSection: parseHashSection(),
+  graphViewMode: "2d",
   setSection: (id) => {
     set({ activeSection: id });
     writeHashSection(id);
   },
+  setGraphViewMode: (mode) => set({ graphViewMode: mode }),
   syncFromHash: () => {
     set({ activeSection: parseHashSection() });
   },

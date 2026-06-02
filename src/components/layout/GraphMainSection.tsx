@@ -1,6 +1,8 @@
 import { ProposalInbox } from "@/components/agent/ProposalInbox";
+import { BrainGraph3DView } from "@/components/brain/BrainGraph3DView";
 import { BrainGraphView } from "@/components/brain/BrainGraphView";
 import { GraphHeader } from "@/components/brain/GraphHeader";
+import { useEffectiveGraphViewMode } from "@/lib/graphViewMode";
 import { GraphStatsCard } from "@/components/brain/GraphStatsCard";
 import { ManualGraphPanel } from "@/components/brain/ManualGraphPanel";
 import { NewsIngestPanel } from "@/components/brain/NewsIngestPanel";
@@ -10,6 +12,7 @@ import { useAgentInboxStore } from "@/stores/agentInboxStore";
 export function GraphMainSection() {
   const inboxOpen = useAgentInboxStore((state) => state.inboxOpen);
   const setInboxOpen = useAgentInboxStore((state) => state.setInboxOpen);
+  const graphViewMode = useEffectiveGraphViewMode();
 
   return (
     <section
@@ -18,7 +21,7 @@ export function GraphMainSection() {
     >
       <GraphHeader />
       <div className="relative min-h-0 flex-1">
-        <BrainGraphView />
+        {graphViewMode === "3d" ? <BrainGraph3DView /> : <BrainGraphView />}
         <GraphStatsCard />
         <ManualGraphPanel />
         <NewsIngestPanel />

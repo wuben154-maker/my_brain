@@ -240,6 +240,14 @@ describe("Product invariants (AGENTS.md core)", () => {
       expect(source).toMatch(/graphNode\.archived/);
     });
 
+    it("3D graph view is read-only render layer (G1)", () => {
+      const source = readRepoSource("src/components/brain/BrainGraph3DView.tsx");
+      expect(source).not.toContain("StorageProvider");
+      expect(source).not.toContain("saveConcept");
+      expect(source).not.toContain("saveProposal");
+      expect(source).toMatch(/useGraphStore/);
+    });
+
     it("archived nodes are hidden from visible graph but recoverable in snapshot", () => {
       const snapshot = {
         nodes: [

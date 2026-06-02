@@ -13,12 +13,23 @@ const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../..");
  */
 describe("uiStore (N0 navigation)", () => {
   beforeEach(() => {
-    useUiStore.setState({ activeSection: "graph" });
+    useUiStore.setState({ activeSection: "graph", graphViewMode: "2d" });
     window.location.hash = "";
   });
 
   it("defaults to graph section", () => {
     expect(useUiStore.getState().activeSection).toBe("graph");
+  });
+
+  it("defaults graphViewMode to 2d (G1)", () => {
+    expect(useUiStore.getState().graphViewMode).toBe("2d");
+  });
+
+  it("setGraphViewMode toggles 2d and 3d (G1)", () => {
+    useUiStore.getState().setGraphViewMode("3d");
+    expect(useUiStore.getState().graphViewMode).toBe("3d");
+    useUiStore.getState().setGraphViewMode("2d");
+    expect(useUiStore.getState().graphViewMode).toBe("2d");
   });
 
   it("setSection updates activeSection", () => {
