@@ -84,6 +84,52 @@ export const VISUAL_TARGETS = [
 
   },
 
+  {
+
+    id: "inbox",
+
+    label: "收件箱 · 同意→空态",
+
+    referenceFile: "inbox-approve-empty.png",
+
+    urlPath: "/?visual=inbox",
+
+    waitSelector: "[data-testid='proposal-card-visual-env-1']",
+
+    captureSelector: "[data-testid='proposal-inbox-drawer']",
+
+    interactionSteps: [
+
+      {
+
+        type: "click",
+
+        selector:
+
+          "[data-testid='proposal-card-visual-env-1'] button:has-text('同意')",
+
+      },
+
+      {
+
+        type: "waitSelector",
+
+        selector: "[data-testid='proposal-inbox-empty']",
+
+        timeout: 15000,
+
+      },
+
+    ],
+
+    referenceCrop: { x: 0, y: 0, w: 1, h: 1 },
+
+    maxDiffRatio: 0.22,
+
+    ignoreRects: [],
+
+  },
+
 ];
 
 

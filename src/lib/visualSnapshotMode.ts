@@ -3,18 +3,21 @@ import {
   VISUAL_BOOT_CHECKS,
   VISUAL_BOOT_LOGS,
   VISUAL_BOOT_PROGRESS,
+  VISUAL_INBOX_ENVELOPE,
 } from "@/lib/visualSnapshotFixtures";
+import { useAgentInboxStore } from "@/stores/agentInboxStore";
 import { useAppStore } from "@/stores/appStore";
 import { useGraphStore } from "@/stores/graphStore";
+import { useProposalStore } from "@/stores/proposalStore";
 
-export type VisualSnapshotId = "boot" | "main";
+export type VisualSnapshotId = "boot" | "main" | "inbox";
 
 export function readVisualSnapshotId(): VisualSnapshotId | null {
   if (typeof window === "undefined") {
     return null;
   }
   const value = new URLSearchParams(window.location.search).get("visual");
-  if (value === "boot" || value === "main") {
+  if (value === "boot" || value === "main" || value === "inbox") {
     return value;
   }
   return null;
@@ -36,6 +39,15 @@ export function applyVisualSnapshot(id: VisualSnapshotId): void {
     for (const line of VISUAL_BOOT_LOGS) {
       store.appendBootLog(line);
     }
+    return;
+  }
+
+  if (id === "inbox") {
+    useAppStore.getState().setPhase("ready");
+    useGraphStore.getState().setGraph(createGraphDemoSnapshot());
+    useProposalStore.setState({ pending: [VISUAL_INBOX_ENVELOPE] });
+    useAgentInboxStore.getState().setInboxOpen(true);
+    document.documentElement.dataset.visualInboxReady = "true";
     return;
   }
 

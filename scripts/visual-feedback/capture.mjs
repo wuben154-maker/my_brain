@@ -31,7 +31,15 @@ export async function captureAllScreenshots(baseUrl = DEV_SERVER_URL) {
   try {
     for (const target of VISUAL_TARGETS) {
       const referencePath = path.join(PATHS.assets, target.referenceFile);
-      const reference = readPng(referencePath);
+      const reference = fs.existsSync(referencePath)
+        ? readPng(referencePath)
+        : readPng(
+            path.join(
+              PATHS.assets,
+              VISUAL_TARGETS.find((t) => t.id === "main")?.referenceFile ??
+                target.referenceFile,
+            ),
+          );
       const page = await browser.newPage({
         viewport: { width: reference.width, height: reference.height },
         deviceScaleFactor: 1,
@@ -48,8 +56,33 @@ export async function captureAllScreenshots(baseUrl = DEV_SERVER_URL) {
           timeout: 15000,
         });
         await page.waitForTimeout(1200);
+      } else if (target.id === "inbox") {
+        await page.waitForSelector("[data-testid='main-shell']", {
+          timeout: 15000,
+        });
+        await page.waitForSelector("[data-testid='proposal-inbox-drawer']", {
+          timeout: 15000,
+        });
+        await page.waitForSelector(".graph-canvas-shell canvas", {
+          timeout: 15000,
+        });
+        await page.waitForTimeout(1200);
       } else {
         await page.waitForTimeout(400);
+      }
+
+      if (target.interactionSteps?.length) {
+        for (const step of target.interactionSteps) {
+          if (step.type === "click") {
+            await page.locator(step.selector).click({ timeout: 10000 });
+          } else if (step.type === "waitSelector") {
+            await page.waitForSelector(step.selector, {
+              timeout: step.timeout ?? 10000,
+            });
+          } else if (step.type === "wait") {
+            await page.waitForTimeout(step.ms ?? 400);
+          }
+        }
       }
 
       const locator = page.locator(target.captureSelector);

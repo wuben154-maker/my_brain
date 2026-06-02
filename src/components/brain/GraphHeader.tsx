@@ -1,8 +1,15 @@
+import { InboxBell } from "@/components/agent/InboxBell";
+import { useAgentInboxStore } from "@/stores/agentInboxStore";
+import { useProposalStore } from "@/stores/proposalStore";
+
 /**
  * Graph canvas header — active graph title + view tools (DESIGN.md §5 layout).
  * Tools are visual scaffold; layout/3D switching wires up later.
  */
 export function GraphHeader() {
+  const pendingCount = useProposalStore((state) => state.pending.length);
+  const setInboxOpen = useAgentInboxStore((state) => state.setInboxOpen);
+
   return (
     <div className="flex shrink-0 items-center justify-between gap-3 px-1">
       <button
@@ -23,6 +30,10 @@ export function GraphHeader() {
       </button>
 
       <div className="flex items-center gap-2">
+        <InboxBell
+          pendingCount={pendingCount}
+          onClick={() => setInboxOpen(true)}
+        />
         {["力导向布局", "主题", "3D 视图"].map((label) => (
           <button
             key={label}

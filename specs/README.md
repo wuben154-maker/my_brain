@@ -20,7 +20,7 @@
 | [A1-agent-core](./A1-agent-core.md) | `agent-core` | A | ✅ 已实现 | Sense→Plan→Act→Reflect 内核（纯函数+mock，只读护栏） |
 | [A2-proposal-inbox](./A2-proposal-inbox.md) | `proposal-inbox` | A | ✅ 已实现 | 提议收件箱：持久化 + 状态机 + 确认即复用现有落库 |
 | [A3-morning-brief-job](./A3-morning-brief-job.md) | `morning-brief` | A | ✅ 已实现 | 后台抓取→去重→预提炼→产出晨间简报+提议（带预算护栏） |
-| [A4-inbox-ui](./A4-inbox-ui.md) | `inbox-ui` | A | 📝 待做 | 星图旁「待办建议」抽屉 + 简报卡片，逐条确认 |
+| [A4-inbox-ui](./A4-inbox-ui.md) | `inbox-ui` | A | ✅ 已实现 | 星图旁「待办建议」抽屉 + 简报卡片，逐条确认 |
 | [A5-local-scheduler](./A5-local-scheduler.md) | `local-scheduler` | A | 📝 待做 | 本机定时触发（L1），可开关、可中断 |
 | [B1-research-loop-job](./B1-research-loop-job.md) | `research-loop` | B | 📝 待做 | 围绕主题的多步自主研究链，产成批关联提议 |
 | [B2-llm-research-extensions](./B2-llm-research-extensions.md) | `research-llm` | B | 📝 待做 | `LlmProvider` 扩展 `planResearch`/`synthesizeConcepts` |

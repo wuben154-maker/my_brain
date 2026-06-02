@@ -25,7 +25,7 @@
 - 仅验证构建通过，作为桌面发布前的回归闸门。
 
 ## 4. 验收清单
-- [ ] 3b：A4 合并后，CI 含收件箱冒烟 job，确认闭环路径在 CI 跑通并出截图 artifact。
+- [x] 3b：A4 合并后，CI 含收件箱冒烟 job，确认闭环路径在 CI 跑通并出截图 artifact。（`ci.yml` `visual-smoke`：`visual:loop --once` 含 `?visual=inbox` 同意→空态）
 - [ ] 3c：B3 合并后，CI 冒烟覆盖轨迹/预览。
 - [ ] 3d：CI 能在干净环境完成一次 Tauri 构建（绿）。
 - [ ] 每批都不显著拖慢主 `check` job（重活放独立 job / 仅特定触发）。

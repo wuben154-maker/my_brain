@@ -14,6 +14,7 @@ import { createStorageProvider } from "@/storage/createStorageProvider";
 import { useAppStore } from "@/stores/appStore";
 import { useGraphStore } from "@/stores/graphStore";
 import { useProfileStore } from "@/stores/profileStore";
+import { useProposalStore } from "@/stores/proposalStore";
 
 const STORAGE_CHECK = {
   id: "storage",
@@ -71,6 +72,7 @@ export async function runLaunchSequence(): Promise<void> {
         const graph = await storage.loadGraphForDisplay();
         useGraphStore.getState().setGraph(graph);
         await useProfileStore.getState().loadFromStorage(storage);
+        await useProposalStore.getState().load(storage);
         store.appendBootLog("  SQLite 读写 · 图谱与用户画像已加载");
         return { ok: true };
       } catch (error) {

@@ -43,8 +43,8 @@ export const NAV_SECTIONS: NavSectionDef[] = [
   {
     id: "agent",
     label: "智能体",
-    status: "planned",
-    specRef: "specs/A4-inbox-ui.md",
+    status: "live",
+    specRef: null,
   },
   {
     id: "insight",

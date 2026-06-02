@@ -1,3 +1,4 @@
+import type { ProposalEnvelope } from "@/agent/types";
 import type { SelfCheckItem } from "@/stores/appStore";
 
 /** Design-aligned diagnostics for pixel-regression (`?visual=boot`). */
@@ -56,6 +57,25 @@ export const VISUAL_BOOT_LOGS = [
 ] as const;
 
 export const VISUAL_BOOT_PROGRESS = 78;
+
+/** Pending proposal for inbox visual smoke (`?visual=inbox`). */
+export const VISUAL_INBOX_ENVELOPE: ProposalEnvelope = {
+  id: "visual-env-1",
+  runId: "visual-run",
+  createdAt: "2026-06-02T08:00:00.000Z",
+  source: "background_ingest",
+  status: "pending",
+  proposal: {
+    id: "visual-prop-create-1",
+    kind: "create",
+    summary: "新建概念「视觉回归样例」",
+    payload: {
+      title: "视觉回归样例",
+      intro: "收件箱冒烟用待确认节点",
+      sourceUrl: null,
+    },
+  },
+};
 
 /** Pinned force-graph coordinates for stable main UI captures (`?visual=main`). */
 export const VISUAL_GRAPH_PINNED_POSITIONS: Record<

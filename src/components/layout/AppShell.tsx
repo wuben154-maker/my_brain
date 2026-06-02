@@ -8,6 +8,7 @@ import { BrainGraphView } from "@/components/brain/BrainGraphView";
 import { ManualGraphPanel } from "@/components/brain/ManualGraphPanel";
 import { NewsIngestPanel } from "@/components/brain/NewsIngestPanel";
 import { VoicePanel } from "@/components/voice/VoicePanel";
+import { useProposalInboxInit } from "@/hooks/useProposalInboxInit";
 import { readVisualSnapshotId } from "@/lib/visualSnapshotMode";
 import { useAppStore } from "@/stores/appStore";
 import { bindUiStoreHashSync } from "@/stores/uiStore";
@@ -17,6 +18,8 @@ export function AppShell() {
   const errorMessage = useAppStore((state) => state.errorMessage);
   // Keep the frozen `?visual=main` baseline untouched for visual regression.
   const visualMain = readVisualSnapshotId() === "main";
+
+  useProposalInboxInit();
 
   useEffect(() => {
     if (visualMain) {

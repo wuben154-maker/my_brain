@@ -50,16 +50,15 @@ describe("navSections (N0 invariants)", () => {
   });
 
   it("planned sections point at existing spec files", () => {
-    for (const section of NAV_SECTIONS) {
-      if (section.status === "live") {
-        expect(section.specRef).toBeNull();
-        continue;
-      }
+    const planned = NAV_SECTIONS.filter((section) => section.status === "planned");
+    expect(planned.length).toBeGreaterThan(0);
+    for (const section of planned) {
       expect(section.specRef).toMatch(/^specs\/.+\.md$/);
       expect(
         existsSync(join(REPO_ROOT, section.specRef!)),
         `${section.specRef} must exist`,
       ).toBe(true);
     }
+    expect(NAV_SECTIONS.find((s) => s.id === "agent")?.status).toBe("live");
   });
 });
