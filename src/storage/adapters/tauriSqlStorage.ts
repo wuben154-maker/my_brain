@@ -214,6 +214,24 @@ export class TauriSqlStorageProvider implements StorageProvider {
     assertProposalStatusUpdated(id, result.rowsAffected ?? 0);
   }
 
+  async getAppMeta(key: string): Promise<string | null> {
+    const db = this.requireDb();
+    const rows = await db.select<{ value: string }[]>(
+      "SELECT value FROM app_meta WHERE key = $1",
+      [key],
+    );
+    return rows[0]?.value ?? null;
+  }
+
+  async setAppMeta(key: string, value: string): Promise<void> {
+    const db = this.requireDb();
+    await db.execute(
+      `INSERT INTO app_meta (key, value) VALUES ($1, $2)
+       ON CONFLICT(key) DO UPDATE SET value = $2`,
+      [key, value],
+    );
+  }
+
   private requireDb(): TauriSqlDatabase {
     if (!this.db) {
       throw new Error("TauriSqlStorageProvider is not initialized");

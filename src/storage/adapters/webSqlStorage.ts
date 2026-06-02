@@ -77,4 +77,12 @@ export class WebSqlStorageProvider implements StorageProvider {
   setProposalStatus(id: string, status: ProposalStatus): Promise<void> {
     return storageFetch("/proposals/status", { body: { id, status } });
   }
+
+  getAppMeta(key: string): Promise<string | null> {
+    return storageFetch(`/meta/${encodeURIComponent(key)}`);
+  }
+
+  setAppMeta(key: string, value: string): Promise<void> {
+    return storageFetch("/meta", { body: { key, value } });
+  }
 }

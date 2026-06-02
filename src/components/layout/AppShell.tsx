@@ -8,6 +8,7 @@ import { BrainGraphView } from "@/components/brain/BrainGraphView";
 import { ManualGraphPanel } from "@/components/brain/ManualGraphPanel";
 import { NewsIngestPanel } from "@/components/brain/NewsIngestPanel";
 import { VoicePanel } from "@/components/voice/VoicePanel";
+import { useAgentScheduler } from "@/hooks/useAgentScheduler";
 import { useProposalInboxInit } from "@/hooks/useProposalInboxInit";
 import { readVisualSnapshotId } from "@/lib/visualSnapshotMode";
 import { useAppStore } from "@/stores/appStore";
@@ -20,6 +21,7 @@ export function AppShell() {
   const visualMain = readVisualSnapshotId() === "main";
 
   useProposalInboxInit();
+  useAgentScheduler();
 
   useEffect(() => {
     if (visualMain) {

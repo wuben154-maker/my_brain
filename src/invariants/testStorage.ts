@@ -39,6 +39,10 @@ function wrapBetterSqliteBackend(backend: BetterSqliteBackend): StorageProvider 
     setProposalStatus: async (id, status) => {
       backend.setProposalStatus(id, status);
     },
+    getAppMeta: async (key) => backend.getAppMeta(key),
+    setAppMeta: async (key, value) => {
+      backend.setAppMeta(key, value);
+    },
   };
 }
 

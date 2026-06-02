@@ -1,6 +1,6 @@
 # A5 — 本机调度（`local-scheduler`，L1）
 
-- **阶段：** A · **状态：** 📝 待做
+- **阶段：** A · **状态：** ✅ 已实现
 - **上游：** A3（`MorningBriefJob`）、A2（写收件箱）· **下游：** B 阶段 Job 复用同一调度器
 
 ## 1. 目标
@@ -34,11 +34,11 @@ export function createAgentScheduler(deps: {
 - 设置项持久化到本地（profile 或单独 settings 表）。
 
 ## 4. 验收清单
-- [ ] `enabled=true` 到点自动跑并写收件箱；`enabled=false` 不触发。
-- [ ] `triggerNow()` 手动立即跑，结果进收件箱。
-- [ ] 运行中再次触发被运行锁拒绝（不并发）。
-- [ ] `stop()` 能中断进行中的 run（`AbortSignal` 生效）。
-- [ ] pending 超期被标 `expired` 不再展示。
+- [x] `enabled=true` 到点自动跑并写收件箱；`enabled=false` 不触发。（`scheduler.test.ts` 假定时器）
+- [x] `triggerNow()` 手动立即跑，结果进收件箱。（`scheduler.triggerNow` + `persistAgentRunResult`）
+- [x] 运行中再次触发被运行锁拒绝（不并发）。（`SchedulerBusyError`）
+- [x] `stop()` 能中断进行中的 run（`AbortSignal` 生效）。（`scheduler.test.ts`）
+- [x] pending 超期被标 `expired` 不再展示。（`schedulerPersist` + 集成测试）
 
 ## 5. 测试（`scheduler.test.ts`，假定时器）
 - `vi.useFakeTimers` 驱动间隔触发；运行锁；abort；persist 被调用且参数正确。

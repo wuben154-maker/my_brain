@@ -59,6 +59,13 @@ export function myBrainStoragePlugin(): Plugin {
             return;
           }
 
+          const metaMatch = path.match(/^\/meta\/(.+)$/);
+          if (metaMatch && req.method === "GET") {
+            const key = decodeURIComponent(metaMatch[1]);
+            res.end(JSON.stringify(backend!.getAppMeta(key)));
+            return;
+          }
+
           if (req.method === "POST") {
             const chunks: Buffer[] = [];
             for await (const chunk of req) {
@@ -98,6 +105,12 @@ export function myBrainStoragePlugin(): Plugin {
 
             if (path === "/proposals/status") {
               backend!.setProposalStatus(String(body.id), body.status);
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
+            if (path === "/meta") {
+              backend!.setAppMeta(String(body.key), String(body.value));
               res.end(JSON.stringify({ ok: true }));
               return;
             }

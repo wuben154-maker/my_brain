@@ -214,6 +214,22 @@ export class BetterSqliteBackend {
     assertProposalStatusUpdated(id, result.changes);
   }
 
+  getAppMeta(key: string): string | null {
+    const db = this.requireDb();
+    const row = db
+      .prepare("SELECT value FROM app_meta WHERE key = ?")
+      .get(key) as { value: string } | undefined;
+    return row?.value ?? null;
+  }
+
+  setAppMeta(key: string, value: string): void {
+    const db = this.requireDb();
+    db.prepare(
+      `INSERT INTO app_meta (key, value) VALUES (?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    ).run(key, value);
+  }
+
   private requireDb(): Database.Database {
     if (!this.db) {
       throw new Error("BetterSqliteBackend is not initialized");
