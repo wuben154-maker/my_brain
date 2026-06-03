@@ -13,6 +13,7 @@ import {
   invalidateGraphVisualTokenCache,
   withAlpha,
 } from "@/lib/graphVisualTokens";
+import { GRAPH_ZOOM_TOPIC_MAX } from "@/lib/memoryLayers";
 import { readVisualSnapshotId } from "@/lib/visualSnapshotMode";
 import { VISUAL_GRAPH_PINNED_POSITIONS } from "@/lib/visualSnapshotFixtures";
 import { useGraphStore } from "@/stores/graphStore";
@@ -390,7 +391,7 @@ export function BrainGraphView() {
               // Tie the label size to the node radius (graph units) so it scales
               // with the graph and never balloons relative to the dot, whatever
               // the current zoom. Hide it only when zoomed far out.
-              if (globalScale > 0.45) {
+              if (globalScale > GRAPH_ZOOM_TOPIC_MAX) {
                 const labelSize = radius * 1.5;
                 ctx.font = `500 ${labelSize}px var(--font-sans)`;
                 ctx.textBaseline = "middle";

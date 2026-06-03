@@ -38,7 +38,7 @@
 |---|---|---|---|---|
 | [M0-memory-provider-evermemos](./M0-memory-provider-evermemos.md) | `memory-provider` | **A 段收尾 → B 段地基（B1 之前）** | ✅ 已实现 | `MemoryProvider` 接口 + EverMemOS 适配器/sidecar + mock + 优雅降级 |
 | [M1-recall-grounding](./M1-recall-grounding.md) | `recall-grounding` | B 段开端（紧跟 M0） | ✅ 已实现 | 回答前 recall 注入（80/20 混合）、会话末回写蒸馏记忆 |
-| [M3-layered-retrieval](./M3-layered-retrieval.md) | `layered-retrieval` | B（配合研究链/N3） | 📝 待做 | 主题→概念→事实 由粗到细召回，层级复用为缩放粒度 |
+| [M3-layered-retrieval](./M3-layered-retrieval.md) | `layered-retrieval` | B（配合研究链/N3） | ✅ 已实现 | 主题→概念→事实 由粗到细召回，层级复用为缩放粒度 |
 | [M2-salience-decay](./M2-salience-decay.md) | `salience-decay` | C（C2 之前/同期） | 📝 待做 | 节点/画像/记忆 显著度+衰减，**只产信号**喂 C2 |
 
 ## 导航与可视化里程碑（N/G 系列 · 让导航栏每项都有去处）

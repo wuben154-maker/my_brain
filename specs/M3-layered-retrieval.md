@@ -1,6 +1,6 @@
 # M3 — 分层 coarse-to-fine 检索（`layered-retrieval`）
 
-- **阶段：** B 段（紧跟 B 研究链 / 配合 N3）· **状态：** 📝 待做
+- **阶段：** B 段（紧跟 B 研究链 / 配合 N3）· **状态：** ✅ 已实现
 - **上游：** M0/M1（记忆引擎与召回）、现有图谱与缩放分层· **下游：** N3（思维导图）、G1（3D 分层）、串讲高亮
 
 ## 1. 目标
@@ -24,10 +24,10 @@ src/lib/memoryLayers.ts （纯函数）
 - 纯函数、确定性，便于测试与 H3 评测。
 
 ## 4. 验收清单
-- [ ] `layerOf`/`groupByLayer` 分层正确、确定性。
-- [ ] `coarseToFineRecall` 先粗后细、合并去重，召回较单层更聚焦（H3 可量化）。
-- [ ] 缩放层级 ↔ `MemoryLayer` 映射一致（与 G1/N3 对齐，避免各做一套）。
-- [ ] sidecar 不可用时降级为单层/空召回，不报错。
+- [x] `layerOf`/`groupByLayer` 分层正确、确定性。
+- [x] `coarseToFineRecall` 先粗后细、合并去重，召回较单层更聚焦（H3 可量化）。
+- [x] 缩放层级 ↔ `MemoryLayer` 映射一致（`graphZoomToMemoryLayer` + `GRAPH_ZOOM_*` 常量）。
+- [x] sidecar 不可用时降级为单层/空召回，不报错。
 
 ## 5. 测试（harness）
 - `memoryLayers.test.ts`：分层、分组、coarse-to-fine 收敛、去重、空集/降级。

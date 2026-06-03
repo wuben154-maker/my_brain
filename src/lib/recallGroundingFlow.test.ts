@@ -95,6 +95,29 @@ describe("recall grounding flow (M1)", () => {
     expect(grounding).toBe("");
   });
 
+  it("uses coarse-to-fine recall sequence when grounding (M3)", async () => {
+    const memory = new MockMemoryProvider();
+    await memory.remember([
+      {
+        kind: "episode",
+        text: "用户关注 RAG 主题",
+        timestamp: Date.now(),
+      },
+      {
+        kind: "fact",
+        text: "RAG 向量检索细节",
+        timestamp: Date.now() + 1,
+      },
+    ]);
+
+    const recallSpy = vi.spyOn(memory, "recall");
+    const grounding = await recallGroundingContext(memory, "RAG");
+
+    expect(recallSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(grounding).toContain("<memory>");
+    expect(grounding).toContain("RAG");
+  });
+
   it("degrades when recall returns empty without throwing", async () => {
     const memory: MemoryProvider = {
       remember: vi.fn(async () => undefined),

@@ -1,3 +1,4 @@
+import { coarseToFineRecall } from "@/lib/memoryLayers";
 import type {
   MemoryItem,
   MemoryProvider,
@@ -68,9 +69,8 @@ export async function recallGroundingContext(
   }
 
   try {
-    const recalled = await memory.recall({
-      query: query.trim(),
-      topK: DEFAULT_RECALL_TOP_K,
+    const recalled = await coarseToFineRecall(memory, query, {
+      maxPerLayer: { topic: 2, fact: DEFAULT_RECALL_TOP_K },
     });
     const mixed = selectRecallMix(recalled);
     return buildGroundingContext(mixed);
