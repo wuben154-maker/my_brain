@@ -1,23 +1,49 @@
 import type { Plugin } from "vite";
-import {
-  BetterSqliteBackend,
-  defaultWebDbPath,
-} from "./src/storage/adapters/betterSqliteBackend";
 
 const PREFIX = "/__my_brain/storage";
 
+type StorageBackendModule = typeof import("./src/storage/adapters/betterSqliteBackend");
+type BetterSqliteBackend = StorageBackendModule["BetterSqliteBackend"];
+
 /** Exposes better-sqlite3 to the browser build during `pnpm dev`. */
 export function myBrainStoragePlugin(): Plugin {
-  let backend: BetterSqliteBackend | null = null;
+  let backend: InstanceType<BetterSqliteBackend> | null = null;
+  let backendReady: Promise<void> | null = null;
+
+  const ensureBackend = async (): Promise<void> => {
+    if (backend) {
+      return;
+    }
+    if (!backendReady) {
+      backendReady = (async () => {
+        const mod: StorageBackendModule = await import(
+          "./src/storage/adapters/betterSqliteBackend"
+        );
+        backend = new mod.BetterSqliteBackend({ dbPath: mod.defaultWebDbPath() });
+      })();
+    }
+    await backendReady;
+  };
 
   return {
     name: "my-brain-storage",
     configureServer(server) {
-      backend = new BetterSqliteBackend({ dbPath: defaultWebDbPath() });
-
       server.middlewares.use(async (req, res, next) => {
         if (!req.url?.startsWith(PREFIX)) {
           next();
+          return;
+        }
+
+        try {
+          await ensureBackend();
+        } catch (error) {
+          res.statusCode = 500;
+          res.setHeader("Content-Type", "application/json");
+          res.end(
+            JSON.stringify({
+              error: error instanceof Error ? error.message : "Storage init error",
+            }),
+          );
           return;
         }
 

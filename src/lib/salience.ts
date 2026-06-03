@@ -1,4 +1,4 @@
-import type { BrainGraphSnapshot, ConceptNode } from "@/domain/graph";
+import type { BrainGraphSnapshot, ConceptNode } from "../domain/graph";
 
 export type SalienceEventKind =
   | "recall_hit"

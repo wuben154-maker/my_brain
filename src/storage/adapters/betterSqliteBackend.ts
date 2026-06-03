@@ -6,7 +6,7 @@ import { DEFAULT_USER_PROFILE, type UserProfile } from "../../domain/profile";
 import type { ProposalEnvelope, ProposalStatus } from "../../agent/types";
 import { INITIAL_MIGRATION_SQL } from "../migrations";
 import { migrateConceptSalienceColumnsSqlite } from "../schemaMigrations";
-import { normalizeConceptSalience } from "@/lib/salience";
+import { normalizeConceptSalience } from "../../lib/salience";
 import {
   assertProposalStatus,
   assertProposalStatusUpdated,
