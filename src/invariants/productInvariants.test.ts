@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GraphMutationProposal } from "@/domain/graph";
+import type { NewsItem } from "@/domain/news";
 import { DEFAULT_USER_PROFILE } from "@/domain/profile";
+import { newsItemStatus } from "@/components/explore/newsItemStatus";
 import {
   applyGraphMutation,
   persistGraphSnapshot,
@@ -13,10 +15,22 @@ import {
 import { finalizeVoiceSession } from "@/lib/voiceSessionFinalize";
 import { createMockLlmProvider } from "@/providers/llm/mockLlmProvider";
 import type { LlmProvider } from "@/providers/llm/types";
+import {
+  createNewsSourceRegistry,
+  type NewsSource,
+} from "@/providers/news/types";
 import { createAppProviders } from "@/providers";
 import { MockVoiceProvider } from "@/providers/voice/mockVoiceProvider";
 import { INITIAL_MIGRATION_SQL } from "@/storage/migrations";
-import { useIngestStore } from "@/stores/ingestStore";
+import {
+  isNewsSessionComplete,
+  resolveCurrentNewsItem,
+  useIngestStore,
+} from "@/stores/ingestStore";
+import { runAgentJob } from "@/agent/runner";
+import { createMorningBriefJob } from "@/agent/jobs/morningBriefJob";
+import { persistAgentRunResult } from "@/agent/schedulerPersist";
+import { createAgentTools } from "@/agent/tools";
 import { createTempStorage } from "./testStorage";
 import { readRepoSource } from "./readRepoSource";
 
@@ -130,6 +144,55 @@ describe("Product invariants (AGENTS.md core)", () => {
       expect(panel).toContain("confirmProposal");
     });
 
+    it("background_ingest persists pending proposals only until inbox approve", async () => {
+      const newsItem = {
+        id: "inv-news-1",
+        title: "Transformer 上下文窗口再扩展",
+        summary: "更长 context 支持整本书级别输入。",
+        sourceUrl: "https://example.com/context",
+        sourceName: "Mock RSS",
+        category: "ai_news" as const,
+        publishedAt: "2026-06-01T00:00:00.000Z",
+      };
+      const newsSource: NewsSource = {
+        id: "mock-inv-news",
+        label: "Mock",
+        async fetchLatest() {
+          return {
+            sourceId: "mock-inv-news",
+            fetchedAt: new Date().toISOString(),
+            items: [newsItem],
+          };
+        },
+      };
+      const tools = createAgentTools({
+        llm: createMockLlmProvider(),
+        news: createNewsSourceRegistry([newsSource]),
+        readGraph: async () => ({ nodes: [], edges: [] }),
+        readProfile: async () => DEFAULT_USER_PROFILE,
+      });
+
+      const { storage, cleanup } = createTempStorage();
+      try {
+        await storage.init();
+        const nodesBefore = (await storage.loadGraph()).nodes.length;
+        const result = await runAgentJob(
+          createMorningBriefJob({ topN: 5 }),
+          tools,
+          new AbortController().signal,
+        );
+        await persistAgentRunResult(storage, result);
+        expect((await storage.loadGraph()).nodes.length).toBe(nodesBefore);
+        const pending = await storage.listPendingProposals();
+        expect(pending.some((p) => p.source === "background_ingest")).toBe(
+          true,
+        );
+        expect(pending.every((p) => p.status === "pending")).toBe(true);
+      } finally {
+        cleanup();
+      }
+    });
+
     it("ManualGraphPanel exposes manual CRUD with suggest-then-confirm", () => {
       const panel = readRepoSource("src/components/brain/ManualGraphPanel.tsx");
       expect(panel).toContain("SuggestConfirmDialog");
@@ -152,7 +215,7 @@ describe("Product invariants (AGENTS.md core)", () => {
       expect(storeApi).not.toContain("autoApply");
     });
 
-    it("clears pending proposals on reject without ingested ids", () => {
+    it("clears pending on full reject before any confirm (no markIngested)", () => {
       useIngestStore.getState().setPendingProposals([sampleProposal]);
       useIngestStore.getState().clearPending();
       const state = useIngestStore.getState();
@@ -161,12 +224,40 @@ describe("Product invariants (AGENTS.md core)", () => {
       expect(state.ingestedIds).toHaveLength(0);
     });
 
+    /**
+     * E5 end-to-end (partial confirm → reject → markIngested): productInvariants.ingestE5.test.ts
+     * Hook suite: useNewsIngestSession.test.ts · rejectProposal
+     */
+    it("E5: ingested news id is not current item (no re-propose surface)", () => {
+      const queue: NewsItem[] = [
+        {
+          id: "news-1",
+          category: "ai_news",
+          title: "资讯",
+          summary: "摘要",
+          sourceName: "RSS",
+          sourceUrl: "https://example.com/1",
+          publishedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ];
+      expect(resolveCurrentNewsItem(queue, 1, [], ["news-1"])).toBeNull();
+      expect(isNewsSessionComplete(queue, [], ["news-1"])).toBe(true);
+      expect(newsItemStatus(queue[0]!, ["news-1"], [])).toBe("ingested");
+    });
+
     it("SuggestConfirmDialog requires explicit confirm/cancel actions", () => {
       const dialog = readRepoSource("src/components/brain/SuggestConfirmDialog.tsx");
       expect(dialog).toContain("确认入库");
       expect(dialog).toContain("取消");
       expect(dialog).toContain("onConfirm");
       expect(dialog).toContain("onCancel");
+    });
+
+    it("SuggestConfirmDialog copy is single-step by default", () => {
+      const dialog = readRepoSource("src/components/brain/SuggestConfirmDialog.tsx");
+      expect(dialog).toContain("确认本条变更");
+      expect(dialog).toMatch(/proposals\.length\s*>\s*1/);
+      expect(dialog).toContain("共 ${proposals.length} 步变更，将按顺序执行");
     });
 
     it("useNewsIngestSession applies mutations only inside confirmProposal", () => {
@@ -179,6 +270,34 @@ describe("Product invariants (AGENTS.md core)", () => {
       );
       expect(requestBlock).toContain("setPendingProposals");
       expect(requestBlock).not.toContain("applyGraphMutation");
+    });
+
+    it("useNewsIngestSession confirms one proposal at a time via shiftPendingProposal", () => {
+      const hook = readRepoSource("src/hooks/useNewsIngestSession.ts");
+      const confirmBlock = hook.slice(
+        hook.indexOf("const confirmProposal"),
+        hook.indexOf("const rejectProposal"),
+      );
+      expect(confirmBlock).toContain("shiftPendingProposal");
+      expect(confirmBlock).toContain("pendingProposal");
+      expect(confirmBlock).not.toMatch(/for\s*\(\s*const\s+\w+\s+of\s+proposals\s*\)/);
+    });
+
+    it("useManualGraphOps confirms one proposal at a time via shiftPendingProposal", () => {
+      const hook = readRepoSource("src/hooks/useManualGraphOps.ts");
+      const confirmBlock = hook.slice(
+        hook.indexOf("const confirmProposals"),
+        hook.indexOf("const rejectProposals"),
+      );
+      expect(confirmBlock).toContain("shiftPendingProposal");
+      expect(confirmBlock).toContain("pendingProposal");
+      expect(confirmBlock).not.toMatch(/for\s*\(\s*const\s+\w+\s+of\s+proposals\s*\)/);
+    });
+
+    it("ManualGraphPanel shows only the current pending proposal", () => {
+      const panel = readRepoSource("src/components/brain/ManualGraphPanel.tsx");
+      expect(panel).toContain("pendingProposal ? [pendingProposal] : []");
+      expect(panel).not.toMatch(/proposals=\{pendingProposals\}/);
     });
   });
 
@@ -400,6 +519,13 @@ describe("Product invariants (AGENTS.md core)", () => {
         publishedAt: null,
       });
       expect(summary.length).toBeGreaterThan(0);
+    });
+
+    it("visual inbox approve never mutates graph without SQLite (H3)", () => {
+      const inboxActions = readRepoSource("src/hooks/useProposalInboxActions.ts");
+      expect(inboxActions).not.toContain("applyGraphMutation");
+      const app = readRepoSource("src/App.tsx");
+      expect(app).toContain("bootstrapVisualInboxStorage");
     });
   });
 
