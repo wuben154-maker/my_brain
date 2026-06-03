@@ -1,3 +1,4 @@
+import { mergeUserProfileLayers } from "@/agent/profile/feedbackSignals";
 import type { UserProfile } from "@/domain/profile";
 import type { LlmProvider } from "@/providers/llm/types";
 import type { StorageProvider } from "@/storage/types";
@@ -34,7 +35,8 @@ export async function distillAndPersistUserProfile(
   current?: UserProfile,
 ): Promise<UserProfile> {
   const base = current ?? (await storage.loadUserProfile());
-  const next = await llm.distillUserProfile(transcript, base);
+  const distilled = await llm.distillUserProfile(transcript, base);
+  const next = mergeUserProfileLayers(base, distilled);
   await storage.saveUserProfile(next);
   return next;
 }

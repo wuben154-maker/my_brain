@@ -24,6 +24,14 @@ function topicMatches(haystack: string, topic: string): boolean {
   return haystack.includes(needle);
 }
 
+function topicWeight(profile: UserProfile, topic: string): number {
+  const weight = profile.topicWeights?.[topic.trim()];
+  if (weight === undefined || !Number.isFinite(weight)) {
+    return 1;
+  }
+  return Math.max(0.15, Math.min(3, weight));
+}
+
 function isColdStartProfile(profile: UserProfile): boolean {
   return (
     profile.interests.length === 0 &&
@@ -64,8 +72,9 @@ export function scoreNewsByProfile(
 
     for (const interest of profile.interests) {
       if (topicMatches(haystack, interest)) {
-        score += 3;
-        reasons.push(`命中兴趣「${interest}」`);
+        const weight = topicWeight(profile, interest);
+        score += 3 * weight;
+        reasons.push(`命中兴趣「${interest}」×${weight.toFixed(2)}`);
       }
     }
     for (const unknown of profile.unknownTopics) {

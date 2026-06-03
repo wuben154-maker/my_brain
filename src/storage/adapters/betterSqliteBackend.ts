@@ -167,6 +167,10 @@ export class BetterSqliteBackend {
       unknownTopics: JSON.parse(map.unknownTopics ?? "[]") as string[],
       explanationStyle: map.explanationStyle ?? null,
       habits: JSON.parse(map.habits ?? "[]") as string[],
+      topicWeights: JSON.parse(map.topicWeights ?? "{}") as Record<
+        string,
+        number
+      >,
       updatedAt: map.updatedAt ?? new Date(0).toISOString(),
     };
   }
@@ -182,6 +186,7 @@ export class BetterSqliteBackend {
       unknownTopics: JSON.stringify(profile.unknownTopics),
       explanationStyle: profile.explanationStyle ?? "",
       habits: JSON.stringify(profile.habits),
+      topicWeights: JSON.stringify(profile.topicWeights ?? {}),
       updatedAt: profile.updatedAt,
     };
 

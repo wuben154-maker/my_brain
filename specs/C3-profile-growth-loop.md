@@ -1,6 +1,6 @@
 # C3 — 画像生长闭环（`profile-growth`）
 
-- **阶段：** C · **状态：** 📝 待做
+- **阶段：** C · **状态：** ✅ 已实现
 - **上游：** 现有 `distillUserProfile`、C1（打分）、C2（建议）· **下游：** 反哺 A3/C1/C2，形成飞轮
 
 ## 1. 目标
@@ -21,10 +21,10 @@ export function applyProposalFeedback(profile: UserProfile, feedback: ProposalFe
 - 与现有 `distillUserProfile` 合流：两条来源都只**追加/调整**画像，不互相覆盖（合并策略可单测）。
 
 ## 4. 验收清单
-- [ ] 连续 `rejected` 某方向 → 该方向在 C1 打分中权重下降（可观测、可断言）。
-- [ ] `approved` 强化相关兴趣。
-- [ ] 反哺只改画像层，不触碰图谱/原文（护栏断言）。
-- [ ] 与 `distillUserProfile` 合并不产生字段丢失/震荡（幂等/收敛测试）。
+- [x] 连续 `rejected` 某方向 → 该方向在 C1 打分中权重下降（可观测、可断言）。
+- [x] `approved` 强化相关兴趣。
+- [x] 反哺只改画像层，不触碰图谱/原文（护栏断言）。
+- [x] 与 `distillUserProfile` 合并不产生字段丢失/震荡（幂等/收敛测试）。
 
 ## 5. 测试（`feedbackSignals.test.ts`）
 - 接受/拒绝对权重的影响；与 distill 合并；幂等；空反馈不变。

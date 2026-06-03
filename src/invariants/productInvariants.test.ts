@@ -245,6 +245,19 @@ describe("Product invariants (AGENTS.md core)", () => {
       expect(source).toMatch(/salienceVisualAlpha/);
     });
 
+    it("persona (C4) only shapes expression — no graph writes", () => {
+      const source = readRepoSource("src/lib/personaPrompt.ts");
+      expect(source).not.toContain("persistGraphSnapshot");
+      expect(source).not.toContain("applyGraphMutation");
+      expect(source).not.toMatch(/openai/i);
+    });
+
+    it("feedbackSignals (C3) only updates profile layer", () => {
+      const source = readRepoSource("src/agent/profile/feedbackSignals.ts");
+      expect(source).not.toContain("persistGraphSnapshot");
+      expect(source).not.toContain("saveConcept");
+    });
+
     it("salience (M2) only emits signals — no auto archive or graph writes", () => {
       const source = readRepoSource("src/lib/salience.ts");
       expect(source).not.toContain("persistGraphSnapshot");

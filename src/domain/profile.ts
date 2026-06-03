@@ -9,6 +9,8 @@ export interface UserProfile {
   unknownTopics: string[];
   explanationStyle: string | null;
   habits: string[];
+  /** C3: per-topic multipliers for curation (1 = neutral). */
+  topicWeights?: Record<string, number>;
   updatedAt: string;
 }
 

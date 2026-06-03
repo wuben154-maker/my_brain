@@ -1,8 +1,32 @@
 import { create } from "zustand";
 import type { ProposalEnvelope } from "@/agent/types";
+import {
+  applyProposalFeedback,
+  proposalTopicHint,
+} from "@/agent/profile/feedbackSignals";
 import { applyGraphMutation, persistGraphSnapshot } from "@/lib/graphMutations";
 import { syncDisplayGraph } from "@/lib/syncDisplayGraph";
 import type { StorageProvider } from "@/storage/types";
+import { useProfileStore } from "@/stores/profileStore";
+
+async function persistProposalFeedback(
+  storage: StorageProvider,
+  envelope: ProposalEnvelope,
+  status: "approved" | "rejected",
+): Promise<void> {
+  const topicHint = proposalTopicHint(envelope.proposal);
+  const current = await storage.loadUserProfile();
+  const next = applyProposalFeedback(current, [
+    {
+      source: envelope.source,
+      kind: envelope.proposal.kind,
+      status,
+      topicHint,
+    },
+  ]);
+  useProfileStore.getState().setProfile(next);
+  await storage.saveUserProfile(next);
+}
 
 interface ProposalState {
   pending: ProposalEnvelope[];
@@ -43,6 +67,7 @@ export const useProposalStore = create<ProposalState>((set, get) => ({
       await persistGraphSnapshot(graphStorage, before, after);
       await syncDisplayGraph(graphStorage);
       await storage.setProposalStatus(id, "approved");
+      await persistProposalFeedback(storage, envelope, "approved");
       set({ pending: get().pending.filter((item) => item.id !== id) });
     } catch (error) {
       try {
@@ -56,7 +81,11 @@ export const useProposalStore = create<ProposalState>((set, get) => ({
   },
 
   reject: async (storage, id) => {
+    const envelope = get().pending.find((item) => item.id === id);
     await storage.setProposalStatus(id, "rejected");
+    if (envelope) {
+      await persistProposalFeedback(storage, envelope, "rejected");
+    }
     set({ pending: get().pending.filter((item) => item.id !== id) });
   },
 }));
