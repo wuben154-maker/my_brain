@@ -4,20 +4,29 @@ import {
   VISUAL_BOOT_LOGS,
   VISUAL_BOOT_PROGRESS,
   VISUAL_INBOX_ENVELOPE,
+  VISUAL_INSIGHT_ENVELOPES,
+  VISUAL_INSIGHT_RUN,
 } from "@/lib/visualSnapshotFixtures";
 import { useAgentInboxStore } from "@/stores/agentInboxStore";
 import { useAppStore } from "@/stores/appStore";
 import { useGraphStore } from "@/stores/graphStore";
 import { useProposalStore } from "@/stores/proposalStore";
+import { useResearchRunStore } from "@/stores/researchRunStore";
+import { useUiStore } from "@/stores/uiStore";
 
-export type VisualSnapshotId = "boot" | "main" | "inbox";
+export type VisualSnapshotId = "boot" | "main" | "inbox" | "insight";
 
 export function readVisualSnapshotId(): VisualSnapshotId | null {
   if (typeof window === "undefined") {
     return null;
   }
   const value = new URLSearchParams(window.location.search).get("visual");
-  if (value === "boot" || value === "main" || value === "inbox") {
+  if (
+    value === "boot" ||
+    value === "main" ||
+    value === "inbox" ||
+    value === "insight"
+  ) {
     return value;
   }
   return null;
@@ -48,6 +57,19 @@ export function applyVisualSnapshot(id: VisualSnapshotId): void {
     useProposalStore.setState({ pending: [VISUAL_INBOX_ENVELOPE] });
     useAgentInboxStore.getState().setInboxOpen(true);
     document.documentElement.dataset.visualInboxReady = "true";
+    return;
+  }
+
+  if (id === "insight") {
+    useAppStore.getState().setPhase("ready");
+    useGraphStore.getState().setGraph(createGraphDemoSnapshot());
+    useResearchRunStore.setState({
+      runs: [VISUAL_INSIGHT_RUN],
+      selectedRunId: VISUAL_INSIGHT_RUN.runId,
+    });
+    useProposalStore.setState({ pending: VISUAL_INSIGHT_ENVELOPES });
+    useUiStore.getState().setSection("insight");
+    document.documentElement.dataset.visualInsightReady = "true";
     return;
   }
 

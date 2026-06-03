@@ -8,6 +8,8 @@
 |------|------|
 | 启动自检 | `assets/boot-self-check.png` |
 | 主界面 | `assets/main-ui-graph-voice.png` |
+| 收件箱闭环 | `assets/inbox-approve-empty.png` |
+| 洞察轨迹+预览 | `assets/insight-trace-preview.png` |
 
 ## 一次性准备
 
@@ -34,6 +36,8 @@ pnpm dev              # 或让 loop 自动启动
 
 - 启动自检：`http://localhost:1420/?visual=boot`
 - 主界面：`http://localhost:1420/?visual=main`（固定 demo 图谱坐标 + 语音区文案）
+- 收件箱：`http://localhost:1420/?visual=inbox`（待确认→同意→空态）
+- 洞察：`http://localhost:1420/?visual=insight`（调研轨迹→预览到星图）
 
 ## 产出物
 

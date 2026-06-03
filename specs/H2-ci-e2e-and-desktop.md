@@ -1,6 +1,6 @@
 # H2 — CI 扩展：端到端 + 桌面构建（`ci-e2e-desktop`）
 
-- **类型：** 硬化（Hardening）· **状态：** 📝 待做（3b ✅ · 3d ✅ · 3c 待 B3）
+- **类型：** 硬化（Hardening）· **状态：** ✅ 已实现（3b/3c/3d 均已接入 `visual-smoke` + `tauri-build`）
 - **执行时机：** 分阶段——**3b 跟 A4**、**3c 跟 B3**、**3d 在 A 阶段收尾 / 首次桌面打包前**
 - **上游：** 现有 `ci.yml`、视觉反馈脚本（`visual:*`）· **下游：** —
 
@@ -26,7 +26,7 @@
 
 ## 4. 验收清单
 - [x] 3b：A4 合并后，CI 含收件箱冒烟 job，确认闭环路径在 CI 跑通并出截图 artifact。（`ci.yml` `visual-smoke`：`visual:loop --once` 含 `?visual=inbox` 同意→空态）
-- [ ] 3c：B3 合并后，CI 冒烟覆盖轨迹/预览。
+- [x] 3c：B3 合并后，CI 冒烟覆盖轨迹/预览。（`?visual=insight`：轨迹渲染 →「预览到星图」→ 清除按钮出现；基线 `assets/insight-trace-preview.png`）
 - [x] 3d：CI 能在干净环境完成一次 Tauri 构建（绿）。
 - [ ] 每批都不显著拖慢主 `check` job（重活放独立 job / 仅特定触发）。
 

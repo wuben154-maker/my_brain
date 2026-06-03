@@ -1,5 +1,86 @@
-import type { ProposalEnvelope } from "@/agent/types";
+import { toResearchTempId } from "@/agent/jobs/topicResearchJob";
+import type { AgentTraceStep, ProposalEnvelope } from "@/agent/types";
+import type { ResearchRunRecord } from "@/stores/researchRunStore";
 import type { SelfCheckItem } from "@/stores/appStore";
+
+export const VISUAL_INSIGHT_RUN_ID = "visual-research-run";
+
+/** Research trace + batch proposals for insight visual smoke (`?visual=insight`). */
+export const VISUAL_INSIGHT_TRACE: AgentTraceStep[] = [
+  {
+    stepId: "visual-plan",
+    name: "plan",
+    startedAt: "2026-06-02T08:00:00.000Z",
+    finishedAt: "2026-06-02T08:00:01.200Z",
+    tokensUsed: 140,
+    inputSummary: "RAG 与 Agent 编排",
+    outputSummary: "3 个子问题",
+  },
+  {
+    stepId: "visual-synth",
+    name: "synthesize",
+    startedAt: "2026-06-02T08:00:01.200Z",
+    finishedAt: "2026-06-02T08:00:02.800Z",
+    tokensUsed: 360,
+    outputSummary: "2 个概念候选",
+  },
+];
+
+export const VISUAL_INSIGHT_RUN: ResearchRunRecord = {
+  runId: VISUAL_INSIGHT_RUN_ID,
+  topic: "RAG 与 Agent",
+  trace: VISUAL_INSIGHT_TRACE,
+  digest: {
+    title: "RAG 与 Agent 编排要点",
+    sections: [
+      {
+        headline: "检索增强",
+        body: "RAG 为模型外接知识检索，降低幻觉。",
+      },
+    ],
+    generatedAt: "2026-06-02T08:00:03.000Z",
+  },
+  finishedAt: "2026-06-02T08:00:03.000Z",
+};
+
+const visualInsightTempId = toResearchTempId("视觉调研概念");
+
+export const VISUAL_INSIGHT_ENVELOPES: ProposalEnvelope[] = [
+  {
+    id: "visual-insight-env-1",
+    runId: VISUAL_INSIGHT_RUN_ID,
+    createdAt: "2026-06-02T08:00:03.000Z",
+    source: "research_loop",
+    status: "pending",
+    proposal: {
+      id: "visual-insight-prop-create",
+      kind: "create",
+      summary: "新建「视觉调研概念」",
+      payload: {
+        title: "视觉调研概念",
+        intro: "洞察分区冒烟用待确认节点",
+        sourceUrl: null,
+      },
+    },
+  },
+  {
+    id: "visual-insight-env-2",
+    runId: VISUAL_INSIGHT_RUN_ID,
+    createdAt: "2026-06-02T08:00:03.000Z",
+    source: "research_loop",
+    status: "pending",
+    proposal: {
+      id: "visual-insight-prop-link",
+      kind: "link",
+      summary: "关联 demo-rag",
+      payload: {
+        sourceId: visualInsightTempId,
+        targetId: "demo-rag",
+        relationType: "related",
+      },
+    },
+  },
+];
 
 /** Design-aligned diagnostics for pixel-regression (`?visual=boot`). */
 export const VISUAL_BOOT_CHECKS: SelfCheckItem[] = [

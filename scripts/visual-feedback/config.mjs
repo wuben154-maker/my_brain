@@ -130,6 +130,52 @@ export const VISUAL_TARGETS = [
 
   },
 
+  {
+
+    id: "insight",
+
+    label: "洞察 · 轨迹 + 预览到星图",
+
+    referenceFile: "insight-trace-preview.png",
+
+    urlPath: "/?visual=insight",
+
+    waitSelector: "[data-testid='research-trace']",
+
+    captureSelector: "[data-testid='section-insight']",
+
+    interactionSteps: [
+
+      {
+
+        type: "click",
+
+        selector: "[data-testid='proposal-preview-show-on-graph']",
+
+        force: true,
+
+      },
+
+      {
+
+        type: "waitSelector",
+
+        selector: "[data-testid='proposal-preview-clear']",
+
+        timeout: 15000,
+
+      },
+
+    ],
+
+    referenceCrop: { x: 0, y: 0, w: 1, h: 1 },
+
+    maxDiffRatio: 0.24,
+
+    ignoreRects: [],
+
+  },
+
 ];
 
 

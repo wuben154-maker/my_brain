@@ -67,6 +67,22 @@ export async function captureAllScreenshots(baseUrl = DEV_SERVER_URL) {
           timeout: 15000,
         });
         await page.waitForTimeout(1200);
+      } else if (target.id === "insight") {
+        await page.setViewportSize({ width: 1440, height: 900 });
+        await page.waitForSelector("[data-testid='main-shell']", {
+          timeout: 15000,
+        });
+        await page.waitForSelector("[data-testid='section-insight']", {
+          timeout: 15000,
+        });
+        await page.waitForSelector(
+          "[data-testid='proposal-preview-visual-research-run']",
+          { timeout: 15000 },
+        );
+        await page
+          .locator("[data-testid='section-insight']")
+          .scrollIntoViewIfNeeded();
+        await page.waitForTimeout(600);
       } else {
         await page.waitForTimeout(400);
       }
@@ -74,7 +90,10 @@ export async function captureAllScreenshots(baseUrl = DEV_SERVER_URL) {
       if (target.interactionSteps?.length) {
         for (const step of target.interactionSteps) {
           if (step.type === "click") {
-            await page.locator(step.selector).click({ timeout: 10000 });
+            await page.locator(step.selector).click({
+              timeout: 10000,
+              force: step.force === true,
+            });
           } else if (step.type === "waitSelector") {
             await page.waitForSelector(step.selector, {
               timeout: step.timeout ?? 10000,

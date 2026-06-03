@@ -9,7 +9,8 @@ export function useProposalInboxInit(): void {
   const storage = useAppStore((state) => state.storage);
 
   useEffect(() => {
-    if (readVisualSnapshotId() === "inbox") {
+    const visualId = readVisualSnapshotId();
+    if (visualId === "inbox" || visualId === "insight") {
       return;
     }
     if (phase !== "ready" && phase !== "onboarding") {

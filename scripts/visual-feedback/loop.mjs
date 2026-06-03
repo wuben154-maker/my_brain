@@ -99,7 +99,7 @@ function printHints(report) {
     `  HTML report: ${path.join(PATHS.artifacts, "index.html")}`,
   );
   console.log(
-    "  Snapshot URLs: /?visual=boot  /?visual=main",
+    "  Snapshot URLs: /?visual=boot  /?visual=main  /?visual=inbox  /?visual=insight",
   );
 }
 

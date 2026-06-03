@@ -43,6 +43,7 @@ export function ProposalPreview({
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
+          data-testid="proposal-preview-show-on-graph"
           onClick={onPreview}
           className="rounded-sm bg-accent-cyan px-3 py-1.5 text-caption font-medium text-bg-base"
         >
@@ -58,6 +59,7 @@ export function ProposalPreview({
         {active ? (
           <button
             type="button"
+            data-testid="proposal-preview-clear"
             onClick={onClear}
             className="rounded-sm border border-hud px-3 py-1.5 text-caption text-secondary"
           >
