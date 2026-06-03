@@ -74,6 +74,8 @@ describe("SQLite persistence (better-sqlite3)", () => {
       expect(graph.nodes).toHaveLength(1);
       expect(graph.nodes[0]?.title).toBe("RAG");
       expect(graph.nodes[0]?.sourceUrl).toBe("https://example.com/rag");
+      expect(graph.nodes[0]?.salience).toBe(1);
+      expect(graph.nodes[0]?.lastTouchedAt).toBeTruthy();
 
       await storage.close();
 

@@ -80,6 +80,8 @@ describe("graphMutations", () => {
     expect(node?.title).toBe("上下文窗口");
     expect(node?.intro).toBe("更新后的简介");
     expect(node?.sourceUrl).toBe("https://example.com/context");
+    expect(node?.salience).toBeGreaterThan(1);
+    expect(node?.lastTouchedAt).toBeTruthy();
   });
 
   it("archives node and migrates incident edges", () => {

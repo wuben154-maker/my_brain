@@ -5,6 +5,8 @@ import type { BrainGraphSnapshot, ConceptNode, GraphEdge } from "../../domain/gr
 import { DEFAULT_USER_PROFILE, type UserProfile } from "../../domain/profile";
 import type { ProposalEnvelope, ProposalStatus } from "../../agent/types";
 import { INITIAL_MIGRATION_SQL } from "../migrations";
+import { migrateConceptSalienceColumnsSqlite } from "../schemaMigrations";
+import { normalizeConceptSalience } from "@/lib/salience";
 import {
   assertProposalStatus,
   assertProposalStatusUpdated,
@@ -33,6 +35,7 @@ export class BetterSqliteBackend {
     this.db = new Database(this.options.dbPath);
     this.db.pragma("journal_mode = WAL");
     this.db.exec(INITIAL_MIGRATION_SQL);
+    migrateConceptSalienceColumnsSqlite(this.db);
   }
 
   close(): void {
@@ -53,11 +56,16 @@ export class BetterSqliteBackend {
     const nodes = db
       .prepare(
         `SELECT id, title, intro, source_url AS sourceUrl, archived,
-                created_at AS createdAt, updated_at AS updatedAt
+                created_at AS createdAt, updated_at AS updatedAt,
+                salience, last_touched_at AS lastTouchedAt
          FROM concepts`,
       )
       .all() as Array<
-      Omit<ConceptNode, "archived"> & { archived: number }
+      Omit<ConceptNode, "archived"> & {
+        archived: number;
+        salience?: number | null;
+        lastTouchedAt?: string | null;
+      }
     >;
 
     const edges = db
@@ -75,7 +83,14 @@ export class BetterSqliteBackend {
     );
 
     return {
-      nodes: nodes.map((row) => ({ ...row, archived: row.archived === 1 })),
+      nodes: nodes.map((row) =>
+        normalizeConceptSalience({
+          ...row,
+          archived: row.archived === 1,
+          salience: row.salience ?? undefined,
+          lastTouchedAt: row.lastTouchedAt ?? undefined,
+        }),
+      ),
       edges: displayEdges,
     };
   }
@@ -100,17 +115,23 @@ export class BetterSqliteBackend {
   saveConcept(node: ConceptNode): void {
     const db = this.requireDb();
     db.prepare(
-      `INSERT INTO concepts (id, title, intro, source_url, archived, created_at, updated_at)
-       VALUES (@id, @title, @intro, @sourceUrl, @archived, @createdAt, @updatedAt)
+      `INSERT INTO concepts (id, title, intro, source_url, archived, created_at, updated_at,
+                            salience, last_touched_at)
+       VALUES (@id, @title, @intro, @sourceUrl, @archived, @createdAt, @updatedAt,
+               @salience, @lastTouchedAt)
        ON CONFLICT(id) DO UPDATE SET
          title = excluded.title,
          intro = excluded.intro,
          source_url = excluded.source_url,
          archived = excluded.archived,
-         updated_at = excluded.updated_at`,
+         updated_at = excluded.updated_at,
+         salience = excluded.salience,
+         last_touched_at = excluded.last_touched_at`,
     ).run({
-      ...node,
+      ...normalizeConceptSalience(node),
       archived: node.archived ? 1 : 0,
+      salience: node.salience ?? 1,
+      lastTouchedAt: node.lastTouchedAt ?? node.updatedAt,
     });
   }
 

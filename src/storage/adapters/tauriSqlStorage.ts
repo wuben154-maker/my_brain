@@ -4,6 +4,8 @@ import type { BrainGraphSnapshot, ConceptNode, GraphEdge } from "@/domain/graph"
 import { DEFAULT_USER_PROFILE, type UserProfile } from "@/domain/profile";
 import type { ProposalEnvelope, ProposalStatus } from "@/agent/types";
 import { INITIAL_MIGRATION_SQL, STORAGE_DB_NAME } from "../migrations";
+import { migrateConceptSalienceColumnsTauri } from "../schemaMigrations";
+import { normalizeConceptSalience } from "@/lib/salience";
 import {
   assertProposalStatus,
   assertProposalStatusUpdated,
@@ -31,6 +33,7 @@ export class TauriSqlStorageProvider implements StorageProvider {
     const load = this.options.loadDatabase ?? ((uri) => Database.load(uri));
     this.db = await load(`sqlite:${STORAGE_DB_NAME}`);
     await this.db.execute(INITIAL_MIGRATION_SQL);
+    await migrateConceptSalienceColumnsTauri(this.db);
   }
 
   async close(): Promise<void> {
@@ -61,7 +64,8 @@ export class TauriSqlStorageProvider implements StorageProvider {
       Array<Omit<ConceptNode, "archived"> & { archived: number }>
     >(
       `SELECT id, title, intro, source_url AS sourceUrl, archived,
-              created_at AS createdAt, updated_at AS updatedAt
+              created_at AS createdAt, updated_at AS updatedAt,
+              salience, last_touched_at AS lastTouchedAt
        FROM concepts`,
     );
 
@@ -78,7 +82,14 @@ export class TauriSqlStorageProvider implements StorageProvider {
     );
 
     return {
-      nodes: nodes.map((row) => ({ ...row, archived: row.archived === 1 })),
+      nodes: nodes.map((row) =>
+        normalizeConceptSalience({
+          ...row,
+          archived: row.archived === 1,
+          salience: row.salience ?? undefined,
+          lastTouchedAt: row.lastTouchedAt ?? undefined,
+        }),
+      ),
       edges: displayEdges,
     };
   }
@@ -86,14 +97,17 @@ export class TauriSqlStorageProvider implements StorageProvider {
   async saveConcept(node: ConceptNode): Promise<void> {
     const db = this.requireDb();
     await db.execute(
-      `INSERT INTO concepts (id, title, intro, source_url, archived, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO concepts (id, title, intro, source_url, archived, created_at, updated_at,
+                            salience, last_touched_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        ON CONFLICT(id) DO UPDATE SET
          title = $2,
          intro = $3,
          source_url = $4,
          archived = $5,
-         updated_at = $7`,
+         updated_at = $7,
+         salience = $8,
+         last_touched_at = $9`,
       [
         node.id,
         node.title,
@@ -102,6 +116,8 @@ export class TauriSqlStorageProvider implements StorageProvider {
         node.archived ? 1 : 0,
         node.createdAt,
         node.updatedAt,
+        node.salience ?? 1,
+        node.lastTouchedAt ?? node.updatedAt,
       ],
     );
   }

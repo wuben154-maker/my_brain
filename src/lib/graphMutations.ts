@@ -12,6 +12,10 @@ import {
   readMergePayload,
   readUpdatePayload,
 } from "@/domain/graphMutationPayloads";
+import {
+  applySalienceEvent,
+  DEFAULT_SALIENCE,
+} from "@/lib/salience";
 import type { StorageProvider } from "@/storage/types";
 
 const CLUSTER_COLORS = [
@@ -55,6 +59,12 @@ function newEdgeId(sourceId: string, targetId: string, relationType: string): st
 
 function findNode(snapshot: BrainGraphSnapshot, id: string): ConceptNode | undefined {
   return snapshot.nodes.find((node) => node.id === id);
+}
+
+function touchNode(node: ConceptNode, timestamp: string): void {
+  const touched = applySalienceEvent(node, "manual_edit", Date.parse(timestamp));
+  node.salience = touched.salience;
+  node.lastTouchedAt = touched.lastTouchedAt;
 }
 
 function migrateEdges(
@@ -111,6 +121,8 @@ export function applyGraphMutation(
         archived: false,
         createdAt: timestamp,
         updatedAt: timestamp,
+        salience: DEFAULT_SALIENCE,
+        lastTouchedAt: timestamp,
       });
       break;
     }
@@ -125,6 +137,7 @@ export function applyGraphMutation(
         node.sourceUrl = payload.sourceUrl;
       }
       node.updatedAt = timestamp;
+      touchNode(node, timestamp);
       break;
     }
     case "merge": {
@@ -138,6 +151,7 @@ export function applyGraphMutation(
       source.updatedAt = timestamp;
       target.intro = payload.mergedIntro.trim();
       target.updatedAt = timestamp;
+      touchNode(target, timestamp);
       const mergedEdges = migrateEdges(
         edges,
         payload.sourceNodeId,
@@ -186,6 +200,7 @@ export function applyGraphMutation(
       node.intro = payload.intro.trim();
       node.sourceUrl = payload.sourceUrl;
       node.updatedAt = timestamp;
+      touchNode(node, timestamp);
       break;
     }
     case "link": {
@@ -219,7 +234,9 @@ export async function persistGraphSnapshot(
       prev.intro !== node.intro ||
       prev.sourceUrl !== node.sourceUrl ||
       prev.archived !== node.archived ||
-      prev.updatedAt !== node.updatedAt
+      prev.updatedAt !== node.updatedAt ||
+      prev.salience !== node.salience ||
+      prev.lastTouchedAt !== node.lastTouchedAt
     ) {
       await storage.saveConcept(node);
     }

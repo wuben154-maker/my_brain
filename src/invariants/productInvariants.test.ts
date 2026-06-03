@@ -242,6 +242,14 @@ describe("Product invariants (AGENTS.md core)", () => {
       const source = readRepoSource("src/components/brain/BrainGraphView.tsx");
       expect(source).toMatch(/ARCHIVED_OPACITY/);
       expect(source).toMatch(/graphNode\.archived/);
+      expect(source).toMatch(/salienceVisualAlpha/);
+    });
+
+    it("salience (M2) only emits signals — no auto archive or graph writes", () => {
+      const source = readRepoSource("src/lib/salience.ts");
+      expect(source).not.toContain("persistGraphSnapshot");
+      expect(source).not.toContain("applyGraphMutation");
+      expect(source).not.toMatch(/archived\s*=\s*true/);
     });
 
     it("3D graph view is read-only render layer (G1)", () => {

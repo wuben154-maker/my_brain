@@ -14,6 +14,7 @@ import {
   withAlpha,
 } from "@/lib/graphVisualTokens";
 import { GRAPH_ZOOM_TOPIC_MAX } from "@/lib/memoryLayers";
+import { salienceVisualAlpha } from "@/lib/salience";
 import { readVisualSnapshotId } from "@/lib/visualSnapshotMode";
 import { VISUAL_GRAPH_PINNED_POSITIONS } from "@/lib/visualSnapshotFixtures";
 import { useGraphStore } from "@/stores/graphStore";
@@ -29,6 +30,7 @@ interface GraphNode extends NodeObject {
   id: string;
   title: string;
   archived: boolean;
+  salienceAlpha: number;
   previewGhost?: boolean;
 }
 
@@ -100,6 +102,7 @@ export function BrainGraphView() {
             id: node.id,
             title: node.title,
             archived: node.archived,
+            salienceAlpha: salienceVisualAlpha(node),
             ...(pinned ? { fx: pinned.x, fy: pinned.y } : {}),
           };
         }),
@@ -108,6 +111,7 @@ export function BrainGraphView() {
           title: node.title,
           archived: false,
           previewGhost: true,
+          salienceAlpha: 1,
         })),
       ],
       links: [
@@ -335,10 +339,13 @@ export function BrainGraphView() {
                 : clusterColorForNodeId(nodeId);
 
               ctx.save();
+              const salienceMul = graphNode.salienceAlpha;
               if (graphNode.archived) {
-                ctx.globalAlpha = ARCHIVED_OPACITY;
+                ctx.globalAlpha = ARCHIVED_OPACITY * salienceMul;
               } else if (isGhost) {
                 ctx.globalAlpha = 0.55;
+              } else {
+                ctx.globalAlpha = salienceMul;
               }
 
               // Soft radial bloom behind every live node so the starfield glows

@@ -8,6 +8,10 @@ export interface ConceptNode {
   archived: boolean;
   createdAt: string;
   updatedAt: string;
+  /** M2: optional salience score (defaults to 1 when absent). */
+  salience?: number;
+  /** M2: last user/agent touch for decay (defaults to updatedAt). */
+  lastTouchedAt?: string;
 }
 
 export interface GraphEdge {
