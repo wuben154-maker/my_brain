@@ -1,6 +1,10 @@
 import type { GraphMutationProposal, BrainGraphSnapshot } from "../domain/graph";
 import type { UserProfile } from "../domain/profile";
 import type { NewsItem } from "../domain/news";
+import type {
+  ConceptCandidate,
+  ResearchPlan,
+} from "../providers/llm/types";
 
 /** Where a proposal originated — inbox routing + analytics. */
 export type ProposalSource =
@@ -53,6 +57,8 @@ export interface AgentTools {
   summarize(item: NewsItem): Promise<string>;
   explain(topic: string, profile: UserProfile): Promise<string>;
   propose(context: string): Promise<GraphMutationProposal[]>;
+  planResearch(topic: string, profile: UserProfile): Promise<ResearchPlan>;
+  synthesizeConcepts(evidence: string[]): Promise<ConceptCandidate[]>;
   readGraph(): Promise<BrainGraphSnapshot>;
   readProfile(): Promise<UserProfile>;
 }

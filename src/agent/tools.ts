@@ -37,6 +37,12 @@ export function createAgentTools(input: CreateAgentToolsInput): AgentTools {
     propose(context) {
       return llm.proposeGraphMutations(context);
     },
+    planResearch(topic, profile) {
+      return llm.planResearch(topic, profile);
+    },
+    synthesizeConcepts(evidence) {
+      return llm.synthesizeConcepts(evidence);
+    },
     readGraph() {
       return readGraph();
     },

@@ -199,6 +199,24 @@ export class MockLlmProvider implements LlmProvider {
     }
 
     const joined = snippets.join("\n");
+
+    if (snippets.length >= 2) {
+      return [
+        {
+          title: "研究概念 A",
+          intro: `Mock 提炼（A）：${snippets[0]!.slice(0, 120)}`,
+          sourceUrl: null,
+          relations: [{ targetTitle: "研究概念 B", relationType: "related" }],
+        },
+        {
+          title: "研究概念 B",
+          intro: `Mock 提炼（B）：${snippets[1]!.slice(0, 120)}`,
+          sourceUrl: null,
+          relations: [{ targetTitle: "研究概念 A", relationType: "related" }],
+        },
+      ];
+    }
+
     const title = joined.includes("Agent")
       ? "AI Agent 编排"
       : joined.includes("RAG")

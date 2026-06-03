@@ -85,9 +85,19 @@ describe("MockLlmProvider", () => {
       "RAG 检索增强实践",
     ]);
     expect(second).toEqual(first);
-    expect(first[0]?.title).toBe("AI Agent 编排");
-    expect(first[0]?.relations.map((rel) => rel.relationType)).toEqual([
-      "related",
+    expect(first).toHaveLength(2);
+    expect(first[0]?.title).toBe("研究概念 A");
+    expect(first[1]?.title).toBe("研究概念 B");
+    expect(first[0]?.relations).toEqual([
+      { targetTitle: "研究概念 B", relationType: "related" },
+    ]);
+  });
+
+  it("synthesizeConcepts returns single candidate for one evidence line", async () => {
+    const candidates = await llm.synthesizeConcepts(["GitHub Agent 框架发布"]);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]?.title).toBe("AI Agent 编排");
+    expect(candidates[0]?.relations.map((rel) => rel.relationType)).toEqual([
       "depends_on",
     ]);
   });
