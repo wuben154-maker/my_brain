@@ -48,7 +48,7 @@ export function SuggestConfirmDialog({
         <p className="mt-2 text-caption text-muted">
           {proposals.length > 1
             ? `共 ${proposals.length} 步变更，将按顺序执行`
-            : "AI 建议如下，你可拒绝或确认"}
+            : "确认本条变更；拒绝则不会写入大脑"}
         </p>
 
         <ul className="mt-4 max-h-64 space-y-3 overflow-y-auto">
