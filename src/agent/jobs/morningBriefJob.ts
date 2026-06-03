@@ -208,6 +208,7 @@ export function createMorningBriefJob(
         }
         assertNotAborted(signal);
 
+        // Invariant #2 / A2: enqueue pending inbox proposals only — no graph writes here.
         const remaining = cfg.maxProposals - proposals.length;
         for (const proposal of mutations.slice(0, remaining)) {
           proposals.push({

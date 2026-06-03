@@ -87,6 +87,38 @@ describe("sortNewsForBrief", () => {
 });
 
 describe("MorningBriefJob", () => {
+  it("persistAgentRunResult enqueues inbox proposals without mutating graph (P0-1)", async () => {
+    const { createTempStorage } = await import("@/invariants/testStorage");
+    const { persistAgentRunResult } = await import("@/agent/schedulerPersist");
+    const items = [makeNewsItem(0)];
+    const { tools } = createBriefTools(items);
+
+    const { storage, cleanup } = createTempStorage();
+    try {
+      await storage.init();
+      const nodesBefore = (await storage.loadGraph()).nodes.length;
+
+      const result = await runAgentJob(
+        createMorningBriefJob({ topN: 5, maxProposals: 10 }),
+        tools,
+        new AbortController().signal,
+      );
+      await persistAgentRunResult(storage, result);
+
+      expect((await storage.loadGraph()).nodes.length).toBe(nodesBefore);
+      const pending = await storage.listPendingProposals();
+      expect(pending.length).toBe(result.proposals.length);
+      expect(pending.length).toBeGreaterThan(0);
+      expect(
+        pending.every(
+          (p) => p.status === "pending" && p.source === "background_ingest",
+        ),
+      ).toBe(true);
+    } finally {
+      cleanup();
+    }
+  });
+
   it("produces digest sections matching processed items and pending proposals under mock", async () => {
     const items = [makeNewsItem(0), makeNewsItem(1)];
     const { tools, loadGraph, loadUserProfile, saveConcept } =
