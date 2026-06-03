@@ -29,7 +29,7 @@ export function useManualGraphOps() {
   const storage = useAppStore((state) => state.storage);
   const [isApplying, setIsApplying] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const pendingProposals = useManualGraphStore((state) => state.pendingProposals);
+  const pendingProposal = useManualGraphStore((state) => state.pendingProposal);
 
   const applyProposal = useCallback(
     async (proposal: GraphMutationProposal) => {
@@ -111,24 +111,26 @@ export function useManualGraphOps() {
   );
 
   const confirmProposals = useCallback(async () => {
-    const proposals = [...useManualGraphStore.getState().pendingProposals];
-    if (proposals.length === 0) {
+    const store = useManualGraphStore.getState();
+    const current = store.pendingProposal;
+    if (!current) {
       return;
     }
     setIsApplying(true);
     setErrorMessage(null);
     try {
-      let lastNodeId: string | null = null;
-      for (const proposal of proposals) {
-        lastNodeId = await applyProposal(proposal);
+      const nodeId = await applyProposal(current);
+      if (nodeId) {
+        useGraphStore.getState().setHighlights([nodeId], []);
       }
-      useManualGraphStore.getState().clearPending();
 
-      if (proposals.some((proposal) => proposal.kind === "archive")) {
-        useGraphStore.getState().selectNode(null);
-      } else if (lastNodeId) {
-        useGraphStore.getState().selectNode(lastNodeId);
-        useGraphStore.getState().setHighlights([lastNodeId], []);
+      const next = store.shiftPendingProposal();
+      if (!next) {
+        if (current.kind === "archive") {
+          useGraphStore.getState().selectNode(null);
+        } else if (nodeId) {
+          useGraphStore.getState().selectNode(nodeId);
+        }
       }
     } catch (error) {
       setErrorMessage(
@@ -144,7 +146,7 @@ export function useManualGraphOps() {
   }, []);
 
   return {
-    pendingProposals,
+    pendingProposal,
     isApplying,
     errorMessage,
     proposeCreate,
