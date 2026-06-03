@@ -22,6 +22,7 @@ interface GraphNode extends NodeObject {
   id: string;
   title: string;
   archived: boolean;
+  previewGhost?: boolean;
 }
 
 interface GraphLink extends LinkObject {
@@ -41,6 +42,8 @@ export function BrainGraph3DView() {
 
   const nodes = useGraphStore((state) => state.nodes);
   const edges = useGraphStore((state) => state.edges);
+  const previewGhostNodes = useGraphStore((state) => state.previewGhostNodes);
+  const previewGhostEdges = useGraphStore((state) => state.previewGhostEdges);
   const highlightedNodeIds = useGraphStore((state) => state.highlightedNodeIds);
   const highlightedEdgeIds = useGraphStore(
     (state) => state.highlightedEdgeIds,
@@ -63,27 +66,43 @@ export function BrainGraph3DView() {
 
   const graphData = useMemo(
     () => ({
-      nodes: nodes.map((node) => {
-        const pinned = pinGraphLayout
-          ? VISUAL_GRAPH_PINNED_POSITIONS[node.id]
-          : undefined;
-        return {
+      nodes: [
+        ...nodes.map((node) => {
+          const pinned = pinGraphLayout
+            ? VISUAL_GRAPH_PINNED_POSITIONS[node.id]
+            : undefined;
+          return {
+            id: node.id,
+            title: node.title,
+            archived: node.archived,
+            ...(pinned
+              ? { fx: pinned.x, fy: pinned.y, fz: 0 }
+              : {}),
+          };
+        }),
+        ...previewGhostNodes.map((node) => ({
           id: node.id,
           title: node.title,
-          archived: node.archived,
-          ...(pinned
-            ? { fx: pinned.x, fy: pinned.y, fz: 0 }
-            : {}),
-        };
-      }),
-      links: edges.map((edge) => ({
-        id: edge.id,
-        source: edge.sourceId,
-        target: edge.targetId,
-        relationType: edge.relationType,
-      })),
+          archived: false,
+          previewGhost: true,
+        })),
+      ],
+      links: [
+        ...edges.map((edge) => ({
+          id: edge.id,
+          source: edge.sourceId,
+          target: edge.targetId,
+          relationType: edge.relationType,
+        })),
+        ...previewGhostEdges.map((edge) => ({
+          id: edge.id,
+          source: edge.sourceId,
+          target: edge.targetId,
+          relationType: edge.relationType,
+        })),
+      ],
     }),
-    [nodes, edges, pinGraphLayout],
+    [nodes, edges, previewGhostNodes, previewGhostEdges, pinGraphLayout],
   );
 
   useEffect(() => {
@@ -110,11 +129,14 @@ export function BrainGraph3DView() {
     if (highlightedNodeIds.length === 0) {
       return;
     }
+    if (previewGhostNodes.length > 0) {
+      return;
+    }
     const timer = window.setTimeout(() => {
       useGraphStore.getState().clearHighlights();
     }, 4000);
     return () => window.clearTimeout(timer);
-  }, [highlightedNodeIds]);
+  }, [highlightedNodeIds, previewGhostNodes.length]);
 
   useEffect(() => {
     const graph = graphRef.current;
@@ -130,11 +152,12 @@ export function BrainGraph3DView() {
   }, [linkDistance, graphData.nodes.length]);
 
   const nodeEmphasis = useCallback(
-    (nodeId: string, archived: boolean) => {
+    (nodeId: string, archived: boolean, previewGhost?: boolean) => {
       if (archived) {
         return false;
       }
       return (
+        previewGhost === true ||
         highlightedNodeIds.includes(nodeId) ||
         selectedNodeId === nodeId ||
         hoveredNodeId === nodeId
@@ -217,6 +240,7 @@ export function BrainGraph3DView() {
               const emphasis = nodeEmphasis(
                 String(node.id),
                 graphNode.archived,
+                graphNode.previewGhost,
               );
               if (graphNode.archived) {
                 return 0.7;
@@ -226,9 +250,16 @@ export function BrainGraph3DView() {
             nodeColor={(node) => {
               const graphNode = node as GraphNode;
               const nodeId = String(node.id);
-              const emphasis = nodeEmphasis(nodeId, graphNode.archived);
+              const emphasis = nodeEmphasis(
+                nodeId,
+                graphNode.archived,
+                graphNode.previewGhost,
+              );
               if (graphNode.archived) {
                 return "#64748b";
+              }
+              if (graphNode.previewGhost) {
+                return graphAccentCyan();
               }
               if (emphasis) {
                 return "#e0f2fe";

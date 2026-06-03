@@ -42,4 +42,11 @@ describe("MainSectionContent (N0 AppShell routing)", () => {
     expect(screen.getByTestId("section-settings")).toBeTruthy();
     expect(screen.getByTestId("settings-scheduler")).toBeTruthy();
   });
+
+  it("renders insight section when activeSection is insight (B3)", () => {
+    useUiStore.setState({ activeSection: "insight" });
+    render(createElement(MainSectionContent));
+    expect(screen.getByTestId("section-insight")).toBeTruthy();
+    expect(screen.getByTestId("insight-empty")).toBeTruthy();
+  });
 });

@@ -1,6 +1,6 @@
 # B3 — 调研轨迹视图（`research-view`）
 
-- **阶段：** B · **状态：** 📝 待做
+- **阶段：** B · **状态：** ✅ 已实现（`ResearchTrace.tsx`、`ProposalPreview.tsx`、`InsightSection.tsx`、`proposalPreview.ts`）
 - **上游：** B1（`trace` + 关联提议）、A4（收件箱 UI）、N0（分区路由）· **下游：** —
 - **导航归属：** 挂 `insight`（分析洞察）分区（见 N0）。
 - **与 G1 协同：** 「预览高亮」须对**当前激活的星图视图**（2D 或 3D）生效；若 G1 先行，预览实现应同时覆盖 3D。

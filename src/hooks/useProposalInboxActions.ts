@@ -39,7 +39,7 @@ export function useProposalInboxActions() {
   );
 
   const clearPreview = useCallback(() => {
-    useGraphStore.getState().clearHighlights();
+    useGraphStore.getState().clearProposalPreview();
   }, []);
 
   const approve = useCallback(

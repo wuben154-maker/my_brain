@@ -1,4 +1,5 @@
 import { AgentSection } from "@/components/agent/AgentSection";
+import { InsightSection } from "@/components/agent/InsightSection";
 import { ExploreFeed } from "@/components/explore/ExploreFeed";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { GraphMainSection } from "@/components/layout/GraphMainSection";
@@ -12,6 +13,9 @@ function renderSection(id: NavSectionId) {
   }
   if (id === "agent") {
     return <AgentSection />;
+  }
+  if (id === "insight") {
+    return <InsightSection />;
   }
   if (id === "explore") {
     return <ExploreFeed />;

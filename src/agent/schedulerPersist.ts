@@ -1,5 +1,6 @@
 import type { AgentRunResult } from "./types";
 import type { StorageProvider } from "@/storage/types";
+import { useResearchRunStore } from "@/stores/researchRunStore";
 
 /** Pending proposals older than this are marked expired (A5). */
 export const DEFAULT_PENDING_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -19,5 +20,18 @@ export async function persistAgentRunResult(
     if (Date.parse(envelope.createdAt) < cutoff) {
       await storage.setProposalStatus(envelope.id, "expired");
     }
+  }
+
+  if (
+    result.trace.length > 0 &&
+    result.proposals.some((item) => item.source === "research_loop")
+  ) {
+    useResearchRunStore.getState().addRun({
+      runId: result.runId,
+      trace: result.trace,
+      digest: result.digest,
+      finishedAt: result.finishedAt,
+      topic: result.digest?.title.replace(/^研究报告：/, ""),
+    });
   }
 }

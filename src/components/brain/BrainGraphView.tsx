@@ -28,6 +28,7 @@ interface GraphNode extends NodeObject {
   id: string;
   title: string;
   archived: boolean;
+  previewGhost?: boolean;
 }
 
 interface GraphLink extends LinkObject {
@@ -65,6 +66,8 @@ export function BrainGraphView() {
 
   const nodes = useGraphStore((state) => state.nodes);
   const edges = useGraphStore((state) => state.edges);
+  const previewGhostNodes = useGraphStore((state) => state.previewGhostNodes);
+  const previewGhostEdges = useGraphStore((state) => state.previewGhostEdges);
   const highlightedNodeIds = useGraphStore((state) => state.highlightedNodeIds);
   const highlightedEdgeIds = useGraphStore(
     (state) => state.highlightedEdgeIds,
@@ -87,25 +90,41 @@ export function BrainGraphView() {
 
   const graphData = useMemo(
     () => ({
-      nodes: nodes.map((node) => {
-        const pinned = pinGraphLayout
-          ? VISUAL_GRAPH_PINNED_POSITIONS[node.id]
-          : undefined;
-        return {
+      nodes: [
+        ...nodes.map((node) => {
+          const pinned = pinGraphLayout
+            ? VISUAL_GRAPH_PINNED_POSITIONS[node.id]
+            : undefined;
+          return {
+            id: node.id,
+            title: node.title,
+            archived: node.archived,
+            ...(pinned ? { fx: pinned.x, fy: pinned.y } : {}),
+          };
+        }),
+        ...previewGhostNodes.map((node) => ({
           id: node.id,
           title: node.title,
-          archived: node.archived,
-          ...(pinned ? { fx: pinned.x, fy: pinned.y } : {}),
-        };
-      }),
-      links: edges.map((edge) => ({
-        id: edge.id,
-        source: edge.sourceId,
-        target: edge.targetId,
-        relationType: edge.relationType,
-      })),
+          archived: false,
+          previewGhost: true,
+        })),
+      ],
+      links: [
+        ...edges.map((edge) => ({
+          id: edge.id,
+          source: edge.sourceId,
+          target: edge.targetId,
+          relationType: edge.relationType,
+        })),
+        ...previewGhostEdges.map((edge) => ({
+          id: edge.id,
+          source: edge.sourceId,
+          target: edge.targetId,
+          relationType: edge.relationType,
+        })),
+      ],
     }),
-    [nodes, edges, pinGraphLayout],
+    [nodes, edges, previewGhostNodes, previewGhostEdges, pinGraphLayout],
   );
 
   const minimapNodes: MinimapNode[] = useMemo(() => {
@@ -151,11 +170,14 @@ export function BrainGraphView() {
     if (highlightedNodeIds.length === 0) {
       return;
     }
+    if (previewGhostNodes.length > 0) {
+      return;
+    }
     const timer = window.setTimeout(() => {
       useGraphStore.getState().clearHighlights();
     }, 4000);
     return () => window.clearTimeout(timer);
-  }, [highlightedNodeIds]);
+  }, [highlightedNodeIds, previewGhostNodes.length]);
 
   useEffect(() => {
     if (graphData.nodes.length === 0) {
@@ -290,9 +312,10 @@ export function BrainGraphView() {
               if (node.x !== undefined && node.y !== undefined) {
                 nodePositionsRef.current.set(nodeId, { x: node.x, y: node.y });
               }
+              const isGhost = graphNode.previewGhost === true;
               const visual = nodeVisualState(
                 graphNode.archived,
-                highlightedNodeIds.includes(nodeId),
+                highlightedNodeIds.includes(nodeId) || isGhost,
                 selectedNodeId === nodeId,
                 hoveredNodeId === nodeId,
               );
@@ -306,11 +329,15 @@ export function BrainGraphView() {
               const radius = baseRadius * scale;
               const x = node.x ?? 0;
               const y = node.y ?? 0;
-              const clusterColor = clusterColorForNodeId(nodeId);
+              const clusterColor = isGhost
+                ? graphAccentCyan()
+                : clusterColorForNodeId(nodeId);
 
               ctx.save();
               if (graphNode.archived) {
                 ctx.globalAlpha = ARCHIVED_OPACITY;
+              } else if (isGhost) {
+                ctx.globalAlpha = 0.55;
               }
 
               // Soft radial bloom behind every live node so the starfield glows
@@ -351,6 +378,13 @@ export function BrainGraphView() {
               ctx.fillStyle =
                 emphasis && !graphNode.archived ? "#e0f2fe" : clusterColor;
               ctx.fill();
+              if (isGhost) {
+                ctx.setLineDash([3 / globalScale, 3 / globalScale]);
+                ctx.lineWidth = 1.5 / globalScale;
+                ctx.strokeStyle = withAlpha(graphAccentCyan(), 0.85);
+                ctx.stroke();
+                ctx.setLineDash([]);
+              }
               ctx.shadowBlur = 0;
 
               // Tie the label size to the node radius (graph units) so it scales

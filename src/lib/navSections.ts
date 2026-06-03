@@ -49,7 +49,7 @@ export const NAV_SECTIONS: NavSectionDef[] = [
   {
     id: "insight",
     label: "分析洞察",
-    status: "planned",
+    status: "live",
     specRef: "specs/B3-research-trace-view.md",
   },
   {
