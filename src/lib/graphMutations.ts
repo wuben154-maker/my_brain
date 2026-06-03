@@ -113,10 +113,16 @@ export function applyGraphMutation(
   switch (proposal.kind) {
     case "create": {
       const payload = readCreatePayload(proposal.payload);
+      if (!payload.title.trim()) {
+        throw new Error("概念标题不能为空");
+      }
+      if (!payload.intro.trim()) {
+        throw new Error("概念简介不能为空");
+      }
       nodes.push({
         id: newConceptId(payload.title),
-        title: payload.title,
-        intro: payload.intro,
+        title: payload.title.trim(),
+        intro: payload.intro.trim(),
         sourceUrl: payload.sourceUrl,
         archived: false,
         createdAt: timestamp,
@@ -209,6 +215,9 @@ export function applyGraphMutation(
       const target = findNode({ nodes, edges }, payload.targetId);
       if (!source || !target) {
         throw new Error("link 节点不存在");
+      }
+      if (payload.sourceId === payload.targetId) {
+        throw new Error("link 源节点与目标节点不能相同");
       }
       edges.push({
         id: newEdgeId(payload.sourceId, payload.targetId, payload.relationType),

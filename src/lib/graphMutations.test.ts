@@ -150,4 +150,58 @@ describe("graphMutations", () => {
       "link 节点不存在",
     );
   });
+
+  it("rejects link when source and target are the same node", () => {
+    const proposal: GraphMutationProposal = {
+      id: "p-link-self",
+      kind: "link",
+      summary: "自环连线",
+      payload: {
+        sourceId: "a",
+        targetId: "a",
+        relationType: "related",
+      },
+    };
+    expect(() => applyGraphMutation(baseSnapshot(), proposal)).toThrow(
+      "link 源节点与目标节点不能相同",
+    );
+    expect(baseSnapshot().edges).toHaveLength(1);
+  });
+
+  it("rejects create when title or intro is empty", () => {
+    const empty: BrainGraphSnapshot = { nodes: [], edges: [] };
+    expect(() =>
+      applyGraphMutation(empty, {
+        id: "p-create-no-title",
+        kind: "create",
+        summary: "无标题",
+        payload: { title: "  ", intro: "简介", sourceUrl: null },
+      }),
+    ).toThrow("概念标题不能为空");
+
+    expect(() =>
+      applyGraphMutation(empty, {
+        id: "p-create-no-intro",
+        kind: "create",
+        summary: "无简介",
+        payload: { title: "概念", intro: "", sourceUrl: null },
+      }),
+    ).toThrow("概念简介不能为空");
+  });
+
+  it("rejects update when title is empty", () => {
+    expect(() =>
+      applyGraphMutation(baseSnapshot(), {
+        id: "p-update-no-title",
+        kind: "update",
+        summary: "清空标题",
+        payload: {
+          nodeId: "a",
+          title: "   ",
+          intro: "简介",
+          sourceUrl: null,
+        },
+      }),
+    ).toThrow("概念标题不能为空");
+  });
 });
