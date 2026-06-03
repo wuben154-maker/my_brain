@@ -7,6 +7,7 @@ import {
 import { runLaunchSequence } from "@/lib/runLaunchSequence";
 import {
   applyVisualSnapshot,
+  bootstrapVisualInboxStorage,
   readVisualSnapshotId,
 } from "@/lib/visualSnapshotMode";
 import { useAppStore } from "@/stores/appStore";
@@ -24,6 +25,11 @@ export default function App() {
     const visualSnapshot = readVisualSnapshotId();
     if (visualSnapshot) {
       applyVisualSnapshot(visualSnapshot);
+      if (visualSnapshot === "inbox") {
+        void bootstrapVisualInboxStorage().then(() => {
+          document.documentElement.dataset.visualInboxReady = "true";
+        });
+      }
       return;
     }
 

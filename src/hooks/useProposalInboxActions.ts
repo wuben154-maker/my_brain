@@ -1,9 +1,6 @@
 import { useCallback, useState } from "react";
 import type { ProposalEnvelope } from "@/agent/types";
-import {
-  applyGraphMutation,
-  primaryNodeIdFromProposal,
-} from "@/lib/graphMutations";
+import { primaryNodeIdFromProposal } from "@/lib/graphMutations";
 import { readVisualSnapshotId } from "@/lib/visualSnapshotMode";
 import { useAppStore } from "@/stores/appStore";
 import { useGraphStore } from "@/stores/graphStore";
@@ -44,34 +41,6 @@ export function useProposalInboxActions() {
 
   const approve = useCallback(
     async (id: string) => {
-      const visualInbox = readVisualSnapshotId() === "inbox";
-      if (!storage && visualInbox) {
-        const envelope = useProposalStore
-          .getState()
-          .pending.find((item) => item.id === id);
-        if (!envelope) {
-          return;
-        }
-        setBusyId(id);
-        setErrorMessage(null);
-        try {
-          const snapshot = {
-            nodes: useGraphStore.getState().nodes,
-            edges: useGraphStore.getState().edges,
-          };
-          const after = applyGraphMutation(snapshot, envelope.proposal);
-          useGraphStore.getState().setGraph(after);
-          useProposalStore.setState({
-            pending: useProposalStore
-              .getState()
-              .pending.filter((item) => item.id !== id),
-          });
-          clearPreview();
-        } finally {
-          setBusyId(null);
-        }
-        return;
-      }
       if (!storage) {
         setErrorMessage("本地存储未就绪");
         return;

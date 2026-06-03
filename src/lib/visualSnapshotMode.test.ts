@@ -1,18 +1,37 @@
 /**
  * @vitest-environment happy-dom
  */
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createTempStorage } from "@/invariants/testStorage";
 import {
+  VISUAL_INBOX_ENVELOPE,
   VISUAL_INSIGHT_RUN,
   VISUAL_INSIGHT_RUN_ID,
 } from "@/lib/visualSnapshotFixtures";
-import {
-  applyVisualSnapshot,
-  readVisualSnapshotId,
-} from "@/lib/visualSnapshotMode";
+import type { StorageProvider } from "@/storage/types";
+import { useAppStore } from "@/stores/appStore";
 import { useProposalStore } from "@/stores/proposalStore";
 import { useResearchRunStore } from "@/stores/researchRunStore";
 import { useUiStore } from "@/stores/uiStore";
+
+const visualInboxStorageRef = vi.hoisted(() => ({
+  current: null as StorageProvider | null,
+}));
+
+vi.mock("@/storage/createStorageProvider", () => ({
+  createStorageProvider: () => {
+    if (!visualInboxStorageRef.current) {
+      throw new Error("visualInboxStorageRef not set");
+    }
+    return visualInboxStorageRef.current;
+  },
+}));
+
+import {
+  applyVisualSnapshot,
+  bootstrapVisualInboxStorage,
+  readVisualSnapshotId,
+} from "@/lib/visualSnapshotMode";
 
 describe("visualSnapshotMode (H2-3c insight)", () => {
   afterEach(() => {
@@ -20,11 +39,34 @@ describe("visualSnapshotMode (H2-3c insight)", () => {
     useResearchRunStore.getState().reset();
     useProposalStore.setState({ pending: [] });
     useUiStore.setState({ activeSection: "graph" });
+    useAppStore.setState({ storage: null });
   });
 
   it("reads ?visual=insight from the URL", () => {
     window.location.search = "?visual=insight";
     expect(readVisualSnapshotId()).toBe("insight");
+  });
+
+  it("bootstrapVisualInboxStorage wires SQLite and pending proposal", async () => {
+    const { storage, cleanup } = createTempStorage();
+    try {
+      await storage.init();
+      visualInboxStorageRef.current = storage;
+      await bootstrapVisualInboxStorage();
+      expect(useAppStore.getState().storage).toBe(storage);
+      const pending = await storage.listPendingProposals();
+      expect(pending.some((item) => item.id === VISUAL_INBOX_ENVELOPE.id)).toBe(
+        true,
+      );
+      expect(
+        useProposalStore
+          .getState()
+          .pending.some((item) => item.id === VISUAL_INBOX_ENVELOPE.id),
+      ).toBe(true);
+    } finally {
+      visualInboxStorageRef.current = null;
+      cleanup();
+    }
   });
 
   it("applyVisualSnapshot(insight) seeds trace, proposals, and insight section", () => {

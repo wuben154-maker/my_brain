@@ -94,7 +94,7 @@ export const VISUAL_TARGETS = [
 
     urlPath: "/?visual=inbox",
 
-    waitSelector: "[data-testid='proposal-card-visual-env-1']",
+    waitSelector: "[data-testid='proposal-card-visual-prop-create-1']",
 
     captureSelector: "[data-testid='proposal-inbox-drawer']",
 
@@ -106,7 +106,7 @@ export const VISUAL_TARGETS = [
 
         selector:
 
-          "[data-testid='proposal-card-visual-env-1'] button:has-text('同意')",
+          "[data-testid='proposal-card-visual-prop-create-1'] button:has-text('同意')",
 
       },
 

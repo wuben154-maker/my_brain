@@ -1,4 +1,6 @@
 import { createGraphDemoSnapshot } from "@/lib/graphDemoSeed";
+import { persistGraphSnapshot } from "@/lib/graphMutations";
+import { createStorageProvider } from "@/storage/createStorageProvider";
 import {
   VISUAL_BOOT_CHECKS,
   VISUAL_BOOT_LOGS,
@@ -36,6 +38,17 @@ export function isVisualSnapshotMode(): boolean {
   return readVisualSnapshotId() !== null;
 }
 
+/** Seed dev SQLite for `?visual=inbox` so approve uses proposalStore, not memory-only graph. */
+export async function bootstrapVisualInboxStorage(): Promise<void> {
+  const storage = createStorageProvider();
+  await storage.init();
+  const graph = createGraphDemoSnapshot();
+  await persistGraphSnapshot(storage, { nodes: [], edges: [] }, graph);
+  await storage.saveProposal(VISUAL_INBOX_ENVELOPE);
+  useAppStore.getState().setStorage(storage);
+  await useProposalStore.getState().load(storage);
+}
+
 export function applyVisualSnapshot(id: VisualSnapshotId): void {
   document.documentElement.dataset.visualSnapshot = id;
 
@@ -56,7 +69,6 @@ export function applyVisualSnapshot(id: VisualSnapshotId): void {
     useGraphStore.getState().setGraph(createGraphDemoSnapshot());
     useProposalStore.setState({ pending: [VISUAL_INBOX_ENVELOPE] });
     useAgentInboxStore.getState().setInboxOpen(true);
-    document.documentElement.dataset.visualInboxReady = "true";
     return;
   }
 

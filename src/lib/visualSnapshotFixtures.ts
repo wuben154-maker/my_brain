@@ -141,7 +141,7 @@ export const VISUAL_BOOT_PROGRESS = 78;
 
 /** Pending proposal for inbox visual smoke (`?visual=inbox`). */
 export const VISUAL_INBOX_ENVELOPE: ProposalEnvelope = {
-  id: "visual-env-1",
+  id: "visual-prop-create-1",
   runId: "visual-run",
   createdAt: "2026-06-02T08:00:00.000Z",
   source: "background_ingest",
