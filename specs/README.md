@@ -97,3 +97,15 @@ B/C（可暂缓）→ N3（思维导图，非 MVP 必做）
 - 新增/改动有对应 `*.test.ts`，mock 优先，不依赖真实网络/真实 API key。
 - 不违反上述任一不变量；涉及 Agent 的均补「无写能力」断言。
 - 该 PR 可独立 demo（命令或截图）。
+
+## 已知债务 / 顺延项（spec-verifier 记账）
+
+> 由 spec-verifier 在里程碑验收时登记；**不阻塞当前合并**，供下一里程碑认领。证据行号以登记时仓库快照为准。
+
+| 编号 | 描述 | 证据 (file:line) | 影响 / 与不变量关系 | 严重度 | 计划处置 |
+|---|---|---|---|---|---|
+| #4 | **newsQueue 仅内存**：启动抓取的资讯候选只存 Zustand、不落 SQLite；刷新或重启即丢。 | `src/stores/appStore.ts:28-55`、`src/lib/runLaunchSequence.ts:114-116` | 字面弱违背不变量 1（本地持久化预期），但非 DB 泄漏；会话级候选可丢、图谱/画像仍持久。 | 低 | 下个里程碑评估是否需要会话级持久化（SQLite 或等价）。 |
+| H2-storage | **存储无事务**：`applyGraphMutation`（含 merge/archive 内 `migrateEdges`）与 `persistGraphSnapshot` 分步落库，非原子。 | `src/lib/graphMutations.ts:105-235`、`237+`；调用例 `src/stores/proposalStore.ts:77` | 对「永久」本地图谱存在部分写 / 损坏风险；不直接违反 suggest-then-confirm，但影响不变量 1 的持久可靠性。 | 中 | 单独立项 spec（建议代号 **H5-storage-transactions**）做事务化；本次不急修。 |
+| coverage-flake | **coverage 首跑偶发 exit 1**：`pnpm coverage` 首次非零退出、无覆盖率表，复跑才过；CI 可能偶红。 | （行为型；见 `H0-coverage-ratchet` 与 CI 日志） | 不违反产品不变量；影响 H0 棘轮与合并信心。 | 中 | 单独排查 Vitest coverage 偶发失败根因（环境/竞态/缓存）。 |
+| H4-openai-mode | **OpenAI 模式端到端缺口（H4 stub）**：`VITE_LLM_PROVIDER=openai` 且配 Key 时，语音画像蒸馏与资讯 summarize/explain 均 fail-fast，端到端不可用。 | `src/providers/llm/openaiLlmProvider.ts:34-44`、`53-76` | 不影响 mock 默认路径与不变量 5（可替换 Provider）；真实 OpenAI 路径未交付。 | 中 | 真正接入前，发布说明标明「须用 mock 模式」；接入留待后续里程碑。 |
+| bundle-size | **生产 bundle >500kB 警告**：单 chunk 超过 500kB（Vite 构建告警）。 | （构建输出；无单点行号） | 无功能/不变量违背；首屏与更新包体偏大。 | 低 | 后续做代码分割 / 懒加载优化。 |
