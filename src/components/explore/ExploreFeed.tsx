@@ -24,13 +24,13 @@ export function ExploreFeed() {
   const skippedIds = useIngestStore((state) => state.skippedIds);
   const ingestedIds = useIngestStore((state) => state.ingestedIds);
   const activeNewsId = useIngestStore((state) => state.activeNewsId);
-  const pendingQueue = useIngestStore((state) => state.pendingProposalQueue);
   const [isApplying, setIsApplying] = useState(false);
 
   const {
     currentItem,
     ingestPhase,
     explanation,
+    pendingProposal,
     explainCurrent,
     requestIngest,
     confirmProposal,
@@ -120,7 +120,7 @@ export function ExploreFeed() {
 
       <SuggestConfirmDialog
         open={isConfirming}
-        proposals={pendingQueue}
+        proposals={pendingProposal ? [pendingProposal] : []}
         isBusy={isApplying}
         onConfirm={() => void handleConfirm()}
         onCancel={rejectProposal}

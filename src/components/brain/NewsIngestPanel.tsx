@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { SuggestConfirmDialog } from "@/components/brain/SuggestConfirmDialog";
 import { useNewsIngestSession } from "@/hooks/useNewsIngestSession";
-import { useIngestStore } from "@/stores/ingestStore";
-
 /** The session-complete banner is a transient welcome, not a resident bar. */
 const COMPLETION_VISIBLE_MS = 4500;
 const COMPLETION_FADE_MS = 500;
@@ -13,12 +11,12 @@ export function NewsIngestPanel() {
   const [completionPhase, setCompletionPhase] = useState<
     "visible" | "fading" | "hidden"
   >("visible");
-  const pendingQueue = useIngestStore((state) => state.pendingProposalQueue);
 
   const {
     currentItem,
     ingestPhase,
     explanation,
+    pendingProposal,
     errorMessage,
     sessionComplete,
     isActive,
@@ -158,7 +156,7 @@ export function NewsIngestPanel() {
 
       <SuggestConfirmDialog
         open={isConfirming}
-        proposals={pendingQueue}
+        proposals={pendingProposal ? [pendingProposal] : []}
         isBusy={isApplying}
         onConfirm={() => void handleConfirm()}
         onCancel={rejectProposal}

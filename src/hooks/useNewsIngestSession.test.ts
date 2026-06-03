@@ -1,11 +1,16 @@
 /**
  * @vitest-environment happy-dom
+ *
+ * E5 (partial confirm → reject → markIngested): rejectProposal suite below.
+ * @see productInvariants.ingestE5.test.ts — invariant-level E2E + requestIngest guard
+ * @see productInvariants.test.ts — store resolution + full-reject baseline
  */
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { GraphMutationProposal } from "@/domain/graph";
 import { createTempStorage } from "@/invariants/testStorage";
 import { useNewsIngestSession } from "@/hooks/useNewsIngestSession";
+import { createAppProviders } from "@/providers";
 import { useAppStore } from "@/stores/appStore";
 import { useIngestStore } from "@/stores/ingestStore";
 
@@ -144,6 +149,15 @@ describe("useNewsIngestSession rejectProposal", () => {
       expect(state.cursor).toBe(1);
       expect(result.current.currentItem).toBeNull();
       expect(result.current.sessionComplete).toBe(true);
+
+      useAppStore.setState({
+        providers: createAppProviders({ openAiApiKey: "" }),
+      });
+      await act(async () => {
+        await result.current.requestIngest();
+      });
+      expect(useIngestStore.getState().pendingProposal).toBeNull();
+      expect(useIngestStore.getState().ingestedIds).toEqual(["news-1"]);
     } finally {
       cleanup();
     }
