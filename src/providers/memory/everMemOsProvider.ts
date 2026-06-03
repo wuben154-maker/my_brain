@@ -196,17 +196,22 @@ export class EverMemOsProvider implements MemoryProvider {
     }
 
     try {
-      const response = await this.fetchImpl(`${this.apiBase}/memories/search`, {
-        method: "GET",
-        headers: this.headers,
-        body: JSON.stringify({
-          query: query.query,
-          user_id: this.userId,
-          retrieve_method: "hybrid",
-          memory_types: memoryTypesForRecall(query.kinds),
-          top_k: query.topK ?? DEFAULT_TOP_K,
-        }),
+      const params = new URLSearchParams({
+        query: query.query,
+        user_id: this.userId,
+        retrieve_method: "hybrid",
+        top_k: String(query.topK ?? DEFAULT_TOP_K),
       });
+      for (const type of memoryTypesForRecall(query.kinds)) {
+        params.append("memory_types", type);
+      }
+      const response = await this.fetchImpl(
+        `${this.apiBase}/memories/search?${params.toString()}`,
+        {
+          method: "GET",
+          headers: this.headers,
+        },
+      );
 
       if (!response.ok) {
         this.log(`[memory] recall HTTP ${response.status}`);

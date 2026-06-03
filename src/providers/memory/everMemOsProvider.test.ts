@@ -9,7 +9,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe("EverMemOsProvider", () => {
-  it("posts distilled text and searches with hybrid retrieve_method", async () => {
+  it("stores distilled text and searches with hybrid retrieve_method via GET", async () => {
     const calls: { url: string; init?: RequestInit }[] = [];
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const href = String(input);
@@ -18,11 +18,14 @@ describe("EverMemOsProvider", () => {
       if (href.endsWith("/health")) {
         return jsonResponse({ status: "healthy" });
       }
-      if (href.endsWith("/memories/search")) {
-        const body = JSON.parse(String(init?.body));
-        expect(body.retrieve_method).toBe("hybrid");
-        expect(body.user_id).toBe("user_test");
-        expect(body.memory_types).toEqual(["episodic_memory", "event_log"]);
+      if (href.includes("/memories/search")) {
+        const url = new URL(href);
+        expect(url.searchParams.get("retrieve_method")).toBe("hybrid");
+        expect(url.searchParams.get("user_id")).toBe("user_test");
+        expect(url.searchParams.getAll("memory_types")).toEqual([
+          "episodic_memory",
+          "event_log",
+        ]);
         return jsonResponse({
           result: {
             memories: [{ content: "用户喜欢 RAG", score: 0.91 }],
@@ -55,6 +58,8 @@ describe("EverMemOsProvider", () => {
 
     const searchCall = calls.find((call) => call.url.includes("/memories/search"));
     expect(searchCall).toBeDefined();
+    expect(searchCall?.init?.method).toBe("GET");
+    expect(searchCall?.init?.body).toBeUndefined();
     const storeCall = calls.find(
       (call) => call.url.endsWith("/memories") && call.init?.method === "POST",
     );
@@ -99,13 +104,43 @@ describe("EverMemOsProvider", () => {
     expect(provider.pendingCount()).toBe(1);
   });
 
+  it("recall uses GET with query params and no request body", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const href = String(input);
+      if (href.endsWith("/health")) {
+        return jsonResponse({ status: "healthy" });
+      }
+      if (href.includes("/memories/search")) {
+        expect(init?.method).toBe("GET");
+        expect(init?.body).toBeUndefined();
+        const url = new URL(href);
+        expect(url.searchParams.get("query")).toBe("no-get-body");
+        return jsonResponse({ result: { memories: [] } });
+      }
+      return jsonResponse({}, 404);
+    });
+
+    const provider = new EverMemOsProvider({
+      baseUrl: "http://localhost:1995",
+      userId: "user_test",
+      fetchImpl: fetchMock,
+    });
+
+    await provider.recall({ query: "no-get-body" });
+    const searchCall = fetchMock.mock.calls.find(([url]) =>
+      String(url).includes("/memories/search"),
+    );
+    expect(searchCall?.[1]?.method).toBe("GET");
+    expect(searchCall?.[1]?.body).toBeUndefined();
+  });
+
   it("tolerates truncated or invalid search JSON", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const href = String(input);
       if (href.endsWith("/health")) {
         return jsonResponse({ status: "healthy" });
       }
-      if (href.endsWith("/memories/search")) {
+      if (href.includes("/memories/search")) {
         return new Response("{not-json", {
           status: 200,
           headers: { "Content-Type": "application/json" },
