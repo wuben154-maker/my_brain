@@ -5,6 +5,7 @@ import {
   proposalTopicHint,
 } from "@/agent/profile/feedbackSignals";
 import { applyGraphMutation, persistGraphSnapshot } from "@/lib/graphMutations";
+import { resolveProposalForApply } from "@/lib/resolveProposalForApply";
 import { syncDisplayGraph } from "@/lib/syncDisplayGraph";
 import type { StorageProvider } from "@/storage/types";
 import { useProfileStore } from "@/stores/profileStore";
@@ -61,9 +62,18 @@ export const useProposalStore = create<ProposalState>((set, get) => ({
     }
 
     try {
-      // Same sequence as useManualGraphOps.applyProposal / useNewsIngestSession.
       const before = await graphStorage.loadGraph();
-      const after = applyGraphMutation(before, envelope.proposal);
+      const pending =
+        get().pending.length > 0
+          ? get().pending
+          : await storage.listPendingProposals();
+      const resolved = resolveProposalForApply(envelope.proposal, {
+        graph: before,
+        pending,
+        runId: envelope.runId,
+        envelopeId: envelope.id,
+      });
+      const after = applyGraphMutation(before, resolved);
       await persistGraphSnapshot(graphStorage, before, after);
       await syncDisplayGraph(graphStorage);
       await storage.setProposalStatus(id, "approved");

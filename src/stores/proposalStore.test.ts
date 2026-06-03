@@ -23,6 +23,7 @@ import {
 } from "@/lib/graphMutations";
 
 import type { ProposalEnvelope } from "@/agent/types";
+import { toResearchTempId } from "@/agent/jobs/topicResearchJob";
 
 import type { StorageProvider } from "@/storage/types";
 
@@ -709,6 +710,116 @@ describe.each(STORAGE_BACKEND_KINDS)(
     });
 
 
+
+    it("rejects link approve before batch create (research temp ids)", async () => {
+      const { storage, cleanup } = createTempStorage(kind);
+      const batchRunId = "run-research-batch";
+      const tempA = toResearchTempId("研究概念 A");
+      const tempB = toResearchTempId("研究概念 B");
+
+      try {
+        await storage.init();
+
+        const createA: GraphMutationProposal = {
+          id: "prop-batch-create-a",
+          kind: "create",
+          summary: "新建 A",
+          payload: { title: "研究概念 A", intro: "a", sourceUrl: null },
+        };
+        const link: GraphMutationProposal = {
+          id: "prop-batch-link",
+          kind: "link",
+          summary: "关联 A→B",
+          payload: {
+            sourceId: tempA,
+            targetId: tempB,
+            relationType: "related",
+          },
+        };
+
+        await storage.saveProposal(
+          envelopeFromProposal(createA, { runId: batchRunId }),
+        );
+        await storage.saveProposal(
+          envelopeFromProposal(link, { runId: batchRunId }),
+        );
+        await useProposalStore.getState().load(storage);
+
+        await expect(
+          useProposalStore
+            .getState()
+            .approve(storage, storage, link.id),
+        ).rejects.toThrow(/请先确认同批次的「新建」提议/);
+
+        const stillPending = await storage.listPendingProposals();
+        expect(stillPending).toHaveLength(1);
+        expect(stillPending[0]?.id).toBe(createA.id);
+        expect(useProposalStore.getState().pending).toHaveLength(1);
+      } finally {
+        cleanup();
+      }
+    });
+
+    it("approve research batch link after creates yields real node ids", async () => {
+      const { storage, cleanup } = createTempStorage(kind);
+      const batchRunId = "run-research-batch-ok";
+      const tempA = toResearchTempId("研究概念 A");
+      const tempB = toResearchTempId("研究概念 B");
+
+      try {
+        await storage.init();
+
+        const createA: GraphMutationProposal = {
+          id: "prop-ok-create-a",
+          kind: "create",
+          summary: "新建 A",
+          payload: { title: "研究概念 A", intro: "a", sourceUrl: null },
+        };
+        const createB: GraphMutationProposal = {
+          id: "prop-ok-create-b",
+          kind: "create",
+          summary: "新建 B",
+          payload: { title: "研究概念 B", intro: "b", sourceUrl: null },
+        };
+        const link: GraphMutationProposal = {
+          id: "prop-ok-link",
+          kind: "link",
+          summary: "关联 A→B",
+          payload: {
+            sourceId: tempA,
+            targetId: tempB,
+            relationType: "related",
+          },
+        };
+
+        for (const proposal of [createA, createB, link]) {
+          await storage.saveProposal(
+            envelopeFromProposal(proposal, { runId: batchRunId }),
+          );
+        }
+        await useProposalStore.getState().load(storage);
+
+        await useProposalStore
+          .getState()
+          .approve(storage, storage, createA.id);
+        await useProposalStore
+          .getState()
+          .approve(storage, storage, createB.id);
+        await useProposalStore
+          .getState()
+          .approve(storage, storage, link.id);
+
+        const graph = await storage.loadGraphForDisplay();
+        expect(graph.edges).toHaveLength(1);
+        const edge = graph.edges[0];
+        expect(edge?.sourceId).not.toMatch(/^__research_temp:/);
+        expect(edge?.targetId).not.toMatch(/^__research_temp:/);
+        expect(graph.nodes.some((n) => n.id === edge?.sourceId)).toBe(true);
+        expect(graph.nodes.some((n) => n.id === edge?.targetId)).toBe(true);
+      } finally {
+        cleanup();
+      }
+    });
 
     it("supports expired status placeholder for failed approvals", async () => {
 

@@ -33,6 +33,7 @@ export class BetterSqliteBackend {
 
     mkdirSync(dirname(this.options.dbPath), { recursive: true });
     this.db = new Database(this.options.dbPath);
+    this.db.pragma("foreign_keys = ON");
     this.db.pragma("journal_mode = WAL");
     this.db.exec(INITIAL_MIGRATION_SQL);
     migrateConceptSalienceColumnsSqlite(this.db);

@@ -6,6 +6,7 @@ import {
   primaryNodeIdFromProposal,
   visibleGraph,
 } from "@/lib/graphMutations";
+import { resolveLinkPendingCreate } from "@/lib/resolveProposalForApply";
 import {
   prependGrounding,
   recallGroundingContext,
@@ -19,25 +20,6 @@ import {
 import { useAppStore } from "@/stores/appStore";
 import { useGraphStore } from "@/stores/graphStore";
 import { useProfileStore } from "@/stores/profileStore";
-
-function resolveLinkTarget(
-  proposal: GraphMutationProposal,
-  createdNodeId: string,
-): GraphMutationProposal {
-  if (
-    proposal.kind === "link" &&
-    proposal.payload.targetId === "__PENDING_CREATE__"
-  ) {
-    return {
-      ...proposal,
-      payload: {
-        ...proposal.payload,
-        targetId: createdNodeId,
-      },
-    };
-  }
-  return proposal;
-}
 
 export function useNewsIngestSession() {
   const pendingCreateNodeIdRef = useRef<string | null>(null);
@@ -163,7 +145,10 @@ export function useNewsIngestSession() {
     try {
       let proposal = current;
       if (pendingCreateNodeIdRef.current) {
-        proposal = resolveLinkTarget(proposal, pendingCreateNodeIdRef.current);
+        proposal = resolveLinkPendingCreate(
+          proposal,
+          pendingCreateNodeIdRef.current,
+        );
       }
       const nodeId = await applyProposal(proposal);
       hasAppliedForActiveNewsRef.current = true;
