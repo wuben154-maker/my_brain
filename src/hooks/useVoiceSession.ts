@@ -148,37 +148,43 @@ export function useVoiceSession() {
     }
   }, [canUseVoice, voice]);
 
-  const distillBeforeDiscard = useCallback(async (lines: TranscriptLineLike[]) => {
-    if (!hasUserSpeech(lines)) {
-      return;
-    }
+  const distillBeforeDiscard = useCallback(
+    async (lines: TranscriptLineLike[]): Promise<boolean> => {
+      if (!hasUserSpeech(lines)) {
+        return true;
+      }
 
-    const storage = useAppStore.getState().storage;
-    const llm = useAppStore.getState().providers?.llm;
-    if (!storage || !llm) {
-      return;
-    }
+      const storage = useAppStore.getState().storage;
+      const llm = useAppStore.getState().providers?.llm;
+      if (!storage || !llm) {
+        setErrorMessage("用户画像蒸馏不可用：存储或语言模型未就绪");
+        return false;
+      }
 
-    const transcript = formatConversationTranscript(lines);
-    setIsDistilling(true);
-    try {
-      const current = useProfileStore.getState().profile;
-      const next = await distillAndPersistUserProfile(
-        storage,
-        llm,
-        transcript,
-        current,
-      );
-      useProfileStore.getState().setProfile(next);
-      useProfileStore.getState().markDistilled(next.updatedAt);
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "用户画像蒸馏失败",
-      );
-    } finally {
-      setIsDistilling(false);
-    }
-  }, []);
+      const transcript = formatConversationTranscript(lines);
+      setIsDistilling(true);
+      try {
+        const current = useProfileStore.getState().profile;
+        const next = await distillAndPersistUserProfile(
+          storage,
+          llm,
+          transcript,
+          current,
+        );
+        useProfileStore.getState().setProfile(next);
+        useProfileStore.getState().markDistilled(next.updatedAt);
+        return true;
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error ? error.message : "用户画像蒸馏失败",
+        );
+        return false;
+      } finally {
+        setIsDistilling(false);
+      }
+    },
+    [],
+  );
 
   const rememberBeforeDiscard = useCallback(async (lines: TranscriptLineLike[]) => {
     if (!hasUserSpeech(lines)) {

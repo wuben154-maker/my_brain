@@ -3,7 +3,8 @@ import type { TranscriptLineLike } from "@/lib/profileDistillation";
 export interface FinalizeVoiceSessionParams {
   transcripts: TranscriptLineLike[];
   disconnectVoice: () => Promise<void>;
-  distillProfile: (lines: TranscriptLineLike[]) => Promise<void>;
+  /** true when profile was distilled and persisted (or nothing to distill); false keeps transcript. */
+  distillProfile: (lines: TranscriptLineLike[]) => Promise<boolean>;
   rememberSession?: (lines: TranscriptLineLike[]) => Promise<void>;
   clearTranscripts: () => void;
 }
@@ -17,9 +18,11 @@ export async function finalizeVoiceSession(
 ): Promise<void> {
   const snapshot = [...params.transcripts];
   await params.disconnectVoice();
-  await params.distillProfile(snapshot);
+  const distillOk = await params.distillProfile(snapshot);
   if (params.rememberSession) {
     await params.rememberSession(snapshot);
   }
-  params.clearTranscripts();
+  if (distillOk) {
+    params.clearTranscripts();
+  }
 }

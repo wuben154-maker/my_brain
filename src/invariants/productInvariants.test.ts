@@ -66,6 +66,7 @@ describe("Product invariants (AGENTS.md core)", () => {
         },
         distillProfile: async () => {
           order.push("distill");
+          return true;
         },
         rememberSession: async () => {
           order.push("remember");
