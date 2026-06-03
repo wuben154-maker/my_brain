@@ -196,6 +196,28 @@ describe("SQLite persistence (better-sqlite3)", () => {
 });
 
 describe.each(STORAGE_BACKEND_KINDS)(
+  "storage foreign keys (%s)",
+  (kind: StorageBackendKind) => {
+    it("rejects saveEdge when concept endpoints are missing", async () => {
+      const { storage, cleanup } = createTempStorage(kind);
+      try {
+        await storage.init();
+        await expect(
+          storage.saveEdge({
+            id: "orphan-edge",
+            sourceId: "no-such-source",
+            targetId: "no-such-target",
+            relationType: "related",
+          }),
+        ).rejects.toThrow();
+      } finally {
+        cleanup();
+      }
+    });
+  },
+);
+
+describe.each(STORAGE_BACKEND_KINDS)(
   "proposal inbox persistence (%s)",
   (kind: StorageBackendKind) => {
   it("creates agent_proposals table idempotently on init", async () => {

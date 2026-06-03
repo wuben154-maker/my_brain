@@ -134,4 +134,20 @@ describe("graphMutations", () => {
     );
     expect(after.edges.every((edge) => edge.sourceId !== "drop")).toBe(true);
   });
+
+  it("rejects link when source or target node is missing", () => {
+    const proposal: GraphMutationProposal = {
+      id: "p-link-missing",
+      kind: "link",
+      summary: "无效连线",
+      payload: {
+        sourceId: "a",
+        targetId: "missing",
+        relationType: "related",
+      },
+    };
+    expect(() => applyGraphMutation(baseSnapshot(), proposal)).toThrow(
+      "link 节点不存在",
+    );
+  });
 });

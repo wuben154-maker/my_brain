@@ -205,6 +205,11 @@ export function applyGraphMutation(
     }
     case "link": {
       const payload = readLinkPayload(proposal.payload);
+      const source = findNode({ nodes, edges }, payload.sourceId);
+      const target = findNode({ nodes, edges }, payload.targetId);
+      if (!source || !target) {
+        throw new Error("link 节点不存在");
+      }
       edges.push({
         id: newEdgeId(payload.sourceId, payload.targetId, payload.relationType),
         sourceId: payload.sourceId,

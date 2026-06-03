@@ -32,6 +32,7 @@ export class TauriSqlStorageProvider implements StorageProvider {
   async init(): Promise<void> {
     const load = this.options.loadDatabase ?? ((uri) => Database.load(uri));
     this.db = await load(`sqlite:${STORAGE_DB_NAME}`);
+    await this.db.execute("PRAGMA foreign_keys = ON");
     await this.db.execute(INITIAL_MIGRATION_SQL);
     await migrateConceptSalienceColumnsTauri(this.db);
   }
