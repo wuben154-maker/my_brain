@@ -1,4 +1,3 @@
-import type { NewsItem } from "@/domain/news";
 import {
   assertNotAborted,
   beginTraceStep,
@@ -13,6 +12,7 @@ import type {
   ProposalEnvelope,
 } from "@/agent/types";
 import type { TokenBudget } from "@/agent/budget";
+import { selectTopNewsByProfile } from "@/agent/curation/scoreNews";
 import { dedupeAgainstGraph } from "./dedupeNews";
 
 export interface MorningBriefConfig {
@@ -35,17 +35,7 @@ export const MORNING_BRIEF_STEP_TOKENS = {
   propose: 200,
 } as const;
 
-/** Simple recency sort until C1 profile scoring lands. */
-export function sortNewsForBrief(items: NewsItem[]): NewsItem[] {
-  return [...items].sort((a, b) => {
-    const aTime = a.publishedAt ? Date.parse(a.publishedAt) : 0;
-    const bTime = b.publishedAt ? Date.parse(b.publishedAt) : 0;
-    if (bTime !== aTime) {
-      return bTime - aTime;
-    }
-    return a.sourceName.localeCompare(b.sourceName, "zh-CN");
-  });
-}
+export { sortNewsForBrief } from "@/agent/curation/scoreNews";
 
 function sumTraceTokens(trace: AgentTraceStep[]): number {
   return trace.reduce((total, step) => total + (step.tokensUsed ?? 0), 0);
@@ -135,7 +125,9 @@ export function createMorningBriefJob(
       pushStep(finishTraceStep(graphDraft, `${graph.nodes.length} nodes`));
       assertNotAborted(signal);
 
-      await tools.readProfile();
+      const profileDraft = beginTraceStep("readProfile");
+      const profile = await tools.readProfile();
+      pushStep(finishTraceStep(profileDraft, profile.displayName ?? "default"));
 
       const dedupeDraft = beginTraceStep("dedupeAgainstGraph");
       const deduped = dedupeAgainstGraph(fetched, graph);
@@ -147,7 +139,7 @@ export function createMorningBriefJob(
       );
       assertNotAborted(signal);
 
-      const candidates = sortNewsForBrief(deduped).slice(0, cfg.topN);
+      const candidates = selectTopNewsByProfile(deduped, profile, cfg.topN);
       const sections: AgentDigestSection[] = [];
       const proposals: ProposalEnvelope[] = [];
 
@@ -164,7 +156,7 @@ export function createMorningBriefJob(
         }
 
         const summarizeDraft = beginTraceStep("summarize", item.title);
-        const summary = await tools.summarize(item);
+        const summary = await tools.summarize(item, profile);
         pushStep(
           finishTraceStep(
             summarizeDraft,

@@ -43,11 +43,12 @@ function findRelatedNode(
 export class MockLlmProvider implements LlmProvider {
   readonly id = "mock-llm";
 
-  async summarizeNews(item: NewsItem): Promise<string> {
+  async summarizeNews(item: NewsItem, profile?: UserProfile): Promise<string> {
+    const style = profile?.explanationStyle ?? "通俗中文 + 保留英文术语";
     if (item.category === "github_trending") {
-      return `GitHub 趋势：${item.title}。这是 Mock 讲解——${item.summary} 你可以把它理解成「用代码搭智能体流水线的 starter kit」，适合想快速试 Agent 编排的开发者。`;
+      return `GitHub 趋势：${item.title}。这是 Mock 讲解（${style}）——${item.summary} 你可以把它理解成「用代码搭智能体流水线的 starter kit」，适合想快速试 Agent 编排的开发者。`;
     }
-    return `AI 资讯速览：${item.title}。Mock 讲解——${item.summary} 核心在 Transformer 的上下文窗口变长，意味着模型一次能读更多 token，长文档问答会更稳。`;
+    return `AI 资讯速览：${item.title}。Mock 讲解（${style}）——${item.summary} 核心在 Transformer 的上下文窗口变长，意味着模型一次能读更多 token，长文档问答会更稳。`;
   }
 
   async explainConcept(topic: string, profile: UserProfile): Promise<string> {

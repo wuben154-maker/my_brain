@@ -1,6 +1,6 @@
 # C1 — 画像驱动选题（`profile-curation`）
 
-- **阶段：** C · **状态：** 📝 待做
+- **阶段：** C · **状态：** ✅ 已实现
 - **上游：** A3（`MorningBriefJob`）、现有 `UserProfile` · **下游：** C3（反哺）
 
 ## 1. 目标
@@ -21,10 +21,10 @@ export function scoreNewsByProfile(news: NewsItem[], profile: UserProfile): News
 - `explain/summarize` 的 prompt 注入 `explanationStyle`（经 `LlmProvider`，不破坏接口）。
 
 ## 4. 验收清单
-- [ ] 打分纯函数表驱动用例：命中兴趣/未知主题分高，已知无新意分低。
-- [ ] topN 选取顺序随画像变化而变化（同新闻不同画像→不同排序）。
-- [ ] 画像为空（冷启动）时退化为时间/来源排序，不报错。
-- [ ] 讲解深度随 `explanationStyle` 变化（mock 可断言 prompt 包含该风格）。
+- [x] 打分纯函数表驱动用例：命中兴趣/未知主题分高，已知无新意分低。
+- [x] topN 选取顺序随画像变化而变化（同新闻不同画像→不同排序）。
+- [x] 画像为空（冷启动）时退化为时间/来源排序，不报错。
+- [x] 讲解深度随 `explanationStyle` 变化（mock 可断言 prompt 包含该风格）。
 
 ## 5. 测试（`scoreNews.test.ts`）
 - 多画像 × 多新闻打分矩阵；空画像退化；稳定排序。

@@ -54,7 +54,7 @@ export interface AgentTraceStep {
  */
 export interface AgentTools {
   fetchNews(): Promise<NewsItem[]>;
-  summarize(item: NewsItem): Promise<string>;
+  summarize(item: NewsItem, profile?: UserProfile): Promise<string>;
   explain(topic: string, profile: UserProfile): Promise<string>;
   propose(context: string): Promise<GraphMutationProposal[]>;
   planResearch(topic: string, profile: UserProfile): Promise<ResearchPlan>;

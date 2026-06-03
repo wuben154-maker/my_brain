@@ -150,7 +150,7 @@ describe("AgentTools", () => {
     expect(loadUserProfile).toHaveBeenCalledOnce();
 
     await tools.summarize(sampleNews);
-    expect(summarizeSpy).toHaveBeenCalledWith(sampleNews);
+    expect(summarizeSpy).toHaveBeenCalledWith(sampleNews, undefined);
   });
 });
 

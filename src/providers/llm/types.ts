@@ -28,7 +28,7 @@ export interface LlmProviderConfig {
 
 export interface LlmProvider {
   readonly id: string;
-  summarizeNews(item: NewsItem): Promise<string>;
+  summarizeNews(item: NewsItem, profile?: UserProfile): Promise<string>;
   explainConcept(topic: string, profile: UserProfile): Promise<string>;
   proposeGraphMutations(context: string): Promise<GraphMutationProposal[]>;
   distillUserProfile(

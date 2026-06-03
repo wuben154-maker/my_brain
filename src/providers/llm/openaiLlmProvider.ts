@@ -22,8 +22,9 @@ export class OpenAiLlmProvider implements LlmProvider {
     void this.config;
   }
 
-  async summarizeNews(item: NewsItem): Promise<string> {
-    return `${item.title}（来源：${item.sourceName}）— 待接入大模型后生成通俗摘要。`;
+  async summarizeNews(item: NewsItem, profile?: UserProfile): Promise<string> {
+    const style = profile?.explanationStyle ?? "通俗、中文讲解，保留英文术语";
+    return `${item.title}（来源：${item.sourceName}，讲解风格：${style}）— 待接入大模型后生成通俗摘要。`;
   }
 
   async explainConcept(topic: string, profile: UserProfile): Promise<string> {

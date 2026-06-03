@@ -11,11 +11,11 @@ import {
 import { assertAgentToolsReadOnly, createAgentTools } from "@/agent/tools";
 import { AgentRunAbortedError, runAgentJob } from "@/agent/runner";
 import { createTokenBudget } from "@/agent/budget";
+import { sortNewsForBrief } from "@/agent/curation/scoreNews";
 import {
   createMorningBriefJob,
   DEFAULT_MORNING_BRIEF_CONFIG,
   MORNING_BRIEF_STEP_TOKENS,
-  sortNewsForBrief,
 } from "./morningBriefJob";
 
 function createMockNewsSource(items: NewsItem[]): NewsSource {
@@ -262,6 +262,34 @@ describe("MorningBriefJob", () => {
     expect(result.trace.some((step) => step.name === "budget_truncated")).toBe(
       true,
     );
+  });
+
+  it("orders digest by profile scoring (C1)", async () => {
+    const items = [
+      makeNewsItem(0, { title: "Transformer 架构速览" }),
+      makeNewsItem(1, { title: "RAG 检索增强实践" }),
+    ];
+    const profile = {
+      ...DEFAULT_USER_PROFILE,
+      interests: ["RAG"],
+      updatedAt: "2026-06-01T00:00:00.000Z",
+    };
+    const loadUserProfile = vi.fn().mockResolvedValue(profile);
+    const tools = createAgentTools({
+      llm: createMockLlmProvider(),
+      news: createNewsSourceRegistry([createMockNewsSource(items)]),
+      readGraph: async () => ({ nodes: [], edges: [] }),
+      readProfile: loadUserProfile,
+    });
+
+    const result = await runAgentJob(
+      createMorningBriefJob({ topN: 1 }),
+      tools,
+      new AbortController().signal,
+    );
+
+    expect(result.digest?.sections[0]?.headline).toBe("RAG 检索增强实践");
+    expect(result.digest?.sections[0]?.body).toContain("通俗中文");
   });
 
   it("does not import storage write or graph mutation paths", () => {

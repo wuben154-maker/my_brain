@@ -28,8 +28,8 @@ export function createAgentTools(input: CreateAgentToolsInput): AgentTools {
       const results = await news.fetchAll();
       return flattenNewsItems(results);
     },
-    summarize(item) {
-      return llm.summarizeNews(item);
+    summarize(item, profile) {
+      return llm.summarizeNews(item, profile);
     },
     explain(topic, profile) {
       return llm.explainConcept(topic, profile);
