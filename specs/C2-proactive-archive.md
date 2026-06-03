@@ -1,6 +1,6 @@
 # C2 — 主动净化建议（`proactive-archive`）
 
-- **阶段：** C · **状态：** 📝 待做
+- **阶段：** C · **状态：** ✅ 已实现
 - **上游：** A2（收件箱）、现有 `graphMutations`（`archive` + 边迁移）· **下游：** C3
 
 ## 1. 目标
@@ -26,10 +26,10 @@ export function detectStaleNodes(graph: BrainGraphSnapshot, now: Date, staleDays
 - `source:"profile_suggestion"`、`status:"pending"`。
 
 ## 4. 验收清单
-- [ ] `detectStaleNodes` 表驱动：久未更新 / 被 `replaces` 指向 / 高重叠 各命中正确。
-- [ ] 生成的 `archive` 提议确认后，边正确迁移到 `migrateEdgesToNodeId`（复用并对齐 `graphMutations.test.ts`）。
-- [ ] **无任何自动归档路径**：本 Job 不调用 `persistGraphSnapshot`（护栏断言）。
-- [ ] `maxProposals` 截断；无候选时产出空。
+- [x] `detectStaleNodes` 表驱动：久未更新 / 被 `replaces` 指向 / 高重叠 各命中正确。
+- [x] 生成的 `archive` 提议确认后，边正确迁移到 `migrateEdgesToNodeId`（复用并对齐 `graphMutations.test.ts`）。
+- [x] **无任何自动归档路径**：本 Job 不调用 `persistGraphSnapshot`（护栏断言）。
+- [x] `maxProposals` 截断；无候选时产出空。
 
 ## 5. 测试（`detectStale.test.ts` / `curationScanJob.test.ts`）
 - 启发式命中矩阵；archive+边迁移一致性；无写能力断言。
