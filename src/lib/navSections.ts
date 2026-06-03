@@ -37,8 +37,8 @@ export const NAV_SECTIONS: NavSectionDef[] = [
   {
     id: "mindmap",
     label: "思维导图",
-    status: "planned",
-    specRef: "specs/N3-mindmap-view.md",
+    status: "live",
+    specRef: null,
   },
   {
     id: "agent",

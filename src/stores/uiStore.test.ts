@@ -60,9 +60,8 @@ describe("navSections (N0 invariants)", () => {
     expect(NAV_SECTIONS).toHaveLength(7);
   });
 
-  it("planned sections point at existing spec files", () => {
+  it("planned sections point at existing spec files; live sections need no specRef", () => {
     const planned = NAV_SECTIONS.filter((section) => section.status === "planned");
-    expect(planned.length).toBeGreaterThan(0);
     for (const section of planned) {
       expect(section.specRef).toMatch(/^specs\/.+\.md$/);
       expect(
@@ -72,5 +71,6 @@ describe("navSections (N0 invariants)", () => {
     }
     expect(NAV_SECTIONS.find((s) => s.id === "agent")?.status).toBe("live");
     expect(NAV_SECTIONS.find((s) => s.id === "explore")?.status).toBe("live");
+    expect(NAV_SECTIONS.find((s) => s.id === "mindmap")?.status).toBe("live");
   });
 });

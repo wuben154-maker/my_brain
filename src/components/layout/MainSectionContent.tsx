@@ -2,6 +2,7 @@ import { AgentSection } from "@/components/agent/AgentSection";
 import { InsightSection } from "@/components/agent/InsightSection";
 import { DocsLibrary } from "@/components/docs/DocsLibrary";
 import { ExploreFeed } from "@/components/explore/ExploreFeed";
+import { MindmapOutline } from "@/components/mindmap/MindmapOutline";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { GraphMainSection } from "@/components/layout/GraphMainSection";
 import { SectionPlaceholder } from "@/components/layout/SectionPlaceholder";
@@ -23,6 +24,9 @@ function renderSection(id: NavSectionId) {
   }
   if (id === "docs") {
     return <DocsLibrary />;
+  }
+  if (id === "mindmap") {
+    return <MindmapOutline />;
   }
   if (id === "settings") {
     return <SettingsPanel />;

@@ -52,7 +52,7 @@
 | [N4-settings](./N4-settings.md) | `settings` | A（跟 A5） | ✅ 已实现 | 设置区：调度开关/Provider 模式/人格/隐私 | 设置 |
 | [G1-graph-3d](./G1-graph-3d.md) | `graph-3d` | A 段收尾 / B（B3 前或同期） | ✅ 已实现 | 真 3D 星图（three.js），2D 默认+基线不动，3D 走「3D 视图」开关 | 知识图谱 |
 | [N2-docs-library](./N2-docs-library.md) | `docs-library` | B（穿插） | ✅ 已实现 | 来源/出处索引区，回链星图定位 | 文档库 |
-| [N3-mindmap-view](./N3-mindmap-view.md) | `mindmap-view` | B/C（非 MVP 必做，可暂缓） | 📝 待做 | 图谱分层大纲/树视角 | 思维导图 |
+| [N3-mindmap-view](./N3-mindmap-view.md) | `mindmap-view` | B/C（非 MVP 必做，可暂缓） | ✅ 已实现 | 图谱分层大纲/树视角 | 思维导图 |
 
 > 已有里程碑承担的导航项：**知识图谱**=主视图（N0 默认区，G1 加 3D）；**智能体**=[A4 收件箱](./A4-inbox-ui.md)（挂 `agent` 分区）；**分析洞察**=[B3 调研轨迹](./B3-research-trace-view.md)（挂 `insight` 分区）。
 

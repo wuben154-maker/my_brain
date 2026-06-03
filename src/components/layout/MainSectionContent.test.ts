@@ -56,4 +56,11 @@ describe("MainSectionContent (N0 AppShell routing)", () => {
     expect(screen.getByTestId("section-insight")).toBeTruthy();
     expect(screen.getByTestId("insight-empty")).toBeTruthy();
   });
+
+  it("renders mindmap outline when activeSection is mindmap (N3)", () => {
+    useUiStore.setState({ activeSection: "mindmap" });
+    render(createElement(MainSectionContent));
+    expect(screen.getByTestId("section-mindmap")).toBeTruthy();
+    expect(screen.getByTestId("mindmap-outline-empty")).toBeTruthy();
+  });
 });
