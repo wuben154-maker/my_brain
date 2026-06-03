@@ -43,6 +43,13 @@ describe("MainSectionContent (N0 AppShell routing)", () => {
     expect(screen.getByTestId("settings-scheduler")).toBeTruthy();
   });
 
+  it("renders docs library when activeSection is docs (N2)", () => {
+    useUiStore.setState({ activeSection: "docs" });
+    render(createElement(MainSectionContent));
+    expect(screen.getByTestId("section-docs")).toBeTruthy();
+    expect(screen.getByTestId("docs-library-empty")).toBeTruthy();
+  });
+
   it("renders insight section when activeSection is insight (B3)", () => {
     useUiStore.setState({ activeSection: "insight" });
     render(createElement(MainSectionContent));

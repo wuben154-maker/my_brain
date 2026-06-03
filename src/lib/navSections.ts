@@ -31,8 +31,8 @@ export const NAV_SECTIONS: NavSectionDef[] = [
   {
     id: "docs",
     label: "文档库",
-    status: "planned",
-    specRef: "specs/N2-docs-library.md",
+    status: "live",
+    specRef: null,
   },
   {
     id: "mindmap",
