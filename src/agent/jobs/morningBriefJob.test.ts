@@ -289,7 +289,7 @@ describe("MorningBriefJob", () => {
     );
 
     expect(result.digest?.sections[0]?.headline).toBe("RAG 检索增强实践");
-    expect(result.digest?.sections[0]?.body).toContain("通俗中文");
+    expect(result.digest?.sections[0]?.body).toContain("【标准】");
   });
 
   it("does not import storage write or graph mutation paths", () => {

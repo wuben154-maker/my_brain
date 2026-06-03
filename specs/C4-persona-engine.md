@@ -1,6 +1,6 @@
 # C4 — Persona 引擎精简版（`persona-engine`）
 
-- **阶段：** C 段（companion）· **状态：** 📝 待做
+- **阶段：** C 段（companion）· **状态：** ✅ 已实现
 - **上游：** 现有人格预设 + `UserProfile.explanationStyle`、M1（召回 grounding）· **下游：** 语音/讲解风格
 
 ## 1. 目标
@@ -25,11 +25,11 @@ src/lib/personaPrompt.ts         // 纯函数：
 - 预设可在 N4 设置切换（依赖 N4，若未做则用默认预设）。
 
 ## 4. 验收清单
-- [ ] 三个预设文件解析为 `PersonaPreset`；缺字段有默认。
-- [ ] 同一内容在不同预设下表达风格可辨（口吻/详略不同），事实不变。
-- [ ] feel-first：`buildExpressionPlan` 先产出内部意图，再塑形输出（纯函数可测）。
-- [ ] 不触碰图谱/落库；不引入新依赖。
-- [ ] 截图/示例：同一讲解切预设，风格差异可见。
+- [x] 三个预设文件解析为 `PersonaPreset`；缺字段有默认。
+- [x] 同一内容在不同预设下表达风格可辨（口吻/详略不同），事实不变。
+- [x] feel-first：`buildExpressionPlan` 先产出内部意图，再塑形输出（纯函数可测）。
+- [x] 不触碰图谱/落库；不引入新依赖。
+- [x] 截图/示例：同一讲解切预设，风格差异可见。
 
 ## 5. 测试（harness）
 - `personaPrompt.test.ts`：预设解析、默认值、`buildExpressionPlan`/`applyPersonaStyle` 纯函数行为、画像联动。

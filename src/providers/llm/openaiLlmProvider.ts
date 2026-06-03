@@ -7,6 +7,8 @@ import {
   parseConceptCandidatesJson,
   parseResearchPlanJson,
 } from "./researchStructuredOutput";
+import { stylizeExplanation } from "@/lib/personaPrompt";
+import { DEFAULT_USER_PROFILE } from "@/domain/profile";
 import type {
   ConceptCandidate,
   LlmProvider,
@@ -23,13 +25,16 @@ export class OpenAiLlmProvider implements LlmProvider {
   }
 
   async summarizeNews(item: NewsItem, profile?: UserProfile): Promise<string> {
-    const style = profile?.explanationStyle ?? "通俗、中文讲解，保留英文术语";
-    return `${item.title}（来源：${item.sourceName}，讲解风格：${style}）— 待接入大模型后生成通俗摘要。`;
+    const base = profile ?? DEFAULT_USER_PROFILE;
+    const core = `${item.title}（来源：${item.sourceName}）— 待接入大模型后生成通俗摘要。${item.summary}`;
+    return stylizeExplanation(base, core, {
+      topicHint: `${item.title} ${item.summary}`,
+    });
   }
 
   async explainConcept(topic: string, profile: UserProfile): Promise<string> {
-    const style = profile.explanationStyle ?? "通俗、中文讲解，保留英文术语";
-    return `关于「${topic}」的讲解（${style}）将在 LLM 接入后生成。`;
+    const core = `关于「${topic}」的讲解将在 LLM 接入后生成。`;
+    return stylizeExplanation(profile, core, { topicHint: topic });
   }
 
   async proposeGraphMutations(_context: string): Promise<GraphMutationProposal[]> {

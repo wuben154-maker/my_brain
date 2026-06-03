@@ -1,8 +1,9 @@
 import type { GraphMutationProposal } from "@/domain/graph";
 import type { NewsItem } from "@/domain/news";
-import type { UserProfile } from "@/domain/profile";
+import { DEFAULT_USER_PROFILE, type UserProfile } from "@/domain/profile";
 import { extractProfileSignalsFromTranscript } from "@/lib/extractProfileSignals";
 import { stripMemoryPrefixFromContext } from "@/lib/memoryGrounding";
+import { stylizeExplanation } from "@/lib/personaPrompt";
 import type { ConceptCandidate, LlmProvider, ResearchPlan } from "./types";
 
 export interface IngestProposalContext {
@@ -44,16 +45,18 @@ export class MockLlmProvider implements LlmProvider {
   readonly id = "mock-llm";
 
   async summarizeNews(item: NewsItem, profile?: UserProfile): Promise<string> {
-    const style = profile?.explanationStyle ?? "通俗中文 + 保留英文术语";
-    if (item.category === "github_trending") {
-      return `GitHub 趋势：${item.title}。这是 Mock 讲解（${style}）——${item.summary} 你可以把它理解成「用代码搭智能体流水线的 starter kit」，适合想快速试 Agent 编排的开发者。`;
-    }
-    return `AI 资讯速览：${item.title}。Mock 讲解（${style}）——${item.summary} 核心在 Transformer 的上下文窗口变长，意味着模型一次能读更多 token，长文档问答会更稳。`;
+    const baseProfile = profile ?? DEFAULT_USER_PROFILE;
+    const topicHint = `${item.title} ${item.summary}`;
+    const core =
+      item.category === "github_trending"
+        ? `GitHub 趋势：${item.title}。${item.summary} 可理解为用代码搭智能体流水线的 starter kit。`
+        : `AI 资讯：${item.title}。${item.summary} 核心在 Transformer 上下文窗口变长，长文档问答更稳。`;
+    return stylizeExplanation(baseProfile, core, { topicHint });
   }
 
   async explainConcept(topic: string, profile: UserProfile): Promise<string> {
-    const style = profile.explanationStyle ?? "通俗中文 + 保留英文术语";
-    return `Mock 讲解「${topic}」（${style}）：这是概念层面的说明，真实 LLM 接入后会结合你的大脑图谱个性化展开。`;
+    const core = `关于「${topic}」：这是概念层面的说明，真实 LLM 接入后会结合大脑图谱展开。`;
+    return stylizeExplanation(profile, core, { topicHint: topic });
   }
 
   async proposeGraphMutations(context: string): Promise<GraphMutationProposal[]> {

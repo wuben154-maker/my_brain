@@ -26,10 +26,11 @@ const githubItem: NewsItem = {
 describe("MockLlmProvider", () => {
   const llm = createMockLlmProvider();
 
-  it("summarizes news in plain language", async () => {
+  it("summarizes news with persona-shaped plain language", async () => {
     const text = await llm.summarizeNews(rssItem);
     expect(text).toContain("Transformer");
-    expect(text).toContain("Mock");
+    expect(text).toContain("【标准】");
+    expect(text).toContain("先给结论");
   });
 
   it("proposes create for empty graph", async () => {
