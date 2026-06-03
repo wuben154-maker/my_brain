@@ -40,6 +40,85 @@ describe("MockLlmProvider", () => {
     expect(proposals[0]?.kind).toBe("create");
   });
 
+  it("proposeGraphMutations create intro does not copy news summary", async () => {
+    const proposals = await llm.proposeGraphMutations(
+      JSON.stringify({ newsItem: rssItem, nodes: [] }),
+    );
+    const create = proposals.find((p) => p.kind === "create");
+    expect(create?.payload && "intro" in create.payload).toBe(true);
+    const intro = (create?.payload as { intro: string }).intro;
+    expect(intro).not.toContain(rssItem.summary);
+    expect(intro).toContain("大模型上下文窗口");
+    expect(intro.length).toBeLessThan(200);
+  });
+
+  it("proposeGraphMutations github create intro does not copy news summary", async () => {
+    const proposals = await llm.proposeGraphMutations(
+      JSON.stringify({ newsItem: githubItem, nodes: [] }),
+    );
+    const create = proposals.find((p) => p.kind === "create");
+    const intro = (create?.payload as { intro: string }).intro;
+    expect(intro).not.toContain(githubItem.summary);
+    expect(intro).toContain("Agent Framework Starter");
+  });
+
+  it("proposeGraphMutations merge mergedIntro does not copy news title or summary", async () => {
+    const mergeItem: NewsItem = {
+      ...rssItem,
+      id: "news-merge-1",
+      title: "长上下文窗口技术进展",
+    };
+    const proposals = await llm.proposeGraphMutations(
+      JSON.stringify({
+        newsItem: mergeItem,
+        nodes: [
+          {
+            id: "n-dup",
+            title: "上下文窗口（过时）",
+            intro: "重复概念简介",
+          },
+          {
+            id: "n-can",
+            title: "大模型上下文窗口",
+            intro: "canonical 概念简介",
+          },
+        ],
+      }),
+    );
+    const merge = proposals.find((p) => p.kind === "merge");
+    expect(merge).toBeDefined();
+    const mergedIntro = (merge?.payload as { mergedIntro: string }).mergedIntro;
+    expect(mergedIntro).not.toContain(mergeItem.title);
+    expect(mergedIntro).not.toContain(mergeItem.summary);
+    expect(mergedIntro).toContain("大模型上下文窗口");
+    expect(mergedIntro).toContain("canonical 概念简介");
+  });
+
+  it("proposeGraphMutations attach introAppend does not copy news summary", async () => {
+    const attachItem: NewsItem = {
+      ...rssItem,
+      id: "news-attach-1",
+      title: "Transformer 上下文窗口再扩展",
+    };
+    const proposals = await llm.proposeGraphMutations(
+      JSON.stringify({
+        newsItem: attachItem,
+        nodes: [
+          {
+            id: "n-ctx",
+            title: "上下文窗口",
+            intro: "已有概念简介",
+          },
+        ],
+      }),
+    );
+    const attach = proposals.find((p) => p.kind === "attach");
+    expect(attach).toBeDefined();
+    const introAppend = (attach?.payload as { introAppend: string }).introAppend;
+    expect(introAppend).not.toContain(attachItem.summary);
+    expect(introAppend).toContain(attachItem.sourceName);
+  });
+
   it("proposes create + link for github trending when related node exists", async () => {
     const context = JSON.stringify({
       newsItem: githubItem,

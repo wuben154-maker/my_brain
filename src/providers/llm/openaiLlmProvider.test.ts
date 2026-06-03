@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_USER_PROFILE } from "@/domain/profile";
+import type { NewsItem } from "@/domain/news";
 import { createMockLlmProvider } from "./mockLlmProvider";
 import {
   OpenAiLlmError,
@@ -30,6 +31,39 @@ describe("OpenAiLlmProvider · fail-fast ingest/research", () => {
     expect(hasOpenAiLlmApiKey({ apiKey: "sk-test" })).toBe(true);
     expect(hasOpenAiLlmApiKey({ apiKey: "" })).toBe(false);
     expect(hasOpenAiLlmApiKey({ apiKey: "   " })).toBe(false);
+  });
+
+  const sampleNewsItem: NewsItem = {
+    id: "n1",
+    title: "Transformer 上下文窗口再扩展",
+    summary: "更长 context。",
+    sourceUrl: "https://example.com",
+    sourceName: "Mock RSS",
+    category: "ai_news",
+    publishedAt: null,
+  };
+
+  it("summarizeNews throws not_implemented instead of placeholder copy", async () => {
+    const llm = createOpenAiLlmProvider({ apiKey: "sk-test" });
+    await expect(llm.summarizeNews(sampleNewsItem)).rejects.toMatchObject({
+      name: "OpenAiLlmError",
+      code: "not_implemented",
+    });
+    await expect(
+      llm.summarizeNews(sampleNewsItem, DEFAULT_USER_PROFILE),
+    ).rejects.toMatchObject({
+      code: "not_implemented",
+    });
+  });
+
+  it("explainConcept throws not_implemented instead of placeholder copy", async () => {
+    const llm = createOpenAiLlmProvider({ apiKey: "sk-test" });
+    await expect(
+      llm.explainConcept("RAG", DEFAULT_USER_PROFILE),
+    ).rejects.toMatchObject({
+      name: "OpenAiLlmError",
+      code: "not_implemented",
+    });
   });
 
   it("proposeGraphMutations throws not_implemented when configured", async () => {
@@ -74,6 +108,14 @@ describe("OpenAiLlmProvider · fail-fast ingest/research", () => {
   it("missing api key throws missing_api_key on ingest paths", async () => {
     const llm = createOpenAiLlmProvider({ apiKey: "" });
     await expect(llm.proposeGraphMutations(ingestContext)).rejects.toMatchObject({
+      code: "missing_api_key",
+    });
+    await expect(llm.summarizeNews(sampleNewsItem)).rejects.toMatchObject({
+      code: "missing_api_key",
+    });
+    await expect(
+      llm.explainConcept("RAG", DEFAULT_USER_PROFILE),
+    ).rejects.toMatchObject({
       code: "missing_api_key",
     });
   });

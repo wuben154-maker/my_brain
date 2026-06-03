@@ -24,6 +24,22 @@ function parseIngestContext(context: string): IngestProposalContext | null {
   }
 }
 
+/** Concept-level stub intro — must not paste newsItem.summary (node ≠ news fragment). */
+function stubConceptIntro(conceptTitle: string, newsItem: NewsItem): string {
+  if (newsItem.category === "github_trending") {
+    return `「${conceptTitle}」：面向 Agent 流水线的脚手架型 starter，便于快速搭编排与工具链（Mock 概念简介）。`;
+  }
+  return `「${conceptTitle}」：与大模型长上下文、文档级输入相关的核心概念（Mock 概念简介）。`;
+}
+
+function stubIntroAppend(newsItem: NewsItem, conceptTitle: string): string {
+  return `【${newsItem.sourceName}】补充「${conceptTitle}」：纳入近期进展要点（Mock，非新闻摘录）。`;
+}
+
+function stubMergeAppend(conceptTitle: string): string {
+  return `【合并】归并到「${conceptTitle}」：统一概念边界与关系边（Mock，非新闻摘录）。`;
+}
+
 function findRelatedNode(
   title: string,
   nodes: IngestProposalContext["nodes"],
@@ -69,14 +85,15 @@ export class MockLlmProvider implements LlmProvider {
     const related = findRelatedNode(newsItem.title, nodes);
 
     if (newsItem.category === "github_trending") {
+      const conceptTitle = "Agent Framework Starter";
       const proposals: GraphMutationProposal[] = [
         {
           id: `proposal-create-${newsItem.id}`,
           kind: "create",
           summary: "新建 GitHub 趋势概念「Agent Framework Starter」",
           payload: {
-            title: "Agent Framework Starter",
-            intro: `${newsItem.summary}\n\n（来自 GitHub 趋势 Mock 数据）`,
+            title: conceptTitle,
+            intro: stubConceptIntro(conceptTitle, newsItem),
             sourceUrl: newsItem.sourceUrl,
           },
         },
@@ -104,7 +121,7 @@ export class MockLlmProvider implements LlmProvider {
           summary: `将资讯补充进已有概念「${related.title}」`,
           payload: {
             nodeId: related.id,
-            introAppend: `【${newsItem.sourceName}】${newsItem.summary}`,
+            introAppend: stubIntroAppend(newsItem, related.title),
             sourceUrl: newsItem.sourceUrl,
           },
         },
@@ -125,21 +142,22 @@ export class MockLlmProvider implements LlmProvider {
             payload: {
               sourceNodeId: duplicate.id,
               targetNodeId: canonical.id,
-              mergedIntro: `${canonical.intro}\n\n【合并】${newsItem.summary}`,
+              mergedIntro: `${canonical.intro}\n\n${stubMergeAppend(canonical.title)}`,
             },
           },
         ];
       }
     }
 
+    const conceptTitle = "大模型上下文窗口";
     return [
       {
         id: `proposal-create-${newsItem.id}`,
         kind: "create",
         summary: "新建概念节点「大模型上下文窗口」",
         payload: {
-          title: "大模型上下文窗口",
-          intro: `${newsItem.summary}\n\n（Mock 入库：概念 + 短介绍 + 来源链接）`,
+          title: conceptTitle,
+          intro: stubConceptIntro(conceptTitle, newsItem),
           sourceUrl: newsItem.sourceUrl,
         },
       },
