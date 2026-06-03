@@ -23,7 +23,7 @@
 | [A4-inbox-ui](./A4-inbox-ui.md) | `inbox-ui` | A | ✅ 已实现 | 星图旁「待办建议」抽屉 + 简报卡片，逐条确认 |
 | [A5-local-scheduler](./A5-local-scheduler.md) | `local-scheduler` | A | ✅ 已实现 | 本机定时触发（L1），可开关、可中断 |
 | [B1-research-loop-job](./B1-research-loop-job.md) | `research-loop` | B | 📝 待做 | 围绕主题的多步自主研究链，产成批关联提议 |
-| [B2-llm-research-extensions](./B2-llm-research-extensions.md) | `research-llm` | B | 📝 待做 | `LlmProvider` 扩展 `planResearch`/`synthesizeConcepts` |
+| [B2-llm-research-extensions](./B2-llm-research-extensions.md) | `research-llm` | B | ✅ 已实现 | `LlmProvider` 扩展 `planResearch`/`synthesizeConcepts` |
 | [B3-research-trace-view](./B3-research-trace-view.md) | `research-view` | B | 📝 待做 | 调研轨迹可视化 + 关联提议星图预览高亮 |
 | [C1-profile-driven-curation](./C1-profile-driven-curation.md) | `profile-curation` | C | 📝 待做 | 用画像给资讯打分排序、讲解深度自适应 |
 | [C2-proactive-archive](./C2-proactive-archive.md) | `proactive-archive` | C | 📝 待做 | 定期扫描，主动产「归档过时节点」提议（不自动执行） |

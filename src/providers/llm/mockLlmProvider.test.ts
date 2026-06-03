@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_USER_PROFILE } from "@/domain/profile";
 import { createMockLlmProvider } from "@/providers/llm/mockLlmProvider";
 import type { NewsItem } from "@/domain/news";
 
@@ -52,5 +53,47 @@ describe("MockLlmProvider", () => {
     const proposals = await llm.proposeGraphMutations(context);
     expect(proposals.length).toBeGreaterThanOrEqual(1);
     expect(proposals[0]?.kind).toBe("create");
+  });
+
+  it("planResearch returns stable structured plan", async () => {
+    const plan = await llm.planResearch("RAG 向量检索", {
+      ...DEFAULT_USER_PROFILE,
+      interests: ["AI Agent"],
+    });
+    expect(plan).toEqual({
+      topic: "RAG 向量检索",
+      subQuestions: [
+        "RAG 向量检索 的核心定义与边界是什么？",
+        "RAG 向量检索 与大脑图谱里已有概念如何关联？",
+        "近期关于 RAG 向量检索 有哪些值得入库的进展？",
+      ],
+      suggestedSources: [
+        "news_registry",
+        "github_trending",
+        "profile_interest:AI Agent",
+      ],
+    });
+  });
+
+  it("synthesizeConcepts returns deterministic candidates with valid relations", async () => {
+    const first = await llm.synthesizeConcepts([
+      "GitHub Agent 框架发布",
+      "RAG 检索增强实践",
+    ]);
+    const second = await llm.synthesizeConcepts([
+      "GitHub Agent 框架发布",
+      "RAG 检索增强实践",
+    ]);
+    expect(second).toEqual(first);
+    expect(first[0]?.title).toBe("AI Agent 编排");
+    expect(first[0]?.relations.map((rel) => rel.relationType)).toEqual([
+      "related",
+      "depends_on",
+    ]);
+  });
+
+  it("synthesizeConcepts returns empty array for no evidence", async () => {
+    expect(await llm.synthesizeConcepts([])).toEqual([]);
+    expect(await llm.synthesizeConcepts(["", "  "])).toEqual([]);
   });
 });

@@ -1,6 +1,6 @@
 # B2 — LlmProvider 研究扩展（`research-llm`）
 
-- **阶段：** B · **状态：** 📝 待做
+- **阶段：** B · **状态：** ✅ 已实现
 - **上游：** 现有 `LlmProvider` · **下游：** B1（消费这些方法）
 
 ## 1. 目标
@@ -27,10 +27,10 @@ export interface LlmProvider {
 - `openaiLlmProvider`：结构化输出（JSON schema / 函数调用），解析失败有兜底。
 
 ## 4. 验收清单
-- [ ] mock 双方法返回稳定结构，类型完备（无 `any`）。
-- [ ] openai 实现解析健壮：非法 JSON 不抛未捕获异常，降级为空结果 + 记录。
-- [ ] 现有 `mockLlmProvider.test.ts` 全过，新增两方法用例。
-- [ ] `ConceptCandidate.relations.relationType` 限定在 `RelationType` 枚举。
+- [x] mock 双方法返回稳定结构，类型完备（无 `any`）。
+- [x] openai 实现解析健壮：非法 JSON 不抛未捕获异常，降级为空结果 + 记录。
+- [x] 现有 `mockLlmProvider.test.ts` 全过，新增两方法用例。
+- [x] `ConceptCandidate.relations.relationType` 限定在 `RelationType` 枚举。
 
 ## 5. 测试
 - mock 输出快照；openai 解析器对「正常/截断/非法」三类输入的处理。

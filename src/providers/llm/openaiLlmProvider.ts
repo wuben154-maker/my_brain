@@ -1,7 +1,18 @@
 import type { GraphMutationProposal } from "@/domain/graph";
 import type { UserProfile } from "@/domain/profile";
 import type { NewsItem } from "@/domain/news";
-import type { LlmProvider, LlmProviderConfig } from "./types";
+import {
+  emptyResearchPlan,
+  logResearchParseFailure,
+  parseConceptCandidatesJson,
+  parseResearchPlanJson,
+} from "./researchStructuredOutput";
+import type {
+  ConceptCandidate,
+  LlmProvider,
+  LlmProviderConfig,
+  ResearchPlan,
+} from "./types";
 
 /** Stub LLM provider — business logic depends on the interface, not vendor SDKs. */
 export class OpenAiLlmProvider implements LlmProvider {
@@ -31,6 +42,37 @@ export class OpenAiLlmProvider implements LlmProvider {
   ): Promise<UserProfile> {
     void _transcript;
     return { ...current, updatedAt: new Date().toISOString() };
+  }
+
+  async planResearch(topic: string, profile: UserProfile): Promise<ResearchPlan> {
+    void profile;
+    return this.parsePlanResponse("", topic.trim() || "未命名主题");
+  }
+
+  async synthesizeConcepts(evidence: string[]): Promise<ConceptCandidate[]> {
+    void evidence;
+    return this.parseConceptsResponse("");
+  }
+
+  /** Shared parse path for structured API responses (B2); stub passes empty until wired. */
+  parsePlanResponse(raw: string, fallbackTopic: string): ResearchPlan {
+    const parsed = parseResearchPlanJson(raw);
+    if (parsed) {
+      return parsed;
+    }
+    if (raw.trim()) {
+      logResearchParseFailure("planResearch", raw);
+    }
+    return emptyResearchPlan(fallbackTopic);
+  }
+
+  parseConceptsResponse(raw: string): ConceptCandidate[] {
+    const parsed = parseConceptCandidatesJson(raw);
+    if (parsed.length > 0 || !raw.trim()) {
+      return parsed;
+    }
+    logResearchParseFailure("synthesizeConcepts", raw);
+    return [];
   }
 }
 

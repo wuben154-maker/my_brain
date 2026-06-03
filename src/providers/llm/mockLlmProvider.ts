@@ -3,7 +3,7 @@ import type { NewsItem } from "@/domain/news";
 import type { UserProfile } from "@/domain/profile";
 import { extractProfileSignalsFromTranscript } from "@/lib/extractProfileSignals";
 import { stripMemoryPrefixFromContext } from "@/lib/memoryGrounding";
-import type { LlmProvider } from "./types";
+import type { ConceptCandidate, LlmProvider, ResearchPlan } from "./types";
 
 export interface IngestProposalContext {
   newsItem: NewsItem;
@@ -172,6 +172,55 @@ export class MockLlmProvider implements LlmProvider {
       habits: mergeList(current.habits, signals.habits),
       updatedAt: timestamp,
     };
+  }
+
+  async planResearch(topic: string, profile: UserProfile): Promise<ResearchPlan> {
+    const trimmed = topic.trim() || "未命名主题";
+    const interestHints = profile.interests.slice(0, 2);
+    return {
+      topic: trimmed,
+      subQuestions: [
+        `${trimmed} 的核心定义与边界是什么？`,
+        `${trimmed} 与大脑图谱里已有概念如何关联？`,
+        `近期关于 ${trimmed} 有哪些值得入库的进展？`,
+      ],
+      suggestedSources: [
+        "news_registry",
+        "github_trending",
+        ...interestHints.map((interest) => `profile_interest:${interest}`),
+      ],
+    };
+  }
+
+  async synthesizeConcepts(evidence: string[]): Promise<ConceptCandidate[]> {
+    const snippets = evidence.map((line) => line.trim()).filter(Boolean);
+    if (snippets.length === 0) {
+      return [];
+    }
+
+    const joined = snippets.join("\n");
+    const title = joined.includes("Agent")
+      ? "AI Agent 编排"
+      : joined.includes("RAG")
+        ? "RAG 检索增强"
+        : "研究概念摘要";
+
+    const relations: ConceptCandidate["relations"] = [];
+    if (/rag|检索增强/i.test(joined)) {
+      relations.push({ targetTitle: "RAG", relationType: "related" });
+    }
+    if (/agent|智能体/i.test(joined)) {
+      relations.push({ targetTitle: "AI Agent", relationType: "depends_on" });
+    }
+
+    return [
+      {
+        title,
+        intro: `Mock 提炼自 ${snippets.length} 条证据：${snippets.slice(0, 2).join("；").slice(0, 240)}`,
+        sourceUrl: null,
+        relations,
+      },
+    ];
   }
 }
 
