@@ -65,7 +65,7 @@
 | [H0-coverage-ratchet](./H0-coverage-ratchet.md) | `coverage-ratchet` | **现在（A4 之前）** | 覆盖率下限 + GitHub 分支保护（基建棘轮，越早越好） |
 | [H1-cost-guardrail](./H1-cost-guardrail.md) | `cost-guardrail` | **跟 A5**（B1 加强） | ✅ 已实现：token 预算断言化 + 单日上限，自主调度前焊死 |
 | [H2-ci-e2e-and-desktop](./H2-ci-e2e-and-desktop.md) | `ci-e2e-desktop` | **3b 跟 A4 / 3c 跟 B3 / 3d A 段收尾** | 3b+3d ✅：visual-smoke + `tauri-build` job；3c 待 B3 |
-| [H3-memory-eval](./H3-memory-eval.md) | `memory-eval` | **起步跟 M1 / 加强跟 C3** | 记忆召回质量 + 自进化曲线 评测断言（mock+固定语料，会红灯） |
+| [H3-memory-eval](./H3-memory-eval.md) | `memory-eval` | **起步跟 M1 / 加强跟 C3** | ✅ 已实现：recall@5 + 画像成长曲线 mock 评测断言 |
 
 执行顺序速记（含 N/G/M 系列）：
 ```
