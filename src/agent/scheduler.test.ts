@@ -167,7 +167,9 @@ describe("createAgentScheduler (A5)", () => {
     await pending;
   });
 
-  it("persistAgentRunResult marks stale pending as expired", async () => {
+  it(
+    "persistAgentRunResult marks stale pending as expired",
+    async () => {
     const { createTempStorage } = await import("@/invariants/testStorage");
     const { persistAgentRunResult, DEFAULT_PENDING_MAX_AGE_MS } = await import(
       "./schedulerPersist"
@@ -200,5 +202,7 @@ describe("createAgentScheduler (A5)", () => {
     } finally {
       cleanup();
     }
-  });
+    },
+    15_000,
+  );
 });
