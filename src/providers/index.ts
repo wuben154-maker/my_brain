@@ -40,12 +40,19 @@ export function createVoiceProvider(): VoiceProvider {
 }
 
 export function createLlmProvider(env: ProviderEnv): LlmProvider {
-  return readLlmProviderMode() === "openai"
-    ? createOpenAiLlmProvider({
-        apiKey: env.openAiApiKey,
-        model: env.openAiLlmModel,
-      })
-    : createMockLlmProvider();
+  if (readLlmProviderMode() !== "openai") {
+    return createMockLlmProvider();
+  }
+  if (!env.openAiApiKey.trim()) {
+    console.warn(
+      "[my-brain] VITE_LLM_PROVIDER=openai 但未配置 VITE_OPENAI_API_KEY，已降级为 mock LLM",
+    );
+    return createMockLlmProvider();
+  }
+  return createOpenAiLlmProvider({
+    apiKey: env.openAiApiKey,
+    model: env.openAiLlmModel,
+  });
 }
 
 export function createAppProviders(env: ProviderEnv): AppProviders {
