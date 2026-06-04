@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+﻿import { beforeEach, describe, expect, it } from "vitest";
 import type { NewsItem } from "@/domain/news";
 import {
   applyIngestCreate,
@@ -15,8 +15,8 @@ import { readCreatePayload } from "@/domain/graphMutationPayloads";
 const newsItem: NewsItem = {
   id: "news-v3",
   category: "ai_news",
-  title: "上下文窗口再扩容",
-  summary: "长文档问答更稳",
+  title: "Context window expansion",
+  summary: "Long document QA",
   sourceName: "Mock RSS",
   sourceUrl: "https://example.com/context-window",
   publishedAt: "2026-01-01T00:00:00.000Z",
@@ -30,29 +30,29 @@ describe("ingestActions", () => {
   it("buildCreateProposalFromNews keeps sourceUrl and merges explanation", () => {
     const proposal = buildCreateProposalFromNews(
       newsItem,
-      "概念级讲解摘要",
+      "explanation snippet",
       {
         id: "p1",
         kind: "create",
         summary: "create",
         payload: {
-          title: "大模型上下文窗口",
-          intro: "旧简介",
+          title: "LLM context window",
+          intro: "old intro",
           sourceUrl: null,
         },
       },
     );
     const payload = readCreatePayload(proposal.payload);
     expect(payload.sourceUrl).toBe(newsItem.sourceUrl);
-    expect(payload.intro).toBe("概念级讲解摘要");
+    expect(payload.intro).toBe("explanation snippet");
   });
 
   it("applyIngestCreate persists node with source link", async () => {
     const { storage, cleanup } = createTempStorage();
     try {
       await storage.init();
-      useIngestStore.getState().setExplanation("入库用讲解");
-      const nodeId = await applyIngestCreate(newsItem, {
+      useIngestStore.getState().setExplanation("ingest explanation");
+      const { nodeId } = await applyIngestCreate(newsItem, {
         storage,
         llm: createMockLlmProvider(),
         profile: DEFAULT_USER_PROFILE,
@@ -92,7 +92,7 @@ describe("ingestActions", () => {
     const { storage, cleanup } = createTempStorage();
     try {
       await storage.init();
-      useIngestStore.getState().setExplanation("确认入库");
+      useIngestStore.getState().setExplanation("confirm ingest");
       const result = await applyIngestDecision("ingest", newsItem, {
         storage,
         llm: createMockLlmProvider(),
@@ -134,10 +134,10 @@ describe("ingestActions", () => {
       const proposal = {
         id: "manual-create",
         kind: "create" as const,
-        summary: "新建",
+        summary: "create",
         payload: {
           title: "Test Concept",
-          intro: "简介",
+          intro: "intro",
           sourceUrl: "https://example.com/node",
         },
       };

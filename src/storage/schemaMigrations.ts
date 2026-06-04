@@ -37,3 +37,25 @@ export async function migrateConceptSalienceColumnsTauri(
     await db.execute("ALTER TABLE concepts ADD COLUMN last_touched_at TEXT");
   }
 }
+
+const GRAPH_HISTORY_TABLE_SQL = `
+CREATE TABLE IF NOT EXISTS graph_history (
+  id TEXT PRIMARY KEY NOT NULL,
+  at TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  before_json TEXT NOT NULL,
+  after_json TEXT NOT NULL,
+  undone INTEGER NOT NULL DEFAULT 0
+);
+`;
+
+export function migrateGraphHistoryTableSqlite(db: Database.Database): void {
+  db.exec(GRAPH_HISTORY_TABLE_SQL);
+}
+
+export async function migrateGraphHistoryTableTauri(
+  db: TauriConceptMigrator,
+): Promise<void> {
+  await db.execute(GRAPH_HISTORY_TABLE_SQL);
+}

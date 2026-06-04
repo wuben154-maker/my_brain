@@ -12,7 +12,13 @@ import {
   prependGrounding,
   recallGroundingContext,
 } from "@/lib/memoryGrounding";
+import { runAutoCurateAfterIngest } from "@/lib/runAutoCuratePipeline";
 import { syncDisplayGraph } from "@/lib/syncDisplayGraph";
+import type { GraphHistoryEntry } from "@/domain/graphHistory";
+import {
+  formatCurationReport,
+  shouldSpeakCurationReport,
+} from "@/conversation/curationReport";
 import type { LlmProvider } from "@/providers/llm/types";
 import type { MemoryProvider } from "@/providers/memory/types";
 import type { StorageProvider } from "@/storage/types";
@@ -91,10 +97,15 @@ async function resolveCreateProposal(
 /**
  * Voice-confirmed create path: propose → create mutation → persist → graph store.
  */
+export interface IngestCreateResult {
+  nodeId: string | null;
+  curationEntries: GraphHistoryEntry[];
+}
+
 export async function applyIngestCreate(
   item: NewsItem,
   deps: IngestDecisionDeps,
-): Promise<string | null> {
+): Promise<IngestCreateResult> {
   const store = useIngestStore.getState();
   const explanation = store.explanation;
   const raw = await resolveCreateProposal(item, deps);
@@ -106,12 +117,34 @@ export async function applyIngestCreate(
   if (nodeId) {
     useGraphStore.getState().setHighlights([nodeId], []);
   }
-  return nodeId;
+  const curationEntries =
+    nodeId != null
+      ? await runAutoCurateAfterIngest(nodeId, {
+          storage: deps.storage,
+          profile: deps.profile,
+        })
+      : [];
+  return { nodeId, curationEntries };
 }
 
 export interface IngestDecisionResult {
   turn: Turn;
   event?: ConversationEvent;
+  curationEntries?: GraphHistoryEntry[];
+}
+
+let lastCurationSpokenAt = 0;
+
+function curationSayLine(entries: GraphHistoryEntry[]): string {
+  const parts: string[] = [];
+  for (const entry of entries) {
+    if (!shouldSpeakCurationReport(entry, lastCurationSpokenAt)) {
+      continue;
+    }
+    parts.push(formatCurationReport(entry));
+    lastCurationSpokenAt = Date.now();
+  }
+  return parts.join("；");
 }
 
 /**
@@ -156,15 +189,18 @@ export async function applyIngestDecision(
     };
   }
 
-  await applyIngestCreate(item, deps);
+  const { curationEntries } = await applyIngestCreate(item, deps);
   store.markIngested(item.id);
   store.setExplanation("");
   store.resetElaborationDepth();
   store.resetIngestParseAttempt();
   store.setCursor(store.cursor + 1);
 
+  const say = curationSayLine(curationEntries);
+
   return {
-    turn: { say: "" },
+    turn: { say },
     event: { type: "ingestAnswer", command: "ingest" },
+    curationEntries,
   };
 }
