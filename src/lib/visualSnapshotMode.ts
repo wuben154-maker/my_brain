@@ -1,3 +1,4 @@
+import { shouldEnableDemoModes } from "@/lib/devOnlyGuards";
 import { createGraphDemoSnapshot } from "@/lib/graphDemoSeed";
 import { persistGraphSnapshot } from "@/lib/graphMutations";
 import { createStorageProvider } from "@/storage/createStorageProvider";
@@ -19,6 +20,9 @@ import { useUiStore } from "@/stores/uiStore";
 export type VisualSnapshotId = "boot" | "main" | "companion" | "inbox" | "insight";
 
 export function readVisualSnapshotId(): VisualSnapshotId | null {
+  if (!shouldEnableDemoModes()) {
+    return null;
+  }
   if (typeof window === "undefined") {
     return null;
   }
@@ -43,6 +47,9 @@ export function isVisualSnapshotMode(): boolean {
 
 /** Seed dev SQLite for `?visual=inbox` so approve uses proposalStore, not memory-only graph. */
 export async function bootstrapVisualInboxStorage(): Promise<void> {
+  if (!shouldEnableDemoModes()) {
+    return;
+  }
   const storage = createStorageProvider();
   await storage.init();
   const graph = createGraphDemoSnapshot();
@@ -53,6 +60,9 @@ export async function bootstrapVisualInboxStorage(): Promise<void> {
 }
 
 export function applyVisualSnapshot(id: VisualSnapshotId): void {
+  if (!shouldEnableDemoModes()) {
+    return;
+  }
   document.documentElement.dataset.visualSnapshot = id;
 
   if (id === "boot") {

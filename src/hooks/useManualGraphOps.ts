@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import type { GraphMutationProposal } from "@/domain/graph";
+import { canUseLegacyNonVoiceGraphCreate } from "@/lib/devOnlyGuards";
 import {
   applyGraphMutation,
   persistGraphSnapshot,
@@ -33,6 +34,14 @@ export function useManualGraphOps() {
 
   const applyProposal = useCallback(
     async (proposal: GraphMutationProposal) => {
+      if (
+        proposal.kind === "create" &&
+        !canUseLegacyNonVoiceGraphCreate()
+      ) {
+        throw new Error(
+          "生产环境仅支持语音「入」确认入库；手动新建概念节点已禁用",
+        );
+      }
       if (!storage) {
         throw new Error("本地存储未就绪");
       }
@@ -46,6 +55,10 @@ export function useManualGraphOps() {
   );
 
   const proposeCreate = useCallback((form: ManualNodeForm) => {
+    if (!canUseLegacyNonVoiceGraphCreate()) {
+      setErrorMessage("生产环境仅支持语音「入」确认入库");
+      return;
+    }
     setErrorMessage(null);
     const title = form.title.trim();
     if (!title) {

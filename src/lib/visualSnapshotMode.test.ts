@@ -47,6 +47,40 @@ describe("visualSnapshotMode (H2-3c insight)", () => {
     expect(readVisualSnapshotId()).toBe("insight");
   });
 
+  it("ignores ?visual= in non-dev builds (invariant #2)", async () => {
+    vi.stubEnv("DEV", false);
+    vi.stubEnv("PROD", true);
+    vi.resetModules();
+    const { readVisualSnapshotId: readId } =
+      await import("@/lib/visualSnapshotMode");
+    window.location.search = "?visual=inbox";
+    expect(readId()).toBeNull();
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("bootstrapVisualInboxStorage is a no-op in non-dev builds (invariant #2)", async () => {
+    vi.stubEnv("DEV", false);
+    vi.stubEnv("PROD", true);
+    vi.resetModules();
+    const { bootstrapVisualInboxStorage: bootstrap } =
+      await import("@/lib/visualSnapshotMode");
+    const { storage, cleanup } = createTempStorage();
+    try {
+      await storage.init();
+      visualInboxStorageRef.current = storage;
+      await bootstrap();
+      const graph = await storage.loadGraph();
+      expect(graph.nodes).toHaveLength(0);
+      expect(useAppStore.getState().storage).toBeNull();
+    } finally {
+      visualInboxStorageRef.current = null;
+      cleanup();
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
+  });
+
   it("bootstrapVisualInboxStorage wires SQLite and pending proposal", async () => {
     const { storage, cleanup } = createTempStorage();
     try {

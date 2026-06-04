@@ -4,6 +4,7 @@ import {
   applyProposalFeedback,
   proposalTopicHint,
 } from "@/agent/profile/feedbackSignals";
+import { canUseLegacyNonVoiceGraphCreate } from "@/lib/devOnlyGuards";
 import { applyGraphMutation, persistGraphSnapshot } from "@/lib/graphMutations";
 import { resolveProposalForApply } from "@/lib/resolveProposalForApply";
 import { syncDisplayGraph } from "@/lib/syncDisplayGraph";
@@ -73,6 +74,14 @@ export const useProposalStore = create<ProposalState>((set, get) => ({
         runId: envelope.runId,
         envelopeId: envelope.id,
       });
+      if (
+        resolved.kind === "create" &&
+        !canUseLegacyNonVoiceGraphCreate()
+      ) {
+        throw new Error(
+          "生产环境仅支持语音「入」确认入库；提议新建概念节点已禁用",
+        );
+      }
       const after = applyGraphMutation(before, resolved);
       await persistGraphSnapshot(graphStorage, before, after);
       await syncDisplayGraph(graphStorage);

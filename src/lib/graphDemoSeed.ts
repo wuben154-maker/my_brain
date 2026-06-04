@@ -1,4 +1,5 @@
 import type { BrainGraphSnapshot } from "@/domain/graph";
+import { shouldEnableDemoModes } from "@/lib/devOnlyGuards";
 
 const NOW = "2026-06-01T00:00:00.000Z";
 
@@ -200,6 +201,9 @@ export function createRichGraphDemoSnapshot(): BrainGraphSnapshot {
 }
 
 export function isGraphDemoMode(): boolean {
+  if (!shouldEnableDemoModes()) {
+    return false;
+  }
   if (typeof window === "undefined") {
     return false;
   }

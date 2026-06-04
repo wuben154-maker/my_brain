@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { GraphMutationProposal } from "@/domain/graph";
 import {
   applyIngestCreate,
   persistProposalToGraph,
   type IngestDecisionDeps,
 } from "@/conversation/ingestActions";
+import { canUseLegacyNonVoiceGraphCreate } from "@/lib/devOnlyGuards";
 import { visibleGraph } from "@/lib/graphMutations";
 import { resolveLinkPendingCreate } from "@/lib/resolveProposalForApply";
 import {
@@ -121,6 +122,14 @@ export function useNewsIngestSession() {
 
   const applyProposal = useCallback(
     async (proposal: GraphMutationProposal) => {
+      if (
+        proposal.kind === "create" &&
+        !canUseLegacyNonVoiceGraphCreate()
+      ) {
+        throw new Error(
+          "生产环境仅支持语音「入」确认入库；资讯面板入库已禁用",
+        );
+      }
       if (!storage) {
         return null;
       }
@@ -131,6 +140,9 @@ export function useNewsIngestSession() {
 
   const applyIngestCreateForItem = useCallback(
     async (item: NonNullable<typeof currentItem>) => {
+      if (!canUseLegacyNonVoiceGraphCreate()) {
+        return null;
+      }
       if (!storage || !providers?.llm) {
         return null;
       }
