@@ -4,7 +4,10 @@ import ForceGraph3D, {
   type LinkObject,
   type NodeObject,
 } from "react-force-graph-3d";
+import { EdgeHoverLabel } from "@/components/brain/EdgeHoverLabel";
 import { GraphZoomControls } from "@/components/brain/GraphZoomControls";
+import { NodeHoverCard } from "@/components/brain/NodeHoverCard";
+import type { RelationType } from "@/domain/graph";
 import {
   clusterColorForNodeId,
   graphAccentCyan,
@@ -37,6 +40,7 @@ export function BrainGraph3DView() {
   );
   const [dimensions, setDimensions] = useState({ width: 800, height: 520 });
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [hoveredLink, setHoveredLink] = useState<GraphLink | null>(null);
   const [layerDepth, setLayerDepth] = useState(45);
   const [cameraDistance, setCameraDistance] = useState(420);
 
@@ -211,9 +215,18 @@ export function BrainGraph3DView() {
             controlType="orbit"
             cooldownTicks={80}
             enableNodeDrag
-            onNodeHover={(node) =>
-              setHoveredNodeId(node ? String(node.id) : null)
-            }
+            onNodeHover={(node) => {
+              setHoveredNodeId(node ? String(node.id) : null);
+              if (node) {
+                setHoveredLink(null);
+              }
+            }}
+            onLinkHover={(link) => {
+              setHoveredLink(link ? (link as GraphLink) : null);
+              if (link) {
+                setHoveredNodeId(null);
+              }
+            }}
             onEngineStop={() => {
               if (!pinGraphLayout) {
                 graphRef.current?.zoomToFit(500, 90);
@@ -285,6 +298,17 @@ export function BrainGraph3DView() {
               );
             }}
           />
+
+          {hoveredNodeId ? (
+            <NodeHoverCard nodeId={hoveredNodeId} left={16} top={56} />
+          ) : null}
+          {hoveredLink ? (
+            <EdgeHoverLabel
+              relationType={hoveredLink.relationType as RelationType}
+              left={16}
+              top={56}
+            />
+          ) : null}
 
           <GraphZoomControls
             layerDepth={layerDepth}
