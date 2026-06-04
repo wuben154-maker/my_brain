@@ -1,7 +1,5 @@
 import { useEffect } from "react";
-import { BootIntroScreen } from "@/components/launch/BootIntroScreen";
-import { LoadingScreen } from "@/components/launch/LoadingScreen";
-import { BootSelfCheck } from "@/components/launch/BootSelfCheck";
+import { LaunchScene } from "@/components/launch/LaunchScene";
 import { MainSectionContent } from "@/components/layout/MainSectionContent";
 import { NavRail } from "@/components/layout/NavRail";
 import { TopBar } from "@/components/layout/TopBar";
@@ -41,16 +39,8 @@ export function AppShell() {
     return bindUiStoreHashSync();
   }, [visualMain, visualLegacyNav]);
 
-  if (phase === "boot") {
-    return <BootIntroScreen />;
-  }
-
-  if (phase === "self_check") {
-    return <BootSelfCheck />;
-  }
-
-  if (phase === "loading") {
-    return <LoadingScreen />;
+  if (phase === "boot" || phase === "self_check" || phase === "loading") {
+    return <LaunchScene />;
   }
 
   if (phase === "error") {

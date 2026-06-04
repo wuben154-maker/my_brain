@@ -50,6 +50,36 @@ describe("MockVoiceProvider", () => {
     expect(voice.getState()).toBe("listening");
   });
 
+  it("speak emits onSpeakProgress chunks and supports setVoice", async () => {
+    const voice = new MockVoiceProvider();
+    const progress: string[] = [];
+    voice.onSpeakProgress((evt) => {
+      if (evt.chunk) {
+        progress.push(evt.chunk);
+      }
+    });
+
+    const speakPromise = voice.speak("麦克风自检就绪");
+    await vi.runAllTimersAsync();
+    await speakPromise;
+
+    expect(progress.length).toBeGreaterThan(0);
+    expect(progress.join("")).toContain("麦克风");
+
+    voice.setVoice("nova");
+    expect(voice.getVoice()).toBe("nova");
+  });
+
+  it("interrupt stops speak() early", async () => {
+    const voice = new MockVoiceProvider();
+    const speakPromise = voice.speak("这是一段较长的自检播报文本用于打断测试");
+    await vi.advanceTimersByTimeAsync(1);
+    expect(voice.getState()).toBe("speaking");
+    await voice.interrupt();
+    await speakPromise;
+    expect(voice.getState()).toBe("idle");
+  });
+
   it("barge-in via simulateUserSpeech while speaking", async () => {
     const voice = new MockVoiceProvider();
     const finals: string[] = [];

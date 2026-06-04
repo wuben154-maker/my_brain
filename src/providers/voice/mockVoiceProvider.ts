@@ -2,13 +2,17 @@ import type {
   VoiceConnectionState,
   VoiceProvider,
   VoiceProviderConfig,
+  VoiceSpeakProgressEvent,
+  VoiceTimbre,
   VoiceTranscriptEvent,
 } from "./types";
 
 const CONNECT_MS = 550;
 const USER_STREAM_MS = 45;
 const ASSISTANT_CHAR_MS = 28;
+const SPEAK_CHUNK_MS = 24;
 const PAUSE_BEFORE_REPLY_MS = 320;
+const SPEAK_CHUNK_CHARS = 6;
 
 export const MOCK_DEFAULT_UTTERANCE = "今天有什么 AI 资讯？";
 
@@ -30,7 +34,13 @@ export class MockVoiceProvider implements VoiceProvider {
   >();
   private timers = new Set<ReturnType<typeof setTimeout>>();
   private generation = 0;
+  private speakGeneration = 0;
+  private timbre: VoiceTimbre = "alloy";
+  private speakProgressListeners = new Set<
+    (evt: VoiceSpeakProgressEvent) => void
+  >();
   private replyContext: MockReplyContext = {};
+  private sessionConnected = false;
 
   async connect(config: VoiceProviderConfig): Promise<void> {
     void config;
@@ -40,6 +50,7 @@ export class MockVoiceProvider implements VoiceProvider {
     if (this.state !== "connecting") {
       return;
     }
+    this.sessionConnected = true;
     this.setState("listening");
     this.schedule(() => {
       void this.streamAssistant(MOCK_GREETING);
@@ -48,6 +59,8 @@ export class MockVoiceProvider implements VoiceProvider {
 
   async disconnect(): Promise<void> {
     this.generation += 1;
+    this.speakGeneration += 1;
+    this.sessionConnected = false;
     this.clearTimers();
     this.setState("idle");
   }
@@ -57,8 +70,68 @@ export class MockVoiceProvider implements VoiceProvider {
       return;
     }
     this.generation += 1;
+    this.speakGeneration += 1;
     this.clearTimers();
-    this.setState("listening");
+    this.setState(this.sessionConnected ? "listening" : "idle");
+  }
+
+  async speak(
+    text: string,
+    opts?: { interruptible?: boolean },
+  ): Promise<void> {
+    void opts;
+    const trimmed = text.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    const turn = ++this.speakGeneration;
+    this.generation += 1;
+    this.clearTimers();
+
+    if (this.state !== "idle" && this.state !== "listening") {
+      return;
+    }
+    this.setState("speaking");
+
+    const chunks: string[] = [];
+    for (let i = 0; i < trimmed.length; i += SPEAK_CHUNK_CHARS) {
+      chunks.push(trimmed.slice(i, i + SPEAK_CHUNK_CHARS));
+    }
+
+    let partial = "";
+    for (const chunk of chunks) {
+      if (turn !== this.speakGeneration) {
+        return;
+      }
+      partial += chunk;
+      this.emitSpeakProgress({ text: trimmed, chunk });
+      this.emitTranscript({ role: "assistant", text: partial, final: false });
+      await this.delay(SPEAK_CHUNK_MS);
+    }
+
+    if (turn !== this.speakGeneration) {
+      return;
+    }
+    this.emitTranscript({ role: "assistant", text: trimmed, final: true });
+    if (turn === this.speakGeneration) {
+      this.setState(this.sessionConnected ? "listening" : "idle");
+    }
+  }
+
+  setVoice(timbre: VoiceTimbre): void {
+    this.timbre = timbre;
+  }
+
+  getVoice(): VoiceTimbre {
+    return this.timbre;
+  }
+
+  onSpeakProgress(
+    listener: (evt: VoiceSpeakProgressEvent) => void,
+  ): () => void {
+    this.speakProgressListeners.add(listener);
+    return () => this.speakProgressListeners.delete(listener);
   }
 
   getState(): VoiceConnectionState {
@@ -167,6 +240,12 @@ export class MockVoiceProvider implements VoiceProvider {
     }
   }
 
+  private emitSpeakProgress(event: VoiceSpeakProgressEvent): void {
+    for (const listener of this.speakProgressListeners) {
+      listener(event);
+    }
+  }
+
   private setState(next: VoiceConnectionState): void {
     this.state = next;
     for (const listener of this.stateListeners) {
@@ -183,14 +262,31 @@ export class MockVoiceProvider implements VoiceProvider {
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => this.schedule(resolve, ms));
+    return new Promise((resolve) => {
+      const finish = () => {
+        this.pendingDelayResolvers.delete(finish);
+        resolve();
+      };
+      this.pendingDelayResolvers.add(finish);
+      const id = setTimeout(() => {
+        this.timers.delete(id);
+        finish();
+      }, ms);
+      this.timers.add(id);
+    });
   }
+
+  private pendingDelayResolvers = new Set<() => void>();
 
   private clearTimers(): void {
     for (const id of this.timers) {
       clearTimeout(id);
     }
     this.timers.clear();
+    for (const finish of this.pendingDelayResolvers) {
+      finish();
+    }
+    this.pendingDelayResolvers.clear();
   }
 }
 

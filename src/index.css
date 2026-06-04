@@ -190,6 +190,23 @@ body {
   .boot-progress-fill {
     transition: width 280ms ease-out;
   }
+
+  .boot-intro-screen {
+    animation: boot-intro-fade 900ms ease-out forwards;
+  }
+
+  .boot-intro-orb {
+    animation: boot-intro-orb-in 1.1s ease-out forwards,
+      orb-breathe 2.5s ease-in-out 1.1s infinite;
+  }
+
+  .boot-intro-title {
+    animation: boot-intro-title-in 700ms ease-out 280ms both;
+  }
+
+  .boot-intro-tagline {
+    animation: boot-intro-title-in 600ms ease-out 480ms both;
+  }
 }
 
 @keyframes orb-breathe {
@@ -212,6 +229,39 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes boot-intro-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes boot-intro-orb-in {
+  from {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes boot-intro-title-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    letter-spacing: 0.08em;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    letter-spacing: inherit;
   }
 }
 

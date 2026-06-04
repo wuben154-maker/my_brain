@@ -462,9 +462,11 @@ describe("Product invariants (AGENTS.md core)", () => {
   });
 
   describe("6 · Interruptible voice is mandatory", () => {
-    it("VoiceProvider interface exposes interrupt()", () => {
+    it("VoiceProvider interface exposes interrupt() and speak()", () => {
       const types = readRepoSource("src/providers/voice/types.ts");
       expect(types).toMatch(/interrupt\(\): Promise<void>/);
+      expect(types).toMatch(/speak\(text: string/);
+      expect(types).toMatch(/setVoice\(timbre: VoiceTimbre\)/);
     });
 
     it("MockVoiceProvider stops speaking and returns to listening on interrupt", async () => {

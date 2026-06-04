@@ -4,6 +4,8 @@ import type {
   VoiceConnectionState,
   VoiceProvider,
   VoiceProviderConfig,
+  VoiceSpeakProgressEvent,
+  VoiceTimbre,
   VoiceTranscriptEvent,
 } from "./types";
 
@@ -33,6 +35,10 @@ export class OpenAiRealtimeVoiceProvider implements VoiceProvider {
   private mic = new MicCapture();
   private speaker = new SpeakerPlayback();
   private assistantTranscript = "";
+  private timbre: VoiceTimbre = "alloy";
+  private speakProgressListeners = new Set<
+    (evt: VoiceSpeakProgressEvent) => void
+  >();
 
   async connect(config: VoiceProviderConfig): Promise<void> {
     if (!config.apiKey) {
@@ -62,7 +68,7 @@ export class OpenAiRealtimeVoiceProvider implements VoiceProvider {
           session: {
             modalities: ["text", "audio"],
             instructions: config.instructions ?? DEFAULT_INSTRUCTIONS,
-            voice: "alloy",
+            voice: this.timbre,
             input_audio_format: "pcm16",
             output_audio_format: "pcm16",
             input_audio_transcription: {
@@ -122,6 +128,51 @@ export class OpenAiRealtimeVoiceProvider implements VoiceProvider {
     this.sendEvent({ type: "response.cancel" });
     this.assistantTranscript = "";
     this.setState("listening");
+  }
+
+  async speak(
+    text: string,
+    opts?: { interruptible?: boolean },
+  ): Promise<void> {
+    void opts;
+    const trimmed = text.trim();
+    if (!trimmed) {
+      return;
+    }
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      this.emitSpeakProgress({ text: trimmed, chunk: trimmed });
+      this.emitTranscript({ role: "assistant", text: trimmed, final: true });
+      return;
+    }
+    this.sendEvent({
+      type: "response.create",
+      response: {
+        modalities: ["text", "audio"],
+        instructions: trimmed,
+      },
+    });
+    this.emitSpeakProgress({ text: trimmed, chunk: trimmed });
+  }
+
+  setVoice(timbre: VoiceTimbre): void {
+    this.timbre = timbre;
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.sendEvent({
+        type: "session.update",
+        session: { voice: timbre },
+      });
+    }
+  }
+
+  getVoice(): VoiceTimbre {
+    return this.timbre;
+  }
+
+  onSpeakProgress(
+    listener: (evt: VoiceSpeakProgressEvent) => void,
+  ): () => void {
+    this.speakProgressListeners.add(listener);
+    return () => this.speakProgressListeners.delete(listener);
   }
 
   getState(): VoiceConnectionState {
@@ -258,6 +309,12 @@ export class OpenAiRealtimeVoiceProvider implements VoiceProvider {
 
   private emitTranscript(event: VoiceTranscriptEvent): void {
     for (const listener of this.transcriptListeners) {
+      listener(event);
+    }
+  }
+
+  private emitSpeakProgress(event: VoiceSpeakProgressEvent): void {
+    for (const listener of this.speakProgressListeners) {
       listener(event);
     }
   }

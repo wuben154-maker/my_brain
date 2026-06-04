@@ -171,8 +171,12 @@ function BootLogStream() {
   );
 }
 
+interface BootSelfCheckProps {
+  onSkipVoice?: () => void;
+}
+
 /** MVP boot screen — orb, staggered diagnostics, progress, log stream. */
-export function BootSelfCheck() {
+export function BootSelfCheck({ onSkipVoice }: BootSelfCheckProps) {
   const checks = useAppStore((state) => state.selfChecks);
   const visualBoot = readVisualSnapshotId() === "boot";
 
@@ -215,6 +219,18 @@ export function BootSelfCheck() {
       </div>
 
       <footer className="relative z-10 mx-auto w-full max-w-3xl space-y-4 px-6 pb-8">
+        {onSkipVoice ? (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              data-testid="boot-skip-voice"
+              className="font-hud text-caption uppercase tracking-hud text-muted transition-colors hover:text-accent-cyan"
+              onClick={onSkipVoice}
+            >
+              跳过语音播报
+            </button>
+          </div>
+        ) : null}
         <BootProgressBar />
         <BootLogStream />
       </footer>

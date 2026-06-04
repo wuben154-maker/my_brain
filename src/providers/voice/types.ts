@@ -5,6 +5,19 @@ export type VoiceConnectionState =
   | "speaking"
   | "error";
 
+export type VoiceTimbre =
+  | "alloy"
+  | "echo"
+  | "fable"
+  | "onyx"
+  | "nova"
+  | "shimmer";
+
+export interface VoiceSpeakProgressEvent {
+  text: string;
+  chunk?: string;
+}
+
 export interface VoiceTranscriptEvent {
   role: "user" | "assistant";
   text: string;
@@ -22,7 +35,13 @@ export interface VoiceProvider {
   connect(config: VoiceProviderConfig): Promise<void>;
   disconnect(): Promise<void>;
   interrupt(): Promise<void>;
+  speak(text: string, opts?: { interruptible?: boolean }): Promise<void>;
+  setVoice(timbre: VoiceTimbre): void;
+  getVoice(): VoiceTimbre;
   getState(): VoiceConnectionState;
   onStateChange(listener: (state: VoiceConnectionState) => void): () => void;
   onTranscript(listener: (event: VoiceTranscriptEvent) => void): () => void;
+  onSpeakProgress?(
+    listener: (evt: VoiceSpeakProgressEvent) => void,
+  ): () => void;
 }

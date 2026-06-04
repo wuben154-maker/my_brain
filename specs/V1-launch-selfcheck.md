@@ -1,6 +1,6 @@
 # V1 — 电影感启动与语音自检（`launch-selfcheck`）
 
-- **阶段：** V · **状态：** 📝 待实现
+- **阶段：** V · **状态：** ✅ 已实现
 - **上游：** V0 · **下游：** V2
 - **复用：** `lib/bootSelfCheck.ts`、`runLaunchSequence.ts`、`LaunchScene` 子组件
 - **依赖 / 前置里程碑：** **V0**（`LaunchPhase` 与 `LaunchScene` 外壳）
@@ -72,12 +72,12 @@ src/components/launch/LaunchScene.tsx
 | `appStore.phase` | `boot` → `self_check` → `loading` → `companion` |
 
 ## 5. 验收清单
-- [ ] `boot` 态：黑场 + logo 可见，且 phase 序列以 `boot` 开头（非仅日志）。
-- [ ] mock voice：`speakSelfCheck` 对 N 项自检依次 `speak`，测试断言顺序与 label 含关键字（麦克风/扬声器等）。
-- [ ] 全部 ok 路径：`runLaunchSequence` 结束 phase=`companion` 且 `newsQueue` 已填充（与现逻辑一致）。
-- [ ] 单项失败：语音错误反馈 + 进入 `loading`/`companion`（降级），phase 不为永久 `error`（除非 storage 致命失败）。
-- [ ] 用户打断：`voice.interrupt()` 后跳过剩余播报，序列继续（不挂死）。
-- [ ] Loading 动画可见且与抓取进度文案联动。
+- [x] `boot` 态：黑场 + logo 可见，且 phase 序列以 `boot` 开头（非仅日志）。
+- [x] mock voice：`speakSelfCheck` 对 N 项自检依次 `speak`，测试断言顺序与 label 含关键字（麦克风/扬声器等）。
+- [x] 全部 ok 路径：`runLaunchSequence` 结束 phase=`companion` 且 `newsQueue` 已填充（与现逻辑一致）。
+- [x] 单项失败：语音错误反馈 + 进入 `loading`/`companion`（降级），phase 不为永久 `error`（除非 storage 致命失败）。
+- [x] 用户打断：`voice.interrupt()` 后跳过剩余播报，序列继续（不挂死）。
+- [x] Loading 动画可见且与抓取进度文案联动。
 
 ## 6. 涉及不变量
 - 可打断语音（硬需求）：自检播报必须可 interrupt。

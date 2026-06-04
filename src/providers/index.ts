@@ -73,7 +73,11 @@ export function createAppProviders(env: ProviderEnv): AppProviders {
 
 export { isMockVoiceProvider, MockVoiceProvider } from "./voice/mockVoiceProvider";
 export { MockLlmProvider, createMockLlmProvider } from "./llm/mockLlmProvider";
-export type { VoiceProvider } from "./voice/types";
+export type {
+  VoiceProvider,
+  VoiceTimbre,
+  VoiceSpeakProgressEvent,
+} from "./voice/types";
 export type { LlmProvider } from "./llm/types";
 export type { NewsSource, NewsSourceRegistry } from "./news/types";
 export type {
