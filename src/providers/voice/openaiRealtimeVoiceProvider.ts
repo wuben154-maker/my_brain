@@ -35,6 +35,7 @@ export class OpenAiRealtimeVoiceProvider implements VoiceProvider {
   private mic = new MicCapture();
   private speaker = new SpeakerPlayback();
   private assistantTranscript = "";
+  private responseInFlight = false;
   private timbre: VoiceTimbre = "alloy";
   private speakProgressListeners = new Set<
     (evt: VoiceSpeakProgressEvent) => void
@@ -124,9 +125,7 @@ export class OpenAiRealtimeVoiceProvider implements VoiceProvider {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       return;
     }
-    this.speaker.stopImmediately();
-    this.sendEvent({ type: "response.cancel" });
-    this.assistantTranscript = "";
+    this.cancelInFlightResponse();
     this.setState("listening");
   }
 
@@ -144,6 +143,9 @@ export class OpenAiRealtimeVoiceProvider implements VoiceProvider {
       this.emitTranscript({ role: "assistant", text: trimmed, final: true });
       return;
     }
+    this.cancelInFlightResponse();
+    this.responseInFlight = true;
+    this.setState("speaking");
     this.sendEvent({
       type: "response.create",
       response: {
@@ -242,6 +244,7 @@ export class OpenAiRealtimeVoiceProvider implements VoiceProvider {
 
       case "response.done":
       case "response.cancelled":
+        this.responseInFlight = false;
         this.assistantTranscript = "";
         if (this.state !== "error") {
           this.setState("listening");
@@ -303,8 +306,22 @@ export class OpenAiRealtimeVoiceProvider implements VoiceProvider {
     }
     this.ws = null;
     this.assistantTranscript = "";
+    this.responseInFlight = false;
     this.sessionReady = null;
     this.sessionFailed = null;
+  }
+
+  /** Stop any assistant response before starting a new speak (barge-in / stop-then-speak). */
+  private cancelInFlightResponse(): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      return;
+    }
+    if (this.responseInFlight || this.state === "speaking") {
+      this.speaker.stopImmediately();
+      this.sendEvent({ type: "response.cancel" });
+    }
+    this.responseInFlight = false;
+    this.assistantTranscript = "";
   }
 
   private emitTranscript(event: VoiceTranscriptEvent): void {

@@ -116,7 +116,7 @@ src/hooks/useConversationSession.ts
 - [x] barge-in：播报中 `userInterrupt` → `voice.interrupt()` 被调用且下一事件为 listen（mock 断言）。
 - [x] persona 切换改变 `say` 口吻（同输入不同 preset，测试 snapshot 或关键词）。
 - [x] 进入 `companion` 后 **主动首句**（非空 turn）。
-- [ ] **冷启动当场点亮第一颗星**：空图状态下走完 onboarding 脚本 + 用户语音「入」→ 星图新增首节点且 `onboarding.step === "done"`（与 V3 联测）。
+- [x] **冷启动当场点亮第一颗星**：空图状态下走完 onboarding 脚本 + 用户语音「入」→ 星图新增首节点且 `onboarding.step === "done"`（`ingestActions.test.ts` 空图 + `nextOnboardingAfterEvent`；conductor `first_star` 联测）。
 - [x] conductor **不调用** `applyGraphMutation` / `persistGraphSnapshot`（新建节点仅 V3）。
 
 ## 6. 涉及不变量

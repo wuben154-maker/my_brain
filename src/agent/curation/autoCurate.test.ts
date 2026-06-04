@@ -27,7 +27,7 @@ describe("autoCurate", () => {
           newNode,
           {
             id: "old-rag",
-            title: "RAG 检索增强生成",
+            title: "RAG 检索生成",
             intro: "old",
             sourceUrl: null,
             archived: false,
@@ -43,6 +43,47 @@ describe("autoCurate", () => {
     expect(proposals.some((p: GraphMutationProposal) => p.kind === "link")).toBe(
       true,
     );
+    expect(proposals.some((p) => p.kind === "merge")).toBe(false);
+    expect(proposals.every((p) => p.kind !== "create")).toBe(true);
+  });
+
+  it("merges a new node into a near-duplicate peer without creating nodes", () => {
+    const sharedTitle = "RAG 检索增强";
+    const newNode = {
+      id: "new-rag-dup",
+      title: sharedTitle,
+      intro: "new intro",
+      sourceUrl: null,
+      archived: false,
+      createdAt: "2026-06-01T00:00:00.000Z",
+      updatedAt: "2026-06-01T00:00:00.000Z",
+    };
+    const proposals = autoCurate(
+      graph({
+        nodes: [
+          newNode,
+          {
+            id: "canonical-rag",
+            title: sharedTitle,
+            intro: "canonical",
+            sourceUrl: null,
+            archived: false,
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+      }),
+      newNode,
+      DEFAULT_USER_PROFILE,
+      { stale: [] },
+    );
+    const merge = proposals.find((p) => p.kind === "merge");
+    expect(merge).toBeDefined();
+    expect(merge?.payload).toMatchObject({
+      sourceNodeId: "new-rag-dup",
+      targetNodeId: "canonical-rag",
+    });
+    expect(proposals.every((p) => p.kind !== "create")).toBe(true);
   });
 
   it("archives stale nodes but never the new node", () => {

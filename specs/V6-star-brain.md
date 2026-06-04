@@ -59,12 +59,12 @@ src/conversation/ConversationConductor.ts
 | `graphStore.selectedNodeId` | 悬停/点击选中 |
 
 ## 5. 验收清单
-- [ ] mock teaching：`highlightNodeIds` 长度为 N 时，高亮逐步推进 N 步（单测 fake timers）。
-- [ ] 2D 与 3D 模式切换后高亮行为一致（共享 store）。
-- [ ] 悬停节点显示简介；悬停边显示关系类型/描述。
-- [ ] interrupt 停止 walkthrough 并清除高亮。
-- [ ] `pnpm visual:loop` **`companion` 轨**通过（新基线入 `assets/`）；**`main` 轨像素 diff 零回归**（冻结轨）。
-- [ ] 无 WebGL 控制台 error（3D 冒烟）。
+- [x] mock teaching：`highlightNodeIds` 长度为 N 时，高亮逐步推进 N 步（单测 fake timers）（`useWalkthroughHighlight.test.ts`）。
+- [ ] 2D 与 3D 模式切换后高亮行为一致（共享 store）— 未加专用切换单测；`graphStore` 共享已由 2D/3D 视图冒烟间接覆盖。
+- [x] 悬停节点显示简介；悬停边显示关系类型/描述（`BrainGraph3DView.test.ts` · V6 hover parity）。
+- [x] interrupt 停止 walkthrough 并清除高亮（`useConversationSession.test.ts` · `onUserInterrupt`）。
+- [ ] `pnpm visual:loop` **`companion` 轨**通过（新基线入 `assets/`）；**`main` 轨像素 diff 零回归**（冻结轨）— 未纳入本次 `pnpm check` 门禁。
+- [ ] 无 WebGL 控制台 error（3D 冒烟）— 未接真 WebGL 浏览器断言；仅 mock 挂载测试。
 
 ## 6. 涉及不变量
 - 渲染层 **只读**图谱；无 `applyGraphMutation`。

@@ -76,13 +76,13 @@ src/conversation/curationReport.ts
 | `proposalStore` | 主流程不再 `approve`；**禁止**后台 `saveProposal` 待审批（V7：`agent_proposals` 只读 legacy） |
 
 ## 5. 验收清单
-- [ ] 入库 mock 后：自动 link/merge/archive 至少一种在单测 fixture 中生效。
-- [ ] archive 节点在 `visibleGraph` 中隐藏，`loadGraph` 可恢复。
-- [ ] 每次 auto apply 产生 **一条** `GraphHistoryEntry`；`undo(id)` 后快照 === entry.before（单测）。
-- [ ] 连续整理 N 次口播汇报 ≤ 节流上限（mock clock）。
-- [ ] **无任何静默提议**：主流程与 scheduler **均不** `saveProposal(..., status:'pending')`（invariant + job 注册表扫描）。
-- [ ] **无** inbox UI / `approve` 主路径（静态扫描）。
-- [ ] `productInvariants` 更新：区分「ingest create 需确认」与「post-ingest curate 可自动」。
+- [x] 入库 mock 后：自动 link/merge/archive 至少一种在单测 fixture 中生效（`autoCurate.test.ts` link + merge + archive；`ingestActions.test.ts` 入库后 archive）。
+- [x] archive 节点在 `visibleGraph` 中隐藏，`loadGraph` 可恢复（`productInvariants.test.ts` · `visibleGraph`）。
+- [x] 每次 auto apply 产生 **一条** `GraphHistoryEntry`；`undo(id)` 后快照 === entry.before（`graphHistoryStore.test.ts` · `runAutoCuratePipeline.test.ts`）。
+- [x] 连续整理 N 次口播汇报 ≤ 节流上限（mock clock）（`curationReport.test.ts` + `ingestActions.test.ts` 二次入库空 `turn.say`）。
+- [x] **无任何静默提议**：主流程与 scheduler **均不** `saveProposal(..., status:'pending')`（`productInvariants` · V4 + `v2-no-proposals` scheduler 扫描）。
+- [x] **无** inbox UI / `approve` 主路径（v2 `ImmersiveScene` 无 inbox；ingest 为唯一 create 出口，见 `ingestActions` / conductor 扫描）。
+- [x] `productInvariants` 更新：区分「ingest create 需确认」与「post-ingest curate 可自动」（§3 描述 + V4 专节）。
 
 ## 6. 涉及不变量（v2 口径）
 - 入库=用户确认；**入库后整理=自动**（本 spec）。

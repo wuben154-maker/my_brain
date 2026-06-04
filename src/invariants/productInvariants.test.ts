@@ -205,12 +205,12 @@ describe("Product invariants (AGENTS.md core)", () => {
     });
   });
 
-  describe("3 · Suggest-then-confirm for ANY graph mutation", () => {
+  describe("3 · User-gated create; post-ingest curation auto-applies (v2 #3)", () => {
     beforeEach(() => {
       useIngestStore.getState().reset();
     });
 
-    it("does not expose auto-apply path in ingest store", () => {
+    it("ingest store has no auto-apply for voice-confirmed create", () => {
       const storeApi = Object.keys(useIngestStore.getState());
       expect(storeApi).not.toContain("applyPending");
       expect(storeApi).not.toContain("autoApply");
