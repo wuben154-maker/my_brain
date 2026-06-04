@@ -6,7 +6,7 @@ import { isVisualSnapshotMode } from "@/lib/visualSnapshotMode";
 import { useVoiceSession } from "@/hooks/useVoiceSession";
 
 /**
- * Immersive voice orb â€” visual chrome + voice loop (V0 shell, V2 conductor).
+ * Immersive voice orb â€?visual chrome + voice loop (V0 shell, V2 conductor).
  */
 export function VoiceOrb() {
   const visualSnapshot = isVisualSnapshotMode();

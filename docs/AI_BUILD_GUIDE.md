@@ -199,7 +199,7 @@ specs/{spec文件名}.md 我已审过批准。
 | **V2** | [`V2-conversation-conductor.md`](../specs/V2-conversation-conductor.md) | 对话编排状态机：闲聊/资讯/briefing/入库问/讲知识 + barge-in + 登场首句 | 📝 待实现 |
 | **V3** | [`V3-voice-ingest.md`](../specs/V3-voice-ingest.md) | **唯一保留的确认**：「入/不要/讲细点」→ 建概念节点 + 来源链接 | 📝 待实现 |
 | **V4** | [`V4-auto-curate.md`](../specs/V4-auto-curate.md) | 入库后 **`autoCurate` 自动整理** + 变更历史/撤销 + 口头汇报 | 📝 待实现 |
-| **V5** | [`V5-profile-voice.md`](../specs/V5-profile-voice.md) | 画像静默蒸馏 + 音色/人格设置（SettingsOverlay） | 📝 待实现 |
+| **V5** | [`V5-profile-voice.md`](../specs/V5-profile-voice.md) | 画像静默蒸馏 + 音色/人格设置（SettingsOverlay） | ✅ 已实现 |
 | **V6** | [`V6-star-brain.md`](../specs/V6-star-brain.md) | 星图科幻打磨 + 串讲同步高亮 + **`companion` visual 基线** | 📝 待实现 |
 | **V7** | [`V7-cutover-hardening.md`](../specs/V7-cutover-hardening.md) | 死 UI 清理、`companion.e2e`、接真 key 清单、文档同步 | 📝 待实现 |
 

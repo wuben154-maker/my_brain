@@ -10,6 +10,7 @@ import {
   distilledMemoryItemsFromTranscript,
 } from "@/lib/memoryGrounding";
 import { finalizeVoiceSession } from "@/lib/voiceSessionFinalize";
+import type { FinalizeCompanionDisconnectParams } from "@/hooks/companionSessionTypes";
 import {
   isMockVoiceProvider,
   MOCK_DEFAULT_UTTERANCE,
@@ -42,7 +43,13 @@ function stateLabel(state: VoiceConnectionState, isMock: boolean): string {
   }
 }
 
-export function useVoiceSession() {
+export type { FinalizeCompanionDisconnectParams } from "@/hooks/companionSessionTypes";
+
+export function useVoiceSession(options?: {
+  finalizeCompanionDisconnect?: (
+    params: FinalizeCompanionDisconnectParams,
+  ) => Promise<void>;
+}) {
   const providers = useAppStore((state) => state.providers);
   const newsCount = useAppStore((state) => state.newsQueue.length);
   const phase = useAppStore((state) => state.phase);
@@ -60,6 +67,7 @@ export function useVoiceSession() {
   const voice = providers?.voice ?? null;
   const isMockVoice = voice !== null && isMockVoiceProvider(voice);
   const canUseVoice = phase === "companion";
+  const finalizeCompanionDisconnect = options?.finalizeCompanionDisconnect;
 
   useEffect(() => {
     if (!voice) {
@@ -215,17 +223,32 @@ export function useVoiceSession() {
     }
     setIsBusy(true);
     try {
-      await finalizeVoiceSession({
+      const runFinalize =
+        finalizeCompanionDisconnect ??
+        (async (params: FinalizeCompanionDisconnectParams) => {
+          await finalizeVoiceSession({
+            transcripts: params.transcripts,
+            disconnectVoice: params.disconnectVoice,
+            distillProfile: (lines) => distillBeforeDiscard(lines),
+            rememberSession: (lines) => rememberBeforeDiscard(lines),
+            clearTranscripts: params.clearTranscripts,
+          });
+        });
+
+      await runFinalize({
         transcripts: transcriptsRef.current,
         disconnectVoice: () => voice.disconnect(),
-        distillProfile: (lines) => distillBeforeDiscard(lines),
-        rememberSession: (lines) => rememberBeforeDiscard(lines),
         clearTranscripts: () => setTranscripts([]),
       });
     } finally {
       setIsBusy(false);
     }
-  }, [distillBeforeDiscard, rememberBeforeDiscard, voice]);
+  }, [
+    distillBeforeDiscard,
+    finalizeCompanionDisconnect,
+    rememberBeforeDiscard,
+    voice,
+  ]);
 
   const interrupt = useCallback(async () => {
     if (!voice) {

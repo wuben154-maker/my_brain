@@ -1,11 +1,11 @@
 import { useEffect, useRef } from "react";
-import { createMorningBriefBudget } from "@/agent/budget";
-import { createMorningBriefJob } from "@/agent/jobs/morningBriefJob";
+import type { AgentJob } from "@/agent/types";
 import type { AgentScheduler } from "@/agent/scheduler";
 import { createAgentScheduler } from "@/agent/scheduler";
 import { persistAgentRunResult } from "@/agent/schedulerPersist";
 import {
   loadSchedulerSettings,
+  normalizeSchedulerSettings,
   saveSchedulerSettings,
   type StoredSchedulerSettings,
   DEFAULT_SCHEDULER_SETTINGS,
@@ -13,9 +13,25 @@ import {
 import { setAgentSchedulerRuntime } from "@/agent/schedulerRuntime";
 import { createAgentToolsFromProviders } from "@/agent/tools";
 import { useAppStore } from "@/stores/appStore";
-import { useProposalStore } from "@/stores/proposalStore";
 
-/** L1 local scheduler — morning brief → inbox (A5). */
+const V2_NOOP_JOB_ID = "v2-no-proposals";
+
+const v2NoopJob: AgentJob = {
+  id: V2_NOOP_JOB_ID,
+  async run() {
+    const now = new Date().toISOString();
+    return {
+      runId: `noop-${Date.now()}`,
+      startedAt: now,
+      finishedAt: now,
+      proposals: [],
+      digest: null,
+      trace: [],
+    };
+  },
+};
+
+/** v2: proposal-producing jobs (A3/C2) stay disabled; scheduler is inert by default. */
 export function useAgentScheduler(): void {
   const phase = useAppStore((state) => state.phase);
   const storage = useAppStore((state) => state.storage);
@@ -23,6 +39,8 @@ export function useAgentScheduler(): void {
 
   const settingsRef = useRef<StoredSchedulerSettings>({
     ...DEFAULT_SCHEDULER_SETTINGS,
+    enabled: false,
+    jobId: V2_NOOP_JOB_ID,
   });
   const lastRunMsRef = useRef(0);
   const schedulerRef = useRef<AgentScheduler | null>(null);
@@ -42,9 +60,13 @@ export function useAgentScheduler(): void {
       if (cancelled) {
         return;
       }
-      settingsRef.current = loaded;
-      lastRunMsRef.current = loaded.lastRunAt
-        ? Date.parse(loaded.lastRunAt)
+      settingsRef.current = normalizeSchedulerSettings({
+        ...loaded,
+        enabled: false,
+        jobId: V2_NOOP_JOB_ID,
+      });
+      lastRunMsRef.current = settingsRef.current.lastRunAt
+        ? Date.parse(settingsRef.current.lastRunAt)
         : 0;
 
       const tools = createAgentToolsFromProviders(
@@ -56,14 +78,10 @@ export function useAgentScheduler(): void {
         result: Parameters<typeof persistAgentRunResult>[1],
       ) => {
         await persistAgentRunResult(storage, result);
-        await useProposalStore.getState().load(storage);
       };
 
       const scheduler = createAgentScheduler({
-        getJob: async () => {
-          const budget = await createMorningBriefBudget(storage);
-          return createMorningBriefJob({ budget });
-        },
+        getJob: async () => v2NoopJob,
         tools,
         persist,
         getConfig: () => settingsRef.current,
@@ -78,10 +96,6 @@ export function useAgentScheduler(): void {
         },
       });
 
-      scheduler.onRun(() => {
-        void useProposalStore.getState().load(storage);
-      });
-
       if (cancelled) {
         return;
       }
@@ -93,16 +107,14 @@ export function useAgentScheduler(): void {
         scheduler,
         getSettings: () => settingsRef.current,
         updateSettings: async (partial) => {
-          settingsRef.current = {
+          settingsRef.current = normalizeSchedulerSettings({
             ...settingsRef.current,
             ...partial,
-          };
+            enabled: false,
+            jobId: V2_NOOP_JOB_ID,
+          });
           await saveSchedulerSettings(storage, settingsRef.current);
-          if (!settingsRef.current.enabled) {
-            scheduler.stop();
-          } else {
-            scheduler.start();
-          }
+          scheduler.stop();
           return settingsRef.current;
         },
       });

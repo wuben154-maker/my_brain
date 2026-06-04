@@ -486,14 +486,17 @@ describe("Product invariants (AGENTS.md core)", () => {
     });
   });
 
-  describe("V3/V4 · ingest confirm vs post-ingest auto-curate", () => {
+  describe("V3 · voice ingest confirm gate", () => {
     it("ingest create requires explicit voice command path", () => {
       const ingestActions = readRepoSource("src/conversation/ingestActions.ts");
+      const parser = readRepoSource("src/lib/parseIngestCommand.ts");
       expect(ingestActions).toContain("applyIngestCreate");
-      expect(ingestActions).toContain("parseIngestCommand");
+      expect(parser).toContain("parseIngestCommand");
     });
+  });
 
-    it("post-ingest auto-curate applies without proposal inbox", () => {
+  describe("V4 · post-ingest auto-curate", () => {
+    it("auto-curate applies without proposal inbox", () => {
       const pipeline = readRepoSource("src/lib/runAutoCuratePipeline.ts");
       expect(pipeline).toContain("runAutoCurateAfterIngest");
       expect(pipeline).not.toContain("saveProposal");

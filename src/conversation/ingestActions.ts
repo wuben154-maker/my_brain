@@ -23,8 +23,6 @@ import type {
   IngestCommand,
   Turn,
 } from "@/conversation/types";
-import { runAutoCurateAfterIngest } from "@/lib/runAutoCuratePipeline";
-
 export interface IngestDecisionDeps {
   storage: StorageProvider;
   llm: LlmProvider;
@@ -114,7 +112,6 @@ export async function applyIngestCreate(
 export interface IngestDecisionResult {
   turn: Turn;
   event?: ConversationEvent;
-  curationEntries?: Awaited<ReturnType<typeof runAutoCurateAfterIngest>>;
 }
 
 /**
@@ -159,24 +156,15 @@ export async function applyIngestDecision(
     };
   }
 
-  const nodeId = await applyIngestCreate(item, deps);
+  await applyIngestCreate(item, deps);
   store.markIngested(item.id);
   store.setExplanation("");
   store.resetElaborationDepth();
   store.resetIngestParseAttempt();
   store.setCursor(store.cursor + 1);
 
-  const curationEntries =
-    nodeId !== null
-      ? await runAutoCurateAfterIngest(nodeId, {
-          storage: deps.storage,
-          profile: deps.profile,
-        })
-      : [];
-
   return {
     turn: { say: "" },
     event: { type: "ingestAnswer", command: "ingest" },
-    curationEntries,
   };
 }

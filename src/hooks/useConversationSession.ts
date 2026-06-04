@@ -1,9 +1,17 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { buildConversationContext } from "@/conversation/buildContext";
 import { ConversationConductor } from "@/conversation/ConversationConductor";
 import { applyIngestDecision } from "@/conversation/ingestActions";
 import type { ConversationEvent } from "@/conversation/types";
+import type { FinalizeCompanionDisconnectParams } from "@/hooks/companionSessionTypes";
+import {
+  conversationTurnsToLines,
+  mergeTranscriptLines,
+  useProfileDistillation,
+} from "@/hooks/useProfileDistillation";
 import { parseIngestCommand } from "@/lib/parseIngestCommand";
+import type { TranscriptLineLike } from "@/lib/profileDistillation";
+import { finalizeVoiceSession } from "@/lib/voiceSessionFinalize";
 import { useAppStore } from "@/stores/appStore";
 import { useConversationStore } from "@/stores/conversationStore";
 import { useGraphStore } from "@/stores/graphStore";
@@ -12,10 +20,12 @@ import { useProfileStore } from "@/stores/profileStore";
 
 /**
  * Binds ConversationConductor to voice: userSpeak → dispatch; speaking + interrupt → barge-in.
+ * V5: finalizeVoiceSession on voice disconnect and when leaving companion phase.
  */
 export function useConversationSession(options?: {
   voiceConnected?: boolean;
 }) {
+  const { distillFromLines, rememberFromLines } = useProfileDistillation();
   const phase = useAppStore((s) => s.phase);
   const newsQueue = useAppStore((s) => s.newsQueue);
   const providers = useAppStore((s) => s.providers);
@@ -32,10 +42,12 @@ export function useConversationSession(options?: {
   const setOnboarding = useConversationStore((s) => s.setOnboarding);
   const setCurrentNewsItem = useConversationStore((s) => s.setCurrentNewsItem);
   const appendTurn = useConversationStore((s) => s.appendTurn);
+  const conversationTurns = useConversationStore((s) => s.turns);
   const resetConversation = useConversationStore((s) => s.reset);
 
   const conductorRef = useRef<ConversationConductor | null>(null);
   const companionPrimedRef = useRef(false);
+  const wasCompanionRef = useRef(false);
   const pendingOpeningRef = useRef<string | null>(null);
   const lastUserFinalRef = useRef<string | null>(null);
   const getContextRef = useRef<ReturnType<typeof buildConversationContext> | null>(
@@ -45,7 +57,22 @@ export function useConversationSession(options?: {
   const voice = providers?.voice ?? null;
   const llm = providers?.llm ?? null;
   const isCompanion = phase === "companion";
-  const voiceConnected = options?.voiceConnected ?? false;
+  const [voiceConnectedInternal, setVoiceConnectedInternal] = useState(false);
+
+  useEffect(() => {
+    if (!voice) {
+      setVoiceConnectedInternal(false);
+      return;
+    }
+    const sync = () => {
+      const state = voice.getState();
+      setVoiceConnectedInternal(state !== "idle" && state !== "error");
+    };
+    sync();
+    return voice.onStateChange(() => sync());
+  }, [voice]);
+
+  const voiceConnected = options?.voiceConnected ?? voiceConnectedInternal;
 
   const getContext = useCallback(() => {
     return buildConversationContext({
@@ -58,6 +85,44 @@ export function useConversationSession(options?: {
   }, [graphEdges, graphNodes, newsCursor, newsQueue, onboarding, profile]);
 
   getContextRef.current = getContext();
+
+  const finalizeCompanionDisconnect = useCallback(
+    async (params: FinalizeCompanionDisconnectParams) => {
+      const merged = mergeTranscriptLines(
+        conversationTurnsToLines(conversationTurns),
+        params.transcripts,
+      );
+      await finalizeVoiceSession({
+        transcripts: merged,
+        disconnectVoice: params.disconnectVoice,
+        distillProfile: distillFromLines,
+        rememberSession: rememberFromLines,
+        clearTranscripts: () => {
+          params.clearTranscripts();
+          resetConversation();
+        },
+      });
+    },
+    [
+      conversationTurns,
+      distillFromLines,
+      rememberFromLines,
+      resetConversation,
+    ],
+  );
+
+  const finalizeCompanionSession = useCallback(
+    async (transcriptSnapshot: TranscriptLineLike[]) => {
+      await finalizeVoiceSession({
+        transcripts: transcriptSnapshot,
+        disconnectVoice: async () => undefined,
+        distillProfile: distillFromLines,
+        rememberSession: rememberFromLines,
+        clearTranscripts: () => undefined,
+      });
+    },
+    [distillFromLines, rememberFromLines],
+  );
 
   useEffect(() => {
     if (!isCompanion || !llm || !voice) {
@@ -121,11 +186,29 @@ export function useConversationSession(options?: {
   ]);
 
   useEffect(() => {
+    if (isCompanion) {
+      wasCompanionRef.current = true;
+      return;
+    }
+
+    if (wasCompanionRef.current) {
+      wasCompanionRef.current = false;
+      const snapshot = conversationTurnsToLines(
+        useConversationStore.getState().turns,
+      );
+      if (snapshot.some((line) => line.role === "user" && line.text.trim())) {
+        void finalizeCompanionSession(snapshot);
+      }
+    }
+
+    companionPrimedRef.current = false;
+    pendingOpeningRef.current = null;
+    resetConversation();
+    conductorRef.current?.reset();
+  }, [finalizeCompanionSession, isCompanion, resetConversation]);
+
+  useEffect(() => {
     if (!isCompanion) {
-      companionPrimedRef.current = false;
-      pendingOpeningRef.current = null;
-      resetConversation();
-      conductorRef.current?.reset();
       return;
     }
 
@@ -140,7 +223,7 @@ export function useConversationSession(options?: {
         pendingOpeningRef.current = turn.say;
       }
     })();
-  }, [isCompanion, resetConversation]);
+  }, [isCompanion]);
 
   useEffect(() => {
     if (!voiceConnected || !voice || !pendingOpeningRef.current) {
@@ -237,6 +320,8 @@ export function useConversationSession(options?: {
     dispatch,
     onUserTranscript,
     onUserInterrupt,
+    finalizeCompanionDisconnect,
+    finalizeCompanionSession,
     isActive: isCompanion && conductorRef.current !== null,
     hasPendingOpening: pendingOpeningRef.current !== null,
   };

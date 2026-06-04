@@ -1,6 +1,6 @@
 # V5 — 画像静默蒸馏与音色人格（`profile-voice`）
 
-- **阶段：** V · **状态：** 📝 待实现
+- **阶段：** V · **状态：** ✅ 已实现
 - **上游：** V0、V2 · **下游：** V7
 - **复用：** `voiceSessionFinalize`、`profileDistillation`、`profileStore`、C4 persona、`VoiceProvider`
 - **依赖 / 前置里程碑：** **V0**（SettingsOverlay 壳）、**V2**（会话结束/轮次边界触发蒸馏）
@@ -62,11 +62,11 @@ src/stores/profileStore.ts
 | localStorage/SQLite | `user_profile` 表 |
 
 ## 5. 验收清单
-- [ ] 模拟一轮对话 transcript → `finalizeVoiceSession` → profile 字段变化可断言（mock LLM fixture）。
-- [ ] **无** UI 确认弹窗；蒸馏失败降级日志，不阻塞 companion。
-- [ ] `setVoice` mock：切换音色后 `getVoice` 更新；Settings 操作可追溯。
-- [ ] 人格预设切换后 `buildExpressionPlan` 输出变化（复用 C4 测试）。
-- [ ] 记忆引擎模块仍 **无** `profileStore.save` / 图谱写（invariant 扫描）。
+- [x] 模拟一轮对话 transcript → `finalizeVoiceSession` → profile 字段变化可断言（mock LLM fixture）。
+- [x] **无** UI 确认弹窗；蒸馏失败降级日志，不阻塞 companion。
+- [x] `setVoice` mock：切换音色后 `getVoice` 更新；Settings 操作可追溯。
+- [x] 人格预设切换后 `buildExpressionPlan` 输出变化（复用 C4 测试）。
+- [x] 记忆引擎模块仍 **无** `profileStore.save` / 图谱写（invariant 扫描）。
 
 ## 6. 涉及不变量
 - **画像永久、静默生长**（v2 明确无需确认）。
