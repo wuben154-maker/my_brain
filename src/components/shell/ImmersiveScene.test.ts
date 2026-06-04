@@ -17,4 +17,12 @@ describe("ImmersiveScene (V0)", () => {
     expect(screen.getByTestId("voice-orb")).toBeTruthy();
     expect(screen.getByTestId("settings-corner")).toBeTruthy();
   });
+
+  it("does not mount proposal inbox or inbox-approve UI (V4)", () => {
+    render(createElement(ImmersiveScene));
+    expect(screen.queryByTestId("proposal-inbox-inline")).toBeNull();
+    expect(screen.queryByTestId("proposal-inbox-drawer")).toBeNull();
+    expect(screen.queryByTestId("proposal-inbox-empty")).toBeNull();
+    expect(screen.queryByTestId("inbox-bell")).toBeNull();
+  });
 });

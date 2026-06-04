@@ -497,6 +497,47 @@ describe("Product invariants (AGENTS.md core)", () => {
       expect(ingestActions).toContain("applyIngestCreate");
       expect(parser).toContain("parseIngestCommand");
     });
+
+    it("non-voice concept-create entry points are dev-guarded; voice uses applyIngestDecision", () => {
+      const ingestActions = readRepoSource("src/conversation/ingestActions.ts");
+      const proposalStore = readRepoSource("src/stores/proposalStore.ts");
+      const manualOps = readRepoSource("src/hooks/useManualGraphOps.ts");
+      const newsIngest = readRepoSource("src/hooks/useNewsIngestSession.ts");
+
+      expect(ingestActions).toContain("export async function applyIngestCreate");
+      expect(ingestActions).toContain("await applyIngestCreate(item, deps)");
+      expect(ingestActions).not.toContain("canUseLegacyNonVoiceGraphCreate");
+
+      const ingestCreateCalls = ingestActions.match(/applyIngestCreate\s*\(/g);
+      expect(ingestCreateCalls?.length).toBe(2);
+
+      expect(proposalStore).toContain("canUseLegacyNonVoiceGraphCreate");
+      expect(proposalStore).toMatch(
+        /resolved\.kind === "create"[\s\S]*!canUseLegacyNonVoiceGraphCreate\(\)/,
+      );
+
+      expect(manualOps).toContain("canUseLegacyNonVoiceGraphCreate");
+      expect(manualOps).toMatch(
+        /proposal\.kind === "create"[\s\S]*!canUseLegacyNonVoiceGraphCreate\(\)/,
+      );
+      expect(manualOps).toMatch(
+        /proposeCreate[\s\S]*!canUseLegacyNonVoiceGraphCreate\(\)/,
+      );
+
+      expect(newsIngest).toContain("canUseLegacyNonVoiceGraphCreate");
+      expect(newsIngest).toMatch(
+        /proposal\.kind === "create"[\s\S]*!canUseLegacyNonVoiceGraphCreate\(\)/,
+      );
+      expect(newsIngest).toMatch(
+        /applyIngestCreateForItem[\s\S]*!canUseLegacyNonVoiceGraphCreate\(\)[\s\S]*applyIngestCreate\(/,
+      );
+
+      expect(ingestActions).toContain("export async function applyIngestDecision");
+      expect(ingestActions).toContain("await applyIngestCreate(item, deps)");
+      expect(ingestActions).toContain(
+        'event: { type: "ingestAnswer", command: "ingest" }',
+      );
+    });
   });
 
   describe("V4 · post-ingest auto-curate", () => {

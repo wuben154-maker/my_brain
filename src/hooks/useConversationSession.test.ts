@@ -3,11 +3,14 @@
  */
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { FIXTURE_NEWS } from "@/conversation/mockConversationFixtures";
 import { useConversationSession } from "@/hooks/useConversationSession";
+import { createTempStorage } from "@/invariants/testStorage";
 import { createAppProviders } from "@/providers";
 import { useAppStore } from "@/stores/appStore";
 import { useConversationStore } from "@/stores/conversationStore";
 import { useGraphStore } from "@/stores/graphStore";
+import { useIngestStore } from "@/stores/ingestStore";
 
 describe("useConversationSession voice interrupt wiring", () => {
   beforeEach(() => {
@@ -98,5 +101,77 @@ describe("useConversationSession voice interrupt wiring", () => {
 
     expect(useGraphStore.getState().highlightedNodeIds).toEqual([]);
     expect(useGraphStore.getState().highlightedEdgeIds).toEqual([]);
+  });
+});
+
+describe("useConversationSession ingest parse attempt (V3)", () => {
+  beforeEach(() => {
+    useConversationStore.getState().reset();
+    useIngestStore.getState().reset();
+    useAppStore.setState({
+      phase: "companion",
+      newsQueue: [],
+      providers: null,
+      storage: null,
+    });
+  });
+
+  it("ambiguous ingest answer sets ingestParseAttempt to 2 and reprompts", async () => {
+    const { storage, cleanup } = createTempStorage();
+    const setAttemptSpy = vi.spyOn(
+      useIngestStore.getState(),
+      "setIngestParseAttempt",
+    );
+    try {
+      await storage.init();
+      const providers = createAppProviders({ openAiApiKey: "" });
+      useAppStore.setState({
+        phase: "companion",
+        newsQueue: FIXTURE_NEWS,
+        providers,
+        storage,
+      });
+      useIngestStore.getState().setCursor(0);
+      useIngestStore.getState().setActiveNewsId(FIXTURE_NEWS[0]!.id);
+      useIngestStore.getState().resetIngestParseAttempt();
+
+      const hook = renderHook(() =>
+        useConversationSession({ voiceConnected: false }),
+      );
+
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      useConversationStore.setState({
+        currentState: "ingest_decision",
+        newsCursor: 0,
+      });
+
+      const assistantTurnsBefore = useConversationStore
+        .getState()
+        .turns.filter((t) => t.role === "assistant").length;
+
+      await act(async () => {
+        hook.result.current.onUserTranscript("嗯", true);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(setAttemptSpy).toHaveBeenCalledWith(2);
+      expect(useConversationStore.getState().currentState).toBe(
+        "ingest_decision",
+      );
+      expect(useIngestStore.getState().ingestedIds).toEqual([]);
+      const assistantTurns = useConversationStore
+        .getState()
+        .turns.filter((t) => t.role === "assistant");
+      expect(assistantTurns.length).toBeGreaterThan(assistantTurnsBefore);
+      expect(assistantTurns.some((t) => /入库/.test(t.text))).toBe(true);
+    } finally {
+      setAttemptSpy.mockRestore();
+      cleanup();
+    }
   });
 });
