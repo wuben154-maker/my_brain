@@ -1,4 +1,5 @@
 import type { BrainGraphSnapshot, ConceptNode, GraphEdge } from "@/domain/graph";
+import type { GraphHistoryEntry } from "@/domain/graphHistory";
 import type { UserProfile } from "@/domain/profile";
 import type { ProposalEnvelope, ProposalStatus } from "@/agent/types";
 import type { StorageProvider } from "../types";
@@ -50,6 +51,13 @@ export class WebSqlStorageProvider implements StorageProvider {
     return storageFetch("/concept", { body: node });
   }
 
+  deleteConcept(conceptId: string): Promise<void> {
+    return storageFetch("/concept/delete", {
+      method: "POST",
+      body: { id: conceptId },
+    });
+  }
+
   saveEdge(edge: GraphEdge): Promise<void> {
     return storageFetch("/edge", { body: edge });
   }
@@ -92,5 +100,17 @@ export class WebSqlStorageProvider implements StorageProvider {
 
   addAgentUsage(usageDate: string, tokens: number): Promise<void> {
     return storageFetch("/agent-usage", { body: { usageDate, tokens } });
+  }
+
+  listGraphHistory(): Promise<GraphHistoryEntry[]> {
+    return storageFetch("/graph-history");
+  }
+
+  saveGraphHistoryEntry(entry: GraphHistoryEntry): Promise<void> {
+    return storageFetch("/graph-history/save", { body: entry });
+  }
+
+  setGraphHistoryUndone(id: string): Promise<void> {
+    return storageFetch("/graph-history/undone", { body: { id } });
   }
 }

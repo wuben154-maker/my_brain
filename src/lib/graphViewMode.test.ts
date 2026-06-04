@@ -11,12 +11,12 @@ describe("effectiveGraphViewMode (G1)", () => {
     window.location.search = "";
   });
 
-  it("forces 2d when visual=main for pixel baseline", () => {
-    window.location.search = "?visual=main";
-    expect(effectiveGraphViewMode("3d", "main")).toBe("2d");
+  it("forces 2d when visual=companion for pixel baseline", () => {
+    window.location.search = "?visual=companion";
+    expect(effectiveGraphViewMode("3d", "companion")).toBe("2d");
   });
 
-  it("respects stored mode when not in visual=main", () => {
+  it("respects stored mode when not in visual snapshot", () => {
     expect(effectiveGraphViewMode("3d", null)).toBe("3d");
     expect(effectiveGraphViewMode("2d", null)).toBe("2d");
   });

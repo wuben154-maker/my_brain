@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { BrainGraphSnapshot, GraphMutationProposal } from "@/domain/graph";
-import { applyGraphMutation, visibleGraph } from "./graphMutations";
+import { createTempStorage } from "@/invariants/testStorage";
+import { applyGraphMutation, persistGraphSnapshot, visibleGraph } from "./graphMutations";
 
 const baseSnapshot = (): BrainGraphSnapshot => ({
   nodes: [
@@ -203,5 +204,63 @@ describe("graphMutations", () => {
         },
       }),
     ).toThrow("概念标题不能为空");
+  });
+
+  it("persistGraphSnapshot deletes nodes and edges absent from target snapshot", async () => {
+    const { storage, cleanup } = createTempStorage();
+    try {
+      await storage.init();
+      const current: BrainGraphSnapshot = {
+        nodes: [
+          {
+            id: "keep",
+            title: "Keep",
+            intro: "stay",
+            sourceUrl: null,
+            archived: false,
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+          {
+            id: "drop",
+            title: "Drop",
+            intro: "go",
+            sourceUrl: null,
+            archived: false,
+            createdAt: "2026-01-02T00:00:00.000Z",
+            updatedAt: "2026-01-02T00:00:00.000Z",
+          },
+        ],
+        edges: [
+          {
+            id: "e-drop",
+            sourceId: "keep",
+            targetId: "drop",
+            relationType: "related",
+          },
+        ],
+      };
+      for (const node of current.nodes) {
+        await storage.saveConcept(node);
+      }
+      for (const edge of current.edges) {
+        await storage.saveEdge(edge);
+      }
+
+      const target: BrainGraphSnapshot = {
+        nodes: [current.nodes[0]!],
+        edges: [],
+      };
+      await persistGraphSnapshot(storage, current, target);
+
+      const graph = await storage.loadGraph();
+      expect(graph.nodes.map((node) => node.id)).toEqual(["keep"]);
+      expect(graph.edges).toHaveLength(0);
+      const display = await storage.loadGraphForDisplay();
+      expect(display.nodes.map((node) => node.id)).toEqual(["keep"]);
+      expect(display.edges).toHaveLength(0);
+    } finally {
+      cleanup();
+    }
   });
 });

@@ -1,6 +1,6 @@
 # V6 — 星图主画布与串讲高亮（`star-brain`）
 
-- **阶段：** V · **状态：** 📝 待实现
+- **阶段：** V · **状态：** ✅ 已实现
 - **上游：** V2 · **下游：** V7
 - **复用：** `BrainGraphView`、`BrainGraph3DView`、`graphVisualTokens`、`graphOutline`、V2 `teaching`
 - **依赖 / 前置里程碑：** **V2**（`teaching` 态 + `Turn.highlightNodeIds`）

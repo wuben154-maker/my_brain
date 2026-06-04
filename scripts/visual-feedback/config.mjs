@@ -64,23 +64,23 @@ export const VISUAL_TARGETS = [
 
   {
 
-    id: "main",
+    id: "companion",
 
-    label: "主界面 · 语音区",
+    label: "沉浸式伴侣 · 星图+光球",
 
     referenceFile: "main-ui-graph-voice.png",
 
-    urlPath: "/?visual=main",
+    urlPath: "/?visual=companion",
 
-    waitSelector: "[data-testid='main-shell']",
+    waitSelector: "[data-testid='immersive-scene']",
 
-    captureSelector: "[data-testid='voice-panel']",
+    captureSelector: "[data-testid='immersive-scene']",
 
-    referenceCrop: { x: 0.73, y: 0.05, w: 0.26, h: 0.9 },
+    referenceCrop: { x: 0, y: 0, w: 1, h: 1 },
 
-    maxDiffRatio: 0.24,
+    maxDiffRatio: 0.28,
 
-    ignoreRects: [{ x: 0, y: 0.1, w: 1, h: 0.7 }],
+    ignoreRects: [],
 
   },
 
@@ -196,4 +196,19 @@ export const LOOP_DEFAULT_MAX_ROUNDS = Number(
 
 export const LOOP_PASS_STREAK_REQUIRED = 2;
 
+/** V7: default loop runs boot + companion; legacy inbox/insight only with --legacy-visual. */
+export function resolveVisualTargets(argv = process.argv.slice(2)) {
+  const args = new Set(argv);
+  if (args.has("--legacy-visual")) {
+    return VISUAL_TARGETS;
+  }
+  if (args.has("--companion")) {
+    return VISUAL_TARGETS.filter((target) =>
+      ["boot", "companion"].includes(target.id),
+    );
+  }
+  return VISUAL_TARGETS.filter((target) =>
+    ["boot", "companion"].includes(target.id),
+  );
+}
 

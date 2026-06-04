@@ -351,11 +351,15 @@ describe("Product invariants (AGENTS.md core)", () => {
       expect(after.edges.every((edge) => edge.targetId !== "old")).toBe(true);
     });
 
-    it("storage layer never hard-deletes concept rows", () => {
+    it("storage hard-deletes concepts only via deleteConcept for history undo", () => {
       const backend = readRepoSource("src/storage/adapters/betterSqliteBackend.ts");
       const tauri = readRepoSource("src/storage/adapters/tauriSqlStorage.ts");
-      expect(backend).not.toMatch(/DELETE FROM concepts/i);
-      expect(tauri).not.toMatch(/DELETE FROM concepts/i);
+      const mutations = readRepoSource("src/lib/graphMutations.ts");
+      expect(backend).toMatch(/deleteConcept\(/);
+      expect(tauri).toMatch(/deleteConcept\(/);
+      expect(mutations).toMatch(/storage\.deleteConcept/);
+      expect(backend.match(/DELETE FROM concepts/gi)?.length).toBe(1);
+      expect(tauri.match(/DELETE FROM concepts/gi)?.length).toBe(1);
     });
 
     it("archived nodes render dimmed on canvas per DESIGN §8", () => {
@@ -496,19 +500,32 @@ describe("Product invariants (AGENTS.md core)", () => {
   });
 
   describe("V4 · post-ingest auto-curate", () => {
-    it("auto-curate applies without proposal inbox", () => {
+    it("post-ingest curate can auto apply", () => {
+      const autoCurate = readRepoSource("src/agent/curation/autoCurate.ts");
       const pipeline = readRepoSource("src/lib/runAutoCuratePipeline.ts");
-      expect(pipeline).toContain("runAutoCurateAfterIngest");
+      expect(autoCurate).toContain("export function autoCurate");
+      expect(pipeline).toContain("applyGraphMutation");
       expect(pipeline).not.toContain("saveProposal");
-      const scheduler = readRepoSource("src/hooks/useAgentScheduler.ts");
-      expect(scheduler).not.toContain("createMorningBriefJob");
     });
 
-    it("graph history supports undo snapshots", () => {
-      const store = readRepoSource("src/stores/graphHistoryStore.ts");
-      expect(store).toContain("undo");
-      expect(store).toContain("before");
-      expect(store).toContain("after");
+    it("ingest create requires confirm", () => {
+      const ingestActions = readRepoSource("src/conversation/ingestActions.ts");
+      expect(ingestActions).toContain("applyIngestDecision");
+      expect(ingestActions).toContain('command: "ingest"');
+      expect(ingestActions).not.toMatch(/autoCurate\([^)]*without/i);
+    });
+
+    it("runs auto-curate after voice-confirmed ingest", () => {
+      const ingestActions = readRepoSource("src/conversation/ingestActions.ts");
+      expect(ingestActions).toContain("runAutoCurateAfterIngest");
+      expect(ingestActions).toContain("curationEntries");
+    });
+
+    it("v2 scheduler disables proposal-producing jobs", () => {
+      const scheduler = readRepoSource("src/hooks/useAgentScheduler.ts");
+      expect(scheduler).toContain("v2-no-proposals");
+      expect(scheduler).not.toMatch(/morningBriefJob|createMorningBriefJob/);
+      expect(scheduler).not.toMatch(/curationScanJob|createCurationScanJob/);
     });
   });
 

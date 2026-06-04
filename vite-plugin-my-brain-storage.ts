@@ -70,6 +70,11 @@ export function myBrainStoragePlugin(): Plugin {
             return;
           }
 
+          if (path === "/graph-history" && req.method === "GET") {
+            res.end(JSON.stringify(backend!.listGraphHistory()));
+            return;
+          }
+
           if (path === "/graph/display" && req.method === "GET") {
             res.end(JSON.stringify(backend!.loadGraphForDisplay()));
             return;
@@ -112,6 +117,12 @@ export function myBrainStoragePlugin(): Plugin {
               return;
             }
 
+            if (path === "/concept/delete") {
+              backend!.deleteConcept(String(body.id));
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
             if (path === "/edge") {
               backend!.saveEdge(body);
               res.end(JSON.stringify({ ok: true }));
@@ -148,6 +159,18 @@ export function myBrainStoragePlugin(): Plugin {
               return;
             }
 
+            if (path === "/graph-history/save") {
+              backend!.saveGraphHistoryEntry(body);
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
+            if (path === "/graph-history/undone") {
+              backend!.setGraphHistoryUndone(String(body.id));
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
             if (path === "/agent-usage") {
               backend!.addAgentUsage(
                 String(body.usageDate),
@@ -156,6 +179,23 @@ export function myBrainStoragePlugin(): Plugin {
               res.end(JSON.stringify({ ok: true }));
               return;
             }
+
+            if (path === "/graph-history/save") {
+              backend!.saveGraphHistoryEntry(body);
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
+            if (path === "/graph-history/undone") {
+              backend!.setGraphHistoryUndone(String(body.id));
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+          }
+
+          if (path === "/graph-history" && req.method === "GET") {
+            res.end(JSON.stringify(backend!.listGraphHistory()));
+            return;
           }
 
           res.statusCode = 404;

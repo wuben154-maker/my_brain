@@ -5,7 +5,11 @@ import type { BrainGraphSnapshot, ConceptNode, GraphEdge } from "../../domain/gr
 import { DEFAULT_USER_PROFILE, type UserProfile } from "../../domain/profile";
 import type { ProposalEnvelope, ProposalStatus } from "../../agent/types";
 import { INITIAL_MIGRATION_SQL } from "../migrations";
-import { migrateConceptSalienceColumnsSqlite } from "../schemaMigrations";
+import type { GraphHistoryEntry } from "../../domain/graphHistory";
+import {
+  migrateConceptSalienceColumnsSqlite,
+  migrateGraphHistoryTableSqlite,
+} from "../schemaMigrations";
 import { normalizeConceptSalience } from "../../lib/salience";
 import {
   assertProposalStatus,
@@ -37,6 +41,7 @@ export class BetterSqliteBackend {
     this.db.pragma("journal_mode = WAL");
     this.db.exec(INITIAL_MIGRATION_SQL);
     migrateConceptSalienceColumnsSqlite(this.db);
+    migrateGraphHistoryTableSqlite(this.db);
   }
 
   close(): void {
@@ -111,6 +116,15 @@ export class BetterSqliteBackend {
   deleteEdge(edgeId: string): void {
     const db = this.requireDb();
     db.prepare("DELETE FROM edges WHERE id = ?").run(edgeId);
+  }
+
+  deleteConcept(conceptId: string): void {
+    const db = this.requireDb();
+    db.prepare("DELETE FROM edges WHERE source_id = ? OR target_id = ?").run(
+      conceptId,
+      conceptId,
+    );
+    db.prepare("DELETE FROM concepts WHERE id = ?").run(conceptId);
   }
 
   saveConcept(node: ConceptNode): void {
@@ -274,6 +288,59 @@ export class BetterSqliteBackend {
       `INSERT INTO agent_usage (usage_date, tokens) VALUES (?, ?)
        ON CONFLICT(usage_date) DO UPDATE SET tokens = tokens + excluded.tokens`,
     ).run(usageDate, tokens);
+  }
+
+  listGraphHistory(): GraphHistoryEntry[] {
+    const db = this.requireDb();
+    const rows = db
+      .prepare(
+        "SELECT id, at, kind, summary, before_json AS beforeJson, after_json AS afterJson, undone FROM graph_history ORDER BY at DESC",
+      )
+      .all() as Array<{
+      id: string;
+      at: string;
+      kind: GraphHistoryEntry["kind"];
+      summary: string;
+      beforeJson: string;
+      afterJson: string;
+      undone: number;
+    }>;
+    return rows.map((row) => ({
+      id: row.id,
+      at: row.at,
+      kind: row.kind,
+      summary: row.summary,
+      before: JSON.parse(row.beforeJson) as BrainGraphSnapshot,
+      after: JSON.parse(row.afterJson) as BrainGraphSnapshot,
+      undone: row.undone === 1 ? true : undefined,
+    }));
+  }
+
+  saveGraphHistoryEntry(entry: GraphHistoryEntry): void {
+    const db = this.requireDb();
+    db.prepare(
+      `INSERT INTO graph_history (id, at, kind, summary, before_json, after_json, undone)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         at = excluded.at,
+         kind = excluded.kind,
+         summary = excluded.summary,
+         before_json = excluded.before_json,
+         after_json = excluded.after_json,
+         undone = excluded.undone`,
+    ).run(
+      entry.id,
+      entry.at,
+      entry.kind,
+      entry.summary,
+      JSON.stringify(entry.before),
+      JSON.stringify(entry.after),
+      entry.undone ? 1 : 0,
+    );
+  }
+
+  setGraphHistoryUndone(id: string): void {
+    this.requireDb().prepare("UPDATE graph_history SET undone = 1 WHERE id = ?").run(id);
   }
 
   private requireDb(): Database.Database {

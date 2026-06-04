@@ -22,6 +22,9 @@ function wrapBetterSqliteBackend(backend: BetterSqliteBackend): StorageProvider 
     saveConcept: async (node) => {
       backend.saveConcept(node);
     },
+    deleteConcept: async (conceptId) => {
+      backend.deleteConcept(conceptId);
+    },
     saveEdge: async (edge) => {
       backend.saveEdge(edge);
     },
@@ -46,6 +49,13 @@ function wrapBetterSqliteBackend(backend: BetterSqliteBackend): StorageProvider 
     loadAgentUsage: async (usageDate) => backend.loadAgentUsage(usageDate),
     addAgentUsage: async (usageDate, tokens) => {
       backend.addAgentUsage(usageDate, tokens);
+    },
+    listGraphHistory: async () => backend.listGraphHistory(),
+    saveGraphHistoryEntry: async (entry) => {
+      backend.saveGraphHistoryEntry(entry);
+    },
+    setGraphHistoryUndone: async (id) => {
+      backend.setGraphHistoryUndone(id);
     },
   };
 }

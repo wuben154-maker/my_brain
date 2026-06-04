@@ -9,6 +9,7 @@ import {
   mergeTranscriptLines,
   useProfileDistillation,
 } from "@/hooks/useProfileDistillation";
+import { useWalkthroughHighlight } from "@/hooks/useWalkthroughHighlight";
 import { parseIngestCommand } from "@/lib/parseIngestCommand";
 import type { TranscriptLineLike } from "@/lib/profileDistillation";
 import { finalizeVoiceSession } from "@/lib/voiceSessionFinalize";
@@ -34,6 +35,11 @@ export function useConversationSession(options?: {
   const graphNodes = useGraphStore((s) => s.nodes);
   const graphEdges = useGraphStore((s) => s.edges);
   const setHighlights = useGraphStore((s) => s.setHighlights);
+  const clearHighlights = useGraphStore((s) => s.clearHighlights);
+
+  const walkthrough = useWalkthroughHighlight([], 1000);
+  const walkthroughRef = useRef(walkthrough);
+  walkthroughRef.current = walkthrough;
 
   const newsCursor = useConversationStore((s) => s.newsCursor);
   const onboarding = useConversationStore((s) => s.onboarding);
@@ -145,7 +151,12 @@ export function useConversationSession(options?: {
             appendTurn("assistant", turn.say);
           }
           if (turn.highlightNodeIds && turn.highlightNodeIds.length > 0) {
-            setHighlights(turn.highlightNodeIds, []);
+            if (turn.nextState === "teaching") {
+              walkthroughRef.current.start(turn.highlightNodeIds);
+            } else {
+              walkthroughRef.current.stop();
+              setHighlights(turn.highlightNodeIds, []);
+            }
           }
           const ctx = getContextRef.current ?? getContext();
           const item = ctx.newsQueue[ctx.newsCursor] ?? null;
@@ -310,8 +321,10 @@ export function useConversationSession(options?: {
   );
 
   const onUserInterrupt = useCallback(() => {
+    walkthroughRef.current.stop();
+    clearHighlights();
     void dispatch({ type: "userInterrupt" });
-  }, [dispatch]);
+  }, [clearHighlights, dispatch]);
 
   return {
     conductor: conductorRef.current,

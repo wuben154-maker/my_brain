@@ -1,4 +1,5 @@
-import type { ConceptNode, GraphEdge } from "@/domain/graph";
+import type { BrainGraphSnapshot, ConceptNode, GraphEdge } from "@/domain/graph";
+import { selectTeachingHighlights } from "@/conversation/selectTeachingHighlights";
 
 export interface OutlineTreeNode {
   node: ConceptNode;
@@ -79,4 +80,49 @@ export function buildGraphOutline(
   }
 
   return forest;
+}
+
+function orderWalkthroughPath(
+  nodeIds: string[],
+  edges: GraphEdge[],
+): string[] {
+  if (nodeIds.length <= 1) {
+    return nodeIds;
+  }
+  const remaining = new Set(nodeIds.slice(1));
+  const ordered: string[] = [nodeIds[0]!];
+
+  while (remaining.size > 0) {
+    const last = ordered[ordered.length - 1]!;
+    let next: string | null = null;
+    for (const edge of edges) {
+      if (edge.sourceId === last && remaining.has(edge.targetId)) {
+        next = edge.targetId;
+        break;
+      }
+      if (edge.targetId === last && remaining.has(edge.sourceId)) {
+        next = edge.sourceId;
+        break;
+      }
+    }
+    if (next === null) {
+      next = remaining.values().next().value ?? null;
+    }
+    if (next === null) {
+      break;
+    }
+    ordered.push(next);
+    remaining.delete(next);
+  }
+
+  return ordered;
+}
+
+/** Ordered node ids for teaching walkthrough along graph edges (V6). */
+export function planWalkthrough(
+  topic: string,
+  graph: BrainGraphSnapshot,
+): string[] {
+  const highlights = selectTeachingHighlights(graph, topic);
+  return orderWalkthroughPath(highlights, graph.edges);
 }

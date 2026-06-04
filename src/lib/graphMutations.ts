@@ -240,6 +240,22 @@ export async function persistGraphSnapshot(
   after: BrainGraphSnapshot,
 ): Promise<void> {
   const beforeNodes = new Map(before.nodes.map((node) => [node.id, node]));
+  const afterNodeIds = new Set(after.nodes.map((node) => node.id));
+  const beforeEdgeIds = new Set(before.edges.map((edge) => edge.id));
+  const afterEdgeIds = new Set(after.edges.map((edge) => edge.id));
+
+  for (const edgeId of beforeEdgeIds) {
+    if (!afterEdgeIds.has(edgeId)) {
+      await storage.deleteEdge(edgeId);
+    }
+  }
+
+  for (const node of before.nodes) {
+    if (!afterNodeIds.has(node.id)) {
+      await storage.deleteConcept(node.id);
+    }
+  }
+
   for (const node of after.nodes) {
     const prev = beforeNodes.get(node.id);
     if (
@@ -262,15 +278,8 @@ export async function persistGraphSnapshot(
     }
   }
 
-  const beforeEdgeIds = new Set(before.edges.map((edge) => edge.id));
-  const afterEdgeIds = new Set(after.edges.map((edge) => edge.id));
   for (const edge of after.edges) {
     await storage.saveEdge(edge);
-  }
-  for (const edgeId of beforeEdgeIds) {
-    if (!afterEdgeIds.has(edgeId)) {
-      await storage.deleteEdge(edgeId);
-    }
   }
 }
 

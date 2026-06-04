@@ -4,8 +4,11 @@ import ForceGraph2D, {
   type LinkObject,
   type NodeObject,
 } from "react-force-graph-2d";
+import { EdgeHoverLabel } from "@/components/brain/EdgeHoverLabel";
 import { GraphMinimap, type MinimapNode } from "@/components/brain/GraphMinimap";
 import { GraphZoomControls } from "@/components/brain/GraphZoomControls";
+import { NodeHoverCard } from "@/components/brain/NodeHoverCard";
+import type { RelationType } from "@/domain/graph";
 import {
   clusterColorForNodeId,
   graphAccentCyan,
@@ -61,6 +64,7 @@ export function BrainGraphView() {
   );
   const [dimensions, setDimensions] = useState({ width: 800, height: 520 });
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [hoveredLink, setHoveredLink] = useState<GraphLink | null>(null);
   const [layerDepth, setLayerDepth] = useState(45);
   const [minimapTick, setMinimapTick] = useState(0);
   const nodePositionsRef = useRef<Map<string, { x: number; y: number }>>(
@@ -89,7 +93,7 @@ export function BrainGraphView() {
     return LINK_DISTANCE_MIN + (LINK_DISTANCE_MAX - LINK_DISTANCE_MIN) * t;
   }, [layerDepth]);
 
-  const pinGraphLayout = readVisualSnapshotId() === "main";
+  const pinGraphLayout = readVisualSnapshotId() === "companion";
 
   const graphData = useMemo(
     () => ({
@@ -188,7 +192,7 @@ export function BrainGraphView() {
     if (graphData.nodes.length === 0) {
       return;
     }
-    // Pinned (visual=main) needs a deterministic frame; the live force layout
+    // Pinned (visual=companion) needs a deterministic frame; the live force layout
     // is fit on `onEngineStop` instead so we never freeze a pre-settle view.
     if (!pinGraphLayout) {
       return;
@@ -236,6 +240,7 @@ export function BrainGraphView() {
   return (
     <div
       ref={containerRef}
+      data-testid="brain-graph-view"
       className="graph-canvas-shell relative h-full min-h-[420px] w-full overflow-hidden rounded-md border border-hud bg-bg-base/80"
     >
       <div className="pointer-events-none absolute left-4 top-4 z-[1] font-hud text-label uppercase tracking-hud text-muted">
@@ -277,9 +282,18 @@ export function BrainGraphView() {
             onRenderFramePost={() => {
               setMinimapTick((value) => (value + 1) % 240);
             }}
-            onNodeHover={(node) =>
-              setHoveredNodeId(node ? String(node.id) : null)
-            }
+            onNodeHover={(node) => {
+              setHoveredNodeId(node ? String(node.id) : null);
+              if (node) {
+                setHoveredLink(null);
+              }
+            }}
+            onLinkHover={(link) => {
+              setHoveredLink(link ? (link as GraphLink) : null);
+              if (link) {
+                setHoveredNodeId(null);
+              }
+            }}
             linkColor={(link) => {
               const linkId = String((link as GraphLink).id);
               return highlightedEdgeIds.includes(linkId)
@@ -413,6 +427,17 @@ export function BrainGraphView() {
               ctx.restore();
             }}
           />
+
+          {hoveredNodeId ? (
+            <NodeHoverCard nodeId={hoveredNodeId} left={16} top={56} />
+          ) : null}
+          {hoveredLink ? (
+            <EdgeHoverLabel
+              relationType={hoveredLink.relationType as RelationType}
+              left={16}
+              top={56}
+            />
+          ) : null}
 
           <GraphMinimap nodes={minimapNodes} />
           <GraphZoomControls

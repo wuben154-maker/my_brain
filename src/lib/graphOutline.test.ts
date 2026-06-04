@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildGraphOutline } from "@/lib/graphOutline";
+import { buildGraphOutline, planWalkthrough } from "@/lib/graphOutline";
 import type { ConceptNode, GraphEdge } from "@/domain/graph";
 
 function node(
@@ -94,5 +94,38 @@ describe("buildGraphOutline (N3)", () => {
     const forest = buildGraphOutline(nodes, []);
     expect(forest).toHaveLength(2);
     expect(collectIds(forest).sort()).toEqual(["x", "y"]);
+  });
+});
+
+describe("planWalkthrough (V6)", () => {
+  it("orders nodes along a path", () => {
+    const nodes = [node("a"), node("b"), node("c")];
+    const order = planWalkthrough("topic", {
+      nodes,
+      edges: [edge("a", "b"), edge("b", "c")],
+    });
+    expect(order).toEqual(["a", "b", "c"]);
+  });
+
+  it("appends disconnected nodes after the path", () => {
+    const nodes = [node("a"), node("b"), node("orphan")];
+    const order = planWalkthrough("topic", {
+      nodes,
+      edges: [edge("a", "b")],
+    });
+    expect(order.slice(0, 2)).toEqual(["a", "b"]);
+    expect(order).toContain("orphan");
+  });
+});
+
+describe("planWalkthrough (V6)", () => {
+  it("orders highlights along edges when possible", () => {
+    const graph = {
+      nodes: [node("a"), node("b"), node("c")],
+      edges: [edge("a", "b"), edge("b", "c")],
+    };
+    const path = planWalkthrough("anything", graph);
+    expect(path.length).toBeGreaterThan(0);
+    expect(path[0]).toBe("a");
   });
 });

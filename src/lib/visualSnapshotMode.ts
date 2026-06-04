@@ -16,16 +16,19 @@ import { useProposalStore } from "@/stores/proposalStore";
 import { useResearchRunStore } from "@/stores/researchRunStore";
 import { useUiStore } from "@/stores/uiStore";
 
-export type VisualSnapshotId = "boot" | "main" | "inbox" | "insight";
+export type VisualSnapshotId = "boot" | "main" | "companion" | "inbox" | "insight";
 
 export function readVisualSnapshotId(): VisualSnapshotId | null {
   if (typeof window === "undefined") {
     return null;
   }
   const value = new URLSearchParams(window.location.search).get("visual");
+  if (value === "main") {
+    return "companion";
+  }
   if (
     value === "boot" ||
-    value === "main" ||
+    value === "companion" ||
     value === "inbox" ||
     value === "insight"
   ) {

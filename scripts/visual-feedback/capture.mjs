@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { chromium } from "playwright";
-import { DEV_SERVER_URL, PATHS, VISUAL_TARGETS } from "./config.mjs";
+import { DEV_SERVER_URL, PATHS, resolveVisualTargets } from "./config.mjs";
 import { readPng } from "./png-utils.mjs";
 
 async function waitForServer(url, attempts = 40) {
@@ -29,14 +29,14 @@ export async function captureAllScreenshots(baseUrl = DEV_SERVER_URL) {
   const results = [];
 
   try {
-    for (const target of VISUAL_TARGETS) {
+    for (const target of resolveVisualTargets()) {
       const referencePath = path.join(PATHS.assets, target.referenceFile);
       const reference = fs.existsSync(referencePath)
         ? readPng(referencePath)
         : readPng(
             path.join(
               PATHS.assets,
-              VISUAL_TARGETS.find((t) => t.id === "main")?.referenceFile ??
+              VISUAL_TARGETS.find((t) => t.id === "companion")?.referenceFile ??
                 target.referenceFile,
             ),
           );
@@ -51,7 +51,7 @@ export async function captureAllScreenshots(baseUrl = DEV_SERVER_URL) {
       await page.waitForFunction(() => document.fonts.ready, null, {
         timeout: 15000,
       });
-      if (target.id === "main") {
+      if (target.id === "companion") {
         await page.waitForSelector(".graph-canvas-shell canvas", {
           timeout: 15000,
         });

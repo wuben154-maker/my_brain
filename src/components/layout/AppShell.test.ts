@@ -59,10 +59,10 @@ describe("AppShell (V0 immersive shell)", () => {
     expect(screen.queryByRole("navigation", { name: "主导航" })).toBeNull();
   });
 
-  it("keeps frozen ?visual=main layout", () => {
+  it("retires ?visual=main and keeps immersive companion shell", () => {
     window.history.replaceState({}, "", "/?visual=main");
     render(createElement(AppShell));
-    expect(screen.getByTestId("main-shell")).toBeTruthy();
-    expect(screen.queryByTestId("immersive-scene")).toBeNull();
+    expect(screen.getByTestId("immersive-scene")).toBeTruthy();
+    expect(screen.queryByTestId("main-shell")).toBeNull();
   });
 });

@@ -7,7 +7,7 @@ export function effectiveGraphViewMode(
   stored: GraphViewMode,
   visualId = readVisualSnapshotId(),
 ): GraphViewMode {
-  if (visualId === "main") {
+  if (visualId === "companion" || visualId === "main") {
     return "2d";
   }
   return stored;
