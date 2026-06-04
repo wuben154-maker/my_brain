@@ -4,18 +4,39 @@ globs: src/{lib/graphMutations.ts,stores/**,components/brain/**,agent/**}
 alwaysApply: false
 ---
 
-# 图谱变更：先建议后确认 + 唯一落库通道
+# 图谱变更：v2 改写，取代旧「全部先确认」
 
-产品灵魂（`AGENTS.md` 不变量 #2/#3/#4）：
+产品灵魂（`AGENTS.md` 不变量 #2/#3/#4；详见 `specs/V4-auto-curate.md`）：
 
-- **任何图谱结构变更（merge/archive/link/create/attach/update）一律先建议、用户确认后才执行。** 严禁自动改图谱。
+## 入库（新建概念节点）= 用户语音确认（保留）
+
+- **仅 create（新建概念节点）**须经用户语音确认：「入 / 不要 / 讲细点」；歧义先 **reprompt**，再决定。
+- 落库走 V3 路径：`applyGraphMutation(create)` + `persistGraphSnapshot`（复用 `useNewsIngestSession` / `ingestStore` 成熟路径）。
+- **严禁**静默 create 或绕过用户确认新建节点。
+
+## 入库后的结构整理 = AI 自动执行，无需确认
+
+- **merge / archive / link / attach / edge-migrate** 在 V3 用户确认入库之后，由 **`autoCurate` 直接 apply**（见 `specs/V4-auto-curate.md`）。
+- **不产** `ProposalEnvelope`、**不进**提议收件箱；v2 主流程下线审批 UI。
+
+## 兜底三件套
+
+- **归档 = 隐藏**，不硬删（`archived=true`，可找回）。
+- **每次结构变更**进 `graphHistoryStore`，且可 **`undo(mutationId)`**。
+- **偶尔语音节流汇报**整理结果（conductor 口播，非逐条确认）。
+
+## 记忆引擎边界（不变）
+
+- **记忆引擎（M 系列）仍绝不写图谱/画像**；蒸馏只进 profile 层（V5 静默路径）。
+
+## 唯一落库通道（不变）
+
 - **唯一落库通道**：`applyGraphMutation(snapshot, proposal)`（纯函数）→ `persistGraphSnapshot(storage, before, after)`。不要绕过它直接写表。
-- **删除 = 归档**（`archived=true`，可找回），不做硬删除。
 - 节点被替换/归档时，边经 `migrateEdges` **迁移**，不断裂。
 - 节点 = 概念 + 简介，不是新闻碎片；多条新闻喂养同一概念。
 
 ```ts
-// ✅ 确认后落库的唯一姿势
+// ✅ 确认后落库的唯一姿势（create 经 V3；整理类经 autoCurate 直接 apply）
 const after = applyGraphMutation(before, proposal);
 await persistGraphSnapshot(storage, before, after);
 // ❌ 不要：storage.saveConcept(...) 直接拼一套新的变更逻辑

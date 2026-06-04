@@ -4,22 +4,37 @@ globs: src/agent/**
 alwaysApply: false
 ---
 
-# Agent 无写能力（核心不变量）
+# Agent 写能力边界（v2 改写）
 
-Agent 唯一的落库出口是：**产出 `ProposalEnvelope` → 提议收件箱 → 用户确认 → `applyGraphMutation` + `persistGraphSnapshot`**。
-Agent 自身**不得**持有或调用任何写图谱/画像的句柄。
+v2 主流程**下线提议收件箱**；Agent 不得静默改图谱/画像。例外与铁律如下。
 
-铁律：
+## 新建节点：仅经「用户确认入库」出口
 
-- `AgentTools` 只暴露读 + LLM/news 能力（`fetchNews`/`summarize`/`explain`/`propose`/`readGraph`/`readProfile`）。**绝不**加 `save*`/`delete*`。
-- `src/agent/**` 不得 import `StorageProvider`、不得出现 `persistGraphSnapshot`/`applyGraphMutation`。
-- 任何 `AgentJob.run` 只组装 `AgentRunResult{proposals, digest, trace}`，不触碰存储写。
-- 新增能力必须保留三重护栏：编译期类型 `AssertAgentToolsReadOnly` + 运行期 `assertAgentToolsReadOnly` + 源码扫描测试（`readRepoSource`）。
+- **create（新建概念节点）**只能由 V3 用户语音确认后，经 conductor / `applyIngestDecision` 触发落库。
+- **Agent 不得静默 create**；`AgentTools` **绝不**加 `saveConcept` / 直接 `persistGraphSnapshot`。
+
+## 整理类变更：agent/curation 层 V4 授权直接 apply
+
+- **merge / archive / link / attach / edge-migrate** 在 V4 路径由 **`autoCurate` → 调用方直接 `applyGraphMutation` + persist**。
+- 这是 v2 **例外**：agent/curation 层**获授权直接 apply 整理类变更**，**不再**强制走提议收件箱。
+- **禁止**任何静默 **pending 提议**（无 `saveProposal` pending）；v2 主流程不注册产审批 job（A3/C2 等关停，见 V7）。
+
+## 记忆引擎边界（不变）
+
+- **记忆引擎（M 系列）仍绝不写图谱/画像**；只读 transcript 做 profile 蒸馏（V5）。
+
+## Agent 内核只读护栏（compile-time + runtime）
+
+- `AgentTools` 只暴露读 + LLM/news 能力（`fetchNews`/`summarize`/`explain`/`readGraph`/`readProfile`；整理逻辑在 curation 模块由 pipeline 调用，**不**经 Agent 直写 storage）。
+- `src/agent/**` 内核 run 路径**不得** import `StorageProvider` 做写操作；**不得**在 job 内静默 `persistGraphSnapshot`。
+- curation **apply** 路径在 `lib/runAutoCuratePipeline.ts`（或等价）由 orchestration 层调用，非 Agent job 直写。
+- 任何 `AgentJob.run` 只组装 `AgentRunResult{ digest, trace, ... }`，**不产 pending proposals**。
+- 新增能力保留三重护栏：编译期类型 `AssertAgentToolsReadOnly` + 运行期 `assertAgentToolsReadOnly` + 源码扫描测试（`readRepoSource`）。
 
 ```ts
 // ❌ 禁止
 interface AgentTools { saveConcept(n: ConceptNode): Promise<void>; }
-// ✅ 只读
+// ✅ 只读（整理 apply 在 curation pipeline，非 AgentTools 写句柄）
 interface AgentTools { readGraph(): Promise<BrainGraphSnapshot>; }
 ```
 
