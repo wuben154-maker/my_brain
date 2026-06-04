@@ -60,6 +60,7 @@ describe("ExploreFeed (N1)", () => {
       rejectProposal: vi.fn(),
       skipCurrent,
       declineIngest: skipCurrent,
+      applyIngestCreate: vi.fn(),
       processedCount: 0,
       totalCount: 2,
     });

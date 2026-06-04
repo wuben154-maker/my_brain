@@ -1,17 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { GraphMutationProposal } from "@/domain/graph";
 import {
-  applyGraphMutation,
-  persistGraphSnapshot,
-  primaryNodeIdFromProposal,
-  visibleGraph,
-} from "@/lib/graphMutations";
+  applyIngestCreate,
+  persistProposalToGraph,
+  type IngestDecisionDeps,
+} from "@/conversation/ingestActions";
+import { visibleGraph } from "@/lib/graphMutations";
 import { resolveLinkPendingCreate } from "@/lib/resolveProposalForApply";
 import {
   prependGrounding,
   recallGroundingContext,
 } from "@/lib/memoryGrounding";
-import { syncDisplayGraph } from "@/lib/syncDisplayGraph";
 import {
   isNewsSessionComplete,
   resolveCurrentNewsItem,
@@ -125,13 +124,25 @@ export function useNewsIngestSession() {
       if (!storage) {
         return null;
       }
-      const before = await storage.loadGraph();
-      const after = applyGraphMutation(before, proposal);
-      await persistGraphSnapshot(storage, before, after);
-      await syncDisplayGraph(storage);
-      return primaryNodeIdFromProposal(proposal, after);
+      return persistProposalToGraph(storage, proposal);
     },
     [storage],
+  );
+
+  const applyIngestCreateForItem = useCallback(
+    async (item: NonNullable<typeof currentItem>) => {
+      if (!storage || !providers?.llm) {
+        return null;
+      }
+      const deps: IngestDecisionDeps = {
+        storage,
+        llm: providers.llm,
+        profile: useProfileStore.getState().profile,
+        memory: providers.memory,
+      };
+      return applyIngestCreate(item, deps);
+    },
+    [providers?.llm, providers?.memory, storage],
   );
 
   const confirmProposal = useCallback(async () => {
@@ -221,7 +232,10 @@ export function useNewsIngestSession() {
     rejectProposal,
     skipCurrent,
     declineIngest,
+    applyIngestCreate: applyIngestCreateForItem,
     processedCount: skippedIds.length + ingestedIds.length,
     totalCount: newsQueue.length,
   };
 }
+
+export { applyIngestCreate } from "@/conversation/ingestActions";

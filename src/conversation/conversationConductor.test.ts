@@ -92,6 +92,39 @@ describe("ConversationConductor", () => {
     expect(ctx.onboarding.step).toBe("first_star");
   });
 
+  it("ingestReprompt re-asks after ambiguous voice answer", async () => {
+    const conductor = createConductor();
+    await conductor.start({ speak: false });
+    await conductor.dispatch(
+      { type: "newsAvailable", queueLength: ctx.newsQueue.length },
+      { speak: false },
+    );
+    const reprompt = await conductor.dispatch(
+      { type: "ingestReprompt" },
+      { speak: false },
+    );
+    expect(reprompt.expect).toBe("ingest");
+    expect(reprompt.say).toMatch(/入库/);
+    expect(conductor.getState()).toBe("ingest_decision");
+  });
+
+  it("ingestAnswer ingest celebrates on first_star", async () => {
+    ctx = createFixtureContext();
+    const conductor = createConductor();
+    await conductor.start({ speak: false });
+    for (const line of ["阿蓝", "Agent 编排", "RAG 检索", "多模态"]) {
+      await conductor.dispatch(
+        { type: "userSpeak", transcript: line },
+        { speak: false },
+      );
+    }
+    await conductor.dispatch(
+      { type: "ingestAnswer", command: "ingest" },
+      { speak: false },
+    );
+    expect(ctx.onboarding.step).toBe("done");
+  });
+
   it("multi-turn small_talk ↔ briefing without deadlock", async () => {
     const conductor = createConductor();
     await conductor.start({ speak: false });

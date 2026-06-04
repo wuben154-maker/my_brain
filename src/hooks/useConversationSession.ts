@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef } from "react";
 import { buildConversationContext } from "@/conversation/buildContext";
 import { ConversationConductor } from "@/conversation/ConversationConductor";
+import { applyIngestDecision } from "@/conversation/ingestActions";
 import type { ConversationEvent } from "@/conversation/types";
+import { parseIngestCommand } from "@/lib/parseIngestCommand";
 import { useAppStore } from "@/stores/appStore";
 import { useConversationStore } from "@/stores/conversationStore";
 import { useGraphStore } from "@/stores/graphStore";
+import { useIngestStore } from "@/stores/ingestStore";
 import { useProfileStore } from "@/stores/profileStore";
 
 /**
@@ -82,10 +85,21 @@ export function useConversationSession(options?: {
           const ctx = getContextRef.current ?? getContext();
           const item = ctx.newsQueue[ctx.newsCursor] ?? null;
           setCurrentNewsItem(item);
+          if (turn.nextState === "ingest_decision" && item) {
+            const ingest = useIngestStore.getState();
+            ingest.setActiveNewsId(item.id);
+            ingest.setCursor(ctx.newsCursor);
+            ingest.resetIngestParseAttempt();
+            ingest.resetElaborationDepth();
+            if (turn.say.trim()) {
+              ingest.setExplanation(turn.say);
+            }
+          }
         },
         onContextPatch: (patch) => {
           if (patch.newsCursor !== undefined) {
             setNewsCursor(patch.newsCursor);
+            useIngestStore.getState().setCursor(patch.newsCursor);
           }
           if (patch.onboarding !== undefined) {
             setOnboarding(patch.onboarding);
@@ -144,6 +158,52 @@ export function useConversationSession(options?: {
     await conductorRef.current.dispatch(event);
   }, []);
 
+  const handleIngestTranscript = useCallback(
+    async (transcript: string) => {
+      const ctx = getContextRef.current ?? getContext();
+      const item = ctx.newsQueue[ctx.newsCursor] ?? null;
+      const storage = useAppStore.getState().storage;
+      const appProviders = useAppStore.getState().providers;
+      if (!item || !storage || !appProviders?.llm || !conductorRef.current) {
+        return;
+      }
+
+      const ingest = useIngestStore.getState();
+      const parsed = parseIngestCommand(transcript, ingest.ingestParseAttempt);
+
+      if (parsed.kind === "reprompt") {
+        ingest.setIngestParseAttempt(2);
+        await conductorRef.current.dispatch(
+          { type: "ingestReprompt" },
+          { speak: true },
+        );
+        return;
+      }
+
+      ingest.resetIngestParseAttempt();
+      try {
+        const { event } = await applyIngestDecision(parsed.command, item, {
+          storage,
+          llm: appProviders.llm,
+          profile: useProfileStore.getState().profile,
+          memory: appProviders.memory,
+        });
+        if (event) {
+          await conductorRef.current.dispatch(event, { speak: true });
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "入库失败";
+        ingest.setError(message);
+        await conductorRef.current.dispatch(
+          { type: "ingestAnswer", command: "skip" },
+          { speak: true },
+        );
+      }
+    },
+    [getContext],
+  );
+
   const onUserTranscript = useCallback(
     (transcript: string, final: boolean) => {
       if (!final || !transcript.trim()) {
@@ -155,9 +215,15 @@ export function useConversationSession(options?: {
       }
       lastUserFinalRef.current = key;
       appendTurn("user", key);
+
+      if (useConversationStore.getState().currentState === "ingest_decision") {
+        void handleIngestTranscript(key);
+        return;
+      }
+
       void dispatch({ type: "userSpeak", transcript: key });
     },
-    [appendTurn, dispatch],
+    [appendTurn, dispatch, handleIngestTranscript],
   );
 
   const onUserInterrupt = useCallback(() => {

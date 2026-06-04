@@ -12,6 +12,10 @@ interface IngestState {
   cursor: number;
   phase: IngestPhase;
   explanation: string;
+  /** Deeper briefing rounds after「讲细点」. */
+  elaborationDepth: number;
+  /** Voice parse attempt for current ingest question (1 → reprompt, 2 → default skip). */
+  ingestParseAttempt: 1 | 2;
   pendingProposal: GraphMutationProposal | null;
   pendingProposalQueue: GraphMutationProposal[];
   activeNewsId: string | null;
@@ -19,6 +23,10 @@ interface IngestState {
   ingestedIds: string[];
   errorMessage: string | null;
   reset: () => void;
+  bumpElaborationDepth: () => void;
+  resetElaborationDepth: () => void;
+  setIngestParseAttempt: (attempt: 1 | 2) => void;
+  resetIngestParseAttempt: () => void;
   setCursor: (cursor: number) => void;
   setPhase: (phase: IngestPhase) => void;
   setExplanation: (explanation: string) => void;
@@ -35,6 +43,8 @@ export const useIngestStore = create<IngestState>((set, get) => ({
   cursor: 0,
   phase: "idle",
   explanation: "",
+  elaborationDepth: 0,
+  ingestParseAttempt: 1,
   pendingProposal: null,
   pendingProposalQueue: [],
   activeNewsId: null,
@@ -46,6 +56,8 @@ export const useIngestStore = create<IngestState>((set, get) => ({
       cursor: 0,
       phase: "idle",
       explanation: "",
+      elaborationDepth: 0,
+      ingestParseAttempt: 1,
       pendingProposal: null,
       pendingProposalQueue: [],
       activeNewsId: null,
@@ -53,6 +65,11 @@ export const useIngestStore = create<IngestState>((set, get) => ({
       ingestedIds: [],
       errorMessage: null,
     }),
+  bumpElaborationDepth: () =>
+    set((state) => ({ elaborationDepth: state.elaborationDepth + 1 })),
+  resetElaborationDepth: () => set({ elaborationDepth: 0 }),
+  setIngestParseAttempt: (ingestParseAttempt) => set({ ingestParseAttempt }),
+  resetIngestParseAttempt: () => set({ ingestParseAttempt: 1 }),
   setCursor: (cursor) => set({ cursor }),
   setPhase: (phase) => set({ phase }),
   setExplanation: (explanation) => set({ explanation }),

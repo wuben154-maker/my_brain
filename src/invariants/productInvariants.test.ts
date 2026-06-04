@@ -461,8 +461,8 @@ describe("Product invariants (AGENTS.md core)", () => {
     });
   });
 
-  describe("V2 · Conversation conductor does not write graph", () => {
-    it("conversation module never calls applyGraphMutation or persistGraphSnapshot", () => {
+  describe("V2/V3 · Conversation conductor does not write graph", () => {
+    it("conductor core never calls applyGraphMutation or persistGraphSnapshot", () => {
       const paths = [
         "src/conversation/ConversationConductor.ts",
         "src/conversation/nextTurn.ts",
@@ -475,6 +475,37 @@ describe("Product invariants (AGENTS.md core)", () => {
         expect(source).not.toContain("applyGraphMutation");
         expect(source).not.toContain("persistGraphSnapshot");
       }
+    });
+
+    it("voice ingest graph writes stay in ingestActions only", () => {
+      const ingestActions = readRepoSource("src/conversation/ingestActions.ts");
+      expect(ingestActions).toContain("applyGraphMutation");
+      expect(ingestActions).toContain("persistGraphSnapshot");
+      const conductor = readRepoSource("src/conversation/ConversationConductor.ts");
+      expect(conductor).not.toContain("applyGraphMutation");
+    });
+  });
+
+  describe("V3/V4 · ingest confirm vs post-ingest auto-curate", () => {
+    it("ingest create requires explicit voice command path", () => {
+      const ingestActions = readRepoSource("src/conversation/ingestActions.ts");
+      expect(ingestActions).toContain("applyIngestCreate");
+      expect(ingestActions).toContain("parseIngestCommand");
+    });
+
+    it("post-ingest auto-curate applies without proposal inbox", () => {
+      const pipeline = readRepoSource("src/lib/runAutoCuratePipeline.ts");
+      expect(pipeline).toContain("runAutoCurateAfterIngest");
+      expect(pipeline).not.toContain("saveProposal");
+      const scheduler = readRepoSource("src/hooks/useAgentScheduler.ts");
+      expect(scheduler).not.toContain("createMorningBriefJob");
+    });
+
+    it("graph history supports undo snapshots", () => {
+      const store = readRepoSource("src/stores/graphHistoryStore.ts");
+      expect(store).toContain("undo");
+      expect(store).toContain("before");
+      expect(store).toContain("after");
     });
   });
 

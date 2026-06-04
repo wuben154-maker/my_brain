@@ -1,6 +1,6 @@
 # V3 — 语音入库决策（`voice-ingest`）
 
-- **阶段：** V · **状态：** 📝 待实现
+- **阶段：** V · **状态：** ✅ 已实现
 - **上游：** V2 · **下游：** V4
 - **复用：** V2 `ingest_decision`、`useNewsIngestSession` / `ingestStore`、`graphMutations`
 - **依赖 / 前置里程碑：** **V2**（conductor 态与 `expect: 'ingest'`）
@@ -63,13 +63,13 @@ src/hooks/useNewsIngestSession.ts
 | `graphStore` | 落库后可见节点增加 |
 
 ## 5. 验收清单
-- [ ] `parseIngestCommand` 单测：三口令与常见中文变体正确分类；**歧义首次 → `reprompt`**，二次仍歧义 → `skip`。
-- [ ] conductor 收到 `reprompt` 时 dispatch `ingestReprompt`，同条资讯再次口播「入库?」（`ingestParseAttempt` 复位为 2）。
-- [ ] mock 路径「入」：星图新增节点，简介非空，**来源链接**可断言。
-- [ ] **冷启动当场点亮第一颗星**：在 V2 onboarding `first_star` 步，用户「入」后首节点出现在空图中央（与 V2 联测）。
-- [ ] 「不要」：不新增节点，`skippedIds` 含 id，进入下一条资讯。
-- [ ] 「讲细点」：同条资讯二次讲解文案更长（或 mock 标记 depth），再次进入 ingest 问句。
-- [ ] 无路径绕过用户确认自动 create（扫描 `applyGraphMutation` 调用栈仅 ingest 模块 + V4 整理类 mutation）。
+- [x] `parseIngestCommand` 单测：三口令与常见中文变体正确分类；**歧义首次 → `reprompt`**，二次仍歧义 → `skip`。
+- [x] conductor 收到 `reprompt` 时 dispatch `ingestReprompt`，同条资讯再次口播「入库?」（`ingestParseAttempt` 复位为 2）。
+- [x] mock 路径「入」：星图新增节点，简介非空，**来源链接**可断言。
+- [x] **冷启动当场点亮第一颗星**：在 V2 onboarding `first_star` 步，用户「入」后首节点出现在空图中央（与 V2 联测）。
+- [x] 「不要」：不新增节点，`skippedIds` 含 id，进入下一条资讯。
+- [x] 「讲细点」：同条资讯二次讲解文案更长（或 mock 标记 depth），再次进入 ingest 问句。
+- [x] 无路径绕过用户确认自动 create（扫描 `applyGraphMutation` 调用栈仅 ingest 模块 + V4 整理类 mutation）。
 
 ## 6. 涉及不变量
 - **入库 = 用户语音确认**（v2 保留的唯一确认门控）。
