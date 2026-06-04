@@ -1,12 +1,12 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { VisualVoiceOrb } from "@/components/voice/VisualVoiceChrome";
+import { useConversationSession } from "@/hooks/useConversationSession";
 import { isGraphDemoMode } from "@/lib/graphDemoSeed";
 import { isVisualSnapshotMode } from "@/lib/visualSnapshotMode";
 import { useVoiceSession } from "@/hooks/useVoiceSession";
 
 /**
- * Immersive voice orb — visual chrome + minimal connect/disconnect (V0).
- * No ingest/inbox controls; conversation wiring lands in V2.
+ * Immersive voice orb — visual chrome + voice loop (V0 shell, V2 conductor).
  */
 export function VoiceOrb() {
   const visualSnapshot = isVisualSnapshotMode();
@@ -18,10 +18,34 @@ export function VoiceOrb() {
     isBusy,
     canUseVoice,
     isConnected,
+    transcripts,
     connect,
     disconnect,
     interrupt,
   } = useVoiceSession();
+
+  const { onUserTranscript, onUserInterrupt } = useConversationSession({
+    voiceConnected: isConnected,
+  });
+
+  const processedTranscriptIds = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (!isConnected || demoMode || visualSnapshot) {
+      return;
+    }
+    for (const line of transcripts) {
+      if (line.role === "user" && line.final && !processedTranscriptIds.current.has(line.id)) {
+        processedTranscriptIds.current.add(line.id);
+        onUserTranscript(line.text, true);
+      }
+    }
+  }, [demoMode, isConnected, onUserTranscript, transcripts, visualSnapshot]);
+
+  const handleInterrupt = () => {
+    void interrupt();
+    onUserInterrupt();
+  };
 
   const showConnected = demoMode || isConnected;
   const displayStatus = demoMode ? "待命" : statusLabel;
@@ -84,7 +108,7 @@ export function VoiceOrb() {
             <button
               type="button"
               disabled={isBusy || voiceState !== "speaking"}
-              onClick={() => void interrupt()}
+              onClick={() => void handleInterrupt()}
               className="rounded-sm border border-hud px-3 py-1.5 text-caption text-primary disabled:opacity-40"
             >
               打断

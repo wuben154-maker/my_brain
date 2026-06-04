@@ -1,6 +1,6 @@
 # V2 — 对话编排状态机（`conversation-conductor`）★心脏
 
-- **阶段：** V · **状态：** 📝 待实现
+- **阶段：** V · **状态：** ✅ 已实现
 - **上游：** V0、V1 · **下游：** V3、V4、V6
 - **复用：** `LlmProvider`、`personaPrompt` / C4、`VoiceProvider`（speak/listen/interrupt）、`useVoiceSession`
 - **依赖 / 前置里程碑：** **V0**（ImmersiveScene + VoiceOrb）、**V1**（稳定 `companion` 入口）
@@ -111,13 +111,13 @@ src/hooks/useConversationSession.ts
 | `graphStore` | teaching 只读；高亮写入 `highlightedNodeIds`（与 V6 共享） |
 
 ## 5. 验收清单
-- [ ] `nextTurn` / conductor **全路径单测**（含 interrupt、briefing→ingest_decision→继续）。
-- [ ] mock 场景：多轮闲聊 ↔ 资讯 briefing 自由切换，无死锁状态。
-- [ ] barge-in：播报中 `userInterrupt` → `voice.interrupt()` 被调用且下一事件为 listen（mock 断言）。
-- [ ] persona 切换改变 `say` 口吻（同输入不同 preset，测试 snapshot 或关键词）。
-- [ ] 进入 `companion` 后 **主动首句**（非空 turn）。
+- [x] `nextTurn` / conductor **全路径单测**（含 interrupt、briefing→ingest_decision→继续）。
+- [x] mock 场景：多轮闲聊 ↔ 资讯 briefing 自由切换，无死锁状态。
+- [x] barge-in：播报中 `userInterrupt` → `voice.interrupt()` 被调用且下一事件为 listen（mock 断言）。
+- [x] persona 切换改变 `say` 口吻（同输入不同 preset，测试 snapshot 或关键词）。
+- [x] 进入 `companion` 后 **主动首句**（非空 turn）。
 - [ ] **冷启动当场点亮第一颗星**：空图状态下走完 onboarding 脚本 + 用户语音「入」→ 星图新增首节点且 `onboarding.step === "done"`（与 V3 联测）。
-- [ ] conductor **不调用** `applyGraphMutation` / `persistGraphSnapshot`（新建节点仅 V3）。
+- [x] conductor **不调用** `applyGraphMutation` / `persistGraphSnapshot`（新建节点仅 V3）。
 
 ## 6. 涉及不变量
 - **可打断语音**（硬需求）。

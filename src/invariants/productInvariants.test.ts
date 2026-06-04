@@ -461,6 +461,23 @@ describe("Product invariants (AGENTS.md core)", () => {
     });
   });
 
+  describe("V2 · Conversation conductor does not write graph", () => {
+    it("conversation module never calls applyGraphMutation or persistGraphSnapshot", () => {
+      const paths = [
+        "src/conversation/ConversationConductor.ts",
+        "src/conversation/nextTurn.ts",
+        "src/conversation/buildContext.ts",
+        "src/conversation/selectTeachingHighlights.ts",
+        "src/hooks/useConversationSession.ts",
+      ];
+      for (const path of paths) {
+        const source = readRepoSource(path);
+        expect(source).not.toContain("applyGraphMutation");
+        expect(source).not.toContain("persistGraphSnapshot");
+      }
+    });
+  });
+
   describe("6 · Interruptible voice is mandatory", () => {
     it("VoiceProvider interface exposes interrupt() and speak()", () => {
       const types = readRepoSource("src/providers/voice/types.ts");
