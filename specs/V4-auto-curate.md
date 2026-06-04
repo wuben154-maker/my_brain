@@ -1,6 +1,6 @@
 # V4 — 入库后自动整理（`auto-curate`）★覆盖旧铁律 #3/#6
 
-- **阶段：** V · **状态：** 📝 待实现
+- **阶段：** V · **状态：** ✅ 已实现
 - **上游：** V3 · **下游：** V7
 - **复用：** `agent/curation/detectStale`、`scoreNews`、`lib/salience`、`applyGraphMutation`
 - **依赖 / 前置里程碑：** **V3**（用户确认 create 之后触发）

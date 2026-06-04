@@ -13,7 +13,11 @@ export function selectTeachingHighlights(
   const { nodes } = visibleGraph(graph);
   const matches = nodes.filter((node) => {
     const title = node.title.toLowerCase();
-    return title.includes(trimmed) || trimmed.includes(title);
+    if (title.includes(trimmed)) {
+      return true;
+    }
+    // Avoid spurious hits like topic "topic" matching node title "c".
+    return trimmed.includes(title) && title.length >= 3;
   });
   if (matches.length > 0) {
     return matches.slice(0, 3).map((node) => node.id);

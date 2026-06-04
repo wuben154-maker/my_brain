@@ -10,7 +10,7 @@
 
 ## 1. 一句话定义
 
-**my_brain** 是一个**语音优先、本地存储**的 AI 知识伴侣：帮用户追 AI 资讯与 GitHub 趋势，通过「先建议、再确认」共建一张**可归档、可合并**的个人知识图谱（科幻星图 UI）。用得越久，画像越准；图谱归用户所有，AI 不能静默改库。
+**my_brain** 是一个**语音优先、本地存储**的 AI 知识伴侣（v2 沉浸式星图）：帮用户追 AI 资讯与 GitHub 趋势，**语音确认入库**后由 AI **自动整理**图谱（merge/link/archive，可撤销），科幻星图 UI + 可打断语音。用得越久，画像越准。
 
 ---
 
@@ -21,8 +21,8 @@
 | # | 要点 |
 |---|------|
 | 1 | **三层记忆分离**：原始音频/全文聊完即丢；图谱永久；用户画像永久生长 |
-| 2 | **用户拥有大脑**：图谱入库必须逐条确认（Explore「入库?」或 Inbox「同意」） |
-| 3 | **建议→确认**：merge/archive/link/create 等结构变更禁止自动执行 |
+| 2 | **入库=用户语音确认**（V3）：新建概念仅经「入/不要/讲细点」 |
+| 3 | **入库后整理=自动**（V4）：merge/archive/link 直接 apply + `graph_history` 可 undo；**新建节点**仍须 #2 |
 | 4 | **删除=归档**：旧节点隐藏可恢复；合并时边迁移到新节点 |
 | 5 | **节点=概念+短简介**，不是新闻片段 |
 | 6 | **可打断语音**（MVP 硬需求；Realtime 路径已实现 barge-in 代码） |
@@ -73,12 +73,12 @@ src/
   agent/            Sense→Plan→Act→Reflect、定时任务、晨间简报、研究链
   stores/           Zustand（app、graph、ingest、proposal、profile…）
   hooks/            资讯入库会话、语音、收件箱、手动图谱操作
-  components/       分区 UI：探索、收件箱、星图、设置、文档库、思维导图…
+  components/       v2 主路径 `ImmersiveScene`；legacy 分区组件仍保留但不挂 AppShell
   invariants/       产品不变量行为测试（高价值回归）
   eval/memory/      H3 记忆评测 harness
 ```
 
-**唯一图谱落库出口**：用户确认 → `applyGraphMutation` + `persistGraphSnapshot`（`proposalStore.approve`、资讯 `confirmProposal`、手动图谱确认等）。Agent **无**直接写库能力。
+**新建节点出口**：用户语音确认 → `applyIngestCreate` → `persistGraphSnapshot`。**入库后整理**：`runAutoCurateAfterIngest`（V4，不经 proposal inbox）。Legacy `proposalStore.approve` 仅只读归档路径。记忆引擎 **无** 写图谱/画像能力。
 
 ---
 

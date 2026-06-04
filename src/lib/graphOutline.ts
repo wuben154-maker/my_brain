@@ -1,5 +1,6 @@
 import type { BrainGraphSnapshot, ConceptNode, GraphEdge } from "@/domain/graph";
 import { selectTeachingHighlights } from "@/conversation/selectTeachingHighlights";
+import { visibleGraph } from "@/lib/graphMutations";
 
 export interface OutlineTreeNode {
   node: ConceptNode;
@@ -57,7 +58,7 @@ function buildTreeFromRoot(
 
 /**
  * Active (non-archived) concepts as a BFS forest from highest-degree hubs (N3).
- * Cycles cannot inflate the tree — each node appears at most once per component.
+ * Cycles cannot inflate the tree 鈥?each node appears at most once per component.
  */
 export function buildGraphOutline(
   nodes: ConceptNode[],
@@ -123,6 +124,17 @@ export function planWalkthrough(
   topic: string,
   graph: BrainGraphSnapshot,
 ): string[] {
-  const highlights = selectTeachingHighlights(graph, topic);
+  const active = visibleGraph(graph).nodes;
+  let highlights = selectTeachingHighlights(graph, topic);
+  const trimmed = topic.trim().toLowerCase();
+  const titleMatched =
+    trimmed.length > 0 &&
+    active.some((node) => {
+      const title = node.title.toLowerCase();
+      return title.includes(trimmed) || (trimmed.includes(title) && title.length >= 3);
+    });
+  if (!titleMatched && active.length > 0) {
+    highlights = active.map((node) => node.id);
+  }
   return orderWalkthroughPath(highlights, graph.edges);
 }

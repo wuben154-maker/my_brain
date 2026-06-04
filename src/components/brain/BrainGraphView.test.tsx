@@ -1,9 +1,29 @@
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { BrainGraphView } from "@/components/brain/BrainGraphView";
+/**
+ * @vitest-environment happy-dom
+ */
+import { createElement } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
 import { useGraphStore } from "@/stores/graphStore";
 
+vi.mock("react-force-graph-2d", () => ({
+  default: () => <div data-testid="force-graph-2d-mock" />,
+}));
+
+import { BrainGraphView } from "@/components/brain/BrainGraphView";
+
 describe("BrainGraphView (V6)", () => {
+  afterEach(() => {
+    cleanup();
+    useGraphStore.setState({
+      nodes: [],
+      edges: [],
+      highlightedNodeIds: [],
+      highlightedEdgeIds: [],
+      selectedNodeId: null,
+    });
+  });
+
   it("renders shell and reflects highlight state", () => {
     useGraphStore.setState({
       nodes: [
@@ -22,8 +42,9 @@ describe("BrainGraphView (V6)", () => {
       highlightedEdgeIds: [],
     });
 
-    render(<BrainGraphView />);
+    render(createElement(BrainGraphView));
     expect(screen.getByTestId("brain-graph-view")).toBeTruthy();
+    expect(screen.getByTestId("force-graph-2d-mock")).toBeTruthy();
     expect(useGraphStore.getState().highlightedNodeIds).toEqual(["n1"]);
   });
 });

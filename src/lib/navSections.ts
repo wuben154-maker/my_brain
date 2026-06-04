@@ -14,7 +14,10 @@ export interface NavSectionDef {
   specRef: string | null;
 }
 
-/** Single source of truth for NavRail order and section metadata (N0). */
+/**
+ * NavRail metadata (N0 legacy).
+ * v2-removed: 主流程已切 ImmersiveScene（V0/V7）；下列分区不再作为默认入口，仅供遗留组件/测试引用。
+ */
 export const NAV_SECTIONS: NavSectionDef[] = [
   {
     id: "graph",
