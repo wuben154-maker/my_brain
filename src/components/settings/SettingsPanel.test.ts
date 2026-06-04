@@ -23,7 +23,7 @@ describe("SettingsPanel (N4)", () => {
       isLoaded: true,
     });
     useAppStore.setState({
-      phase: "ready",
+      phase: "companion",
       storage: null,
     } as Partial<ReturnType<typeof useAppStore.getState>>);
   });

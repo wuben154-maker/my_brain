@@ -12,7 +12,7 @@ import { useAppStore } from "@/stores/appStore";
 describe("useVoiceSession disconnect / profile distill", () => {
   beforeEach(() => {
     useAppStore.setState({
-      phase: "ready",
+      phase: "companion",
       providers: null,
       storage: null,
     });

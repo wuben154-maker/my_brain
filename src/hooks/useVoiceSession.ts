@@ -59,7 +59,7 @@ export function useVoiceSession() {
 
   const voice = providers?.voice ?? null;
   const isMockVoice = voice !== null && isMockVoiceProvider(voice);
-  const canUseVoice = phase === "ready" || phase === "onboarding";
+  const canUseVoice = phase === "companion";
 
   useEffect(() => {
     if (!voice) {

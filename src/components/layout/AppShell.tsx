@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { BootIntroScreen } from "@/components/launch/BootIntroScreen";
 import { LoadingScreen } from "@/components/launch/LoadingScreen";
 import { BootSelfCheck } from "@/components/launch/BootSelfCheck";
 import { MainSectionContent } from "@/components/layout/MainSectionContent";
@@ -8,27 +9,41 @@ import { BrainGraphView } from "@/components/brain/BrainGraphView";
 import { ManualGraphPanel } from "@/components/brain/ManualGraphPanel";
 import { NewsIngestPanel } from "@/components/brain/NewsIngestPanel";
 import { VoicePanel } from "@/components/voice/VoicePanel";
+import { ImmersiveScene } from "@/components/shell/ImmersiveScene";
 import { useAgentScheduler } from "@/hooks/useAgentScheduler";
 import { useProposalInboxInit } from "@/hooks/useProposalInboxInit";
-import { readVisualSnapshotId } from "@/lib/visualSnapshotMode";
+import {
+  readVisualSnapshotId,
+  type VisualSnapshotId,
+} from "@/lib/visualSnapshotMode";
 import { useAppStore } from "@/stores/appStore";
 import { bindUiStoreHashSync } from "@/stores/uiStore";
+
+function isLegacyNavVisualSnapshot(id: VisualSnapshotId | null): boolean {
+  return id === "inbox" || id === "insight";
+}
 
 export function AppShell() {
   const phase = useAppStore((state) => state.phase);
   const errorMessage = useAppStore((state) => state.errorMessage);
+  const visualId = readVisualSnapshotId();
   // Keep the frozen `?visual=main` baseline untouched for visual regression.
-  const visualMain = readVisualSnapshotId() === "main";
+  const visualMain = visualId === "main";
+  const visualLegacyNav = isLegacyNavVisualSnapshot(visualId);
 
   useProposalInboxInit();
   useAgentScheduler();
 
   useEffect(() => {
-    if (visualMain) {
+    if (visualMain || visualLegacyNav) {
       return;
     }
     return bindUiStoreHashSync();
-  }, [visualMain]);
+  }, [visualMain, visualLegacyNav]);
+
+  if (phase === "boot") {
+    return <BootIntroScreen />;
+  }
 
   if (phase === "self_check") {
     return <BootSelfCheck />;
@@ -49,6 +64,10 @@ export function AppShell() {
     );
   }
 
+  if (phase !== "companion") {
+    return null;
+  }
+
   if (visualMain) {
     return (
       <div
@@ -65,16 +84,20 @@ export function AppShell() {
     );
   }
 
-  return (
-    <div data-testid="main-shell" className="flex h-full flex-col">
-      <TopBar />
-      <div className="flex min-h-0 flex-1">
-        <NavRail />
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 p-3 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-          <MainSectionContent />
-          <VoicePanel />
+  if (visualLegacyNav) {
+    return (
+      <div data-testid="main-shell" className="flex h-full flex-col">
+        <TopBar />
+        <div className="flex min-h-0 flex-1">
+          <NavRail />
+          <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 p-3 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+            <MainSectionContent />
+            <VoicePanel />
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return <ImmersiveScene />;
 }

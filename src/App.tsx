@@ -35,7 +35,7 @@ export default function App() {
 
     if (isGraphDemoMode()) {
       useGraphStore.getState().setGraph(createRichGraphDemoSnapshot());
-      useAppStore.getState().setPhase("ready");
+      useAppStore.getState().setPhase("companion");
       return;
     }
 

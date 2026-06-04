@@ -38,7 +38,7 @@ export function useNewsIngestSession() {
   const ingestedIds = useIngestStore((state) => state.ingestedIds);
   const errorMessage = useIngestStore((state) => state.errorMessage);
 
-  const isActive = phase === "ready" || phase === "onboarding";
+  const isActive = phase === "companion";
   const currentItem = useMemo(
     () => resolveCurrentNewsItem(newsQueue, cursor, skippedIds, ingestedIds),
     [cursor, ingestedIds, newsQueue, skippedIds],

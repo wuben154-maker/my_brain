@@ -42,7 +42,7 @@ describe("ExploreFeed (N1)", () => {
 
   beforeEach(() => {
     useAppStore.setState({
-      phase: "ready",
+      phase: "companion",
       newsQueue: sampleNews,
     } as Partial<ReturnType<typeof useAppStore.getState>>);
     useIngestStore.getState().reset();

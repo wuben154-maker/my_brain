@@ -1,6 +1,7 @@
 import { readAppEnv } from "@/lib/env";
 import {
   BOOT_CHECK_VISIBLE_MS,
+  BOOT_INTRO_MS,
   BOOT_MIN_TOTAL_MS,
   BOOT_STAGGER_MS,
   BOOT_TAIL_MS,
@@ -23,7 +24,7 @@ const STORAGE_CHECK = {
 
 let launchStarted = false;
 
-/** Launch pipeline: animated boot self-check → loading → ready/onboarding. */
+/** Launch pipeline: boot intro → self-check → loading → companion. */
 export async function runLaunchSequence(): Promise<void> {
   if (launchStarted) {
     return;
@@ -34,6 +35,9 @@ export async function runLaunchSequence(): Promise<void> {
   const store = useAppStore.getState();
   const env = readAppEnv();
   const defs = createBootCheckDefinitions(env);
+
+  store.setPhase("boot");
+  await sleep(BOOT_INTRO_MS);
 
   store.resetBoot();
   store.setSelfChecks([
@@ -117,7 +121,7 @@ export async function runLaunchSequence(): Promise<void> {
   store.appendBootLog(`  候选资讯 ${newsQueue.length} 条`);
 
   await sleep(800);
-  store.setPhase(newsQueue.length > 0 ? "ready" : "onboarding");
+  store.setPhase("companion");
 }
 
 async function runSingleBootCheck(

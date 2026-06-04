@@ -21,7 +21,7 @@
 
 | Spec | 代号 | 依赖 | 状态 | 一句话 |
 |---|---|---|---|---|
-| [V0-immersive-shell](./V0-immersive-shell.md) | `immersive-shell` | — | 📝 待实现 | 单一沉浸式外壳：全屏星图 + 语音光球 + 角落设置 |
+| [V0-immersive-shell](./V0-immersive-shell.md) | `immersive-shell` | — | ✅ 已实现 | 单一沉浸式外壳：全屏星图 + 语音光球 + 角落设置 |
 | [V1-launch-selfcheck](./V1-launch-selfcheck.md) | `launch-selfcheck` | V0 | 📝 待实现 | 电影感启动 + 语音自检播报 + 注入大脑加载动画 |
 | [V2-conversation-conductor](./V2-conversation-conductor.md) | `conversation-conductor` | V0, V1 | 📝 待实现 | ★ 对话编排状态机：闲聊/资讯/入库问/讲知识 + barge-in |
 | [V3-voice-ingest](./V3-voice-ingest.md) | `voice-ingest` | V2 | 📝 待实现 | 语音三口令入库；概念节点 + 来源链接 |

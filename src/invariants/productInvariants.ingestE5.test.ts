@@ -47,7 +47,7 @@ describe("Product invariant E5 · partial confirm then reject", () => {
   beforeEach(() => {
     useIngestStore.getState().reset();
     useAppStore.setState({
-      phase: "ready",
+      phase: "companion",
       newsQueue: [newsOne],
       providers: null,
       storage: null,
@@ -59,7 +59,7 @@ describe("Product invariant E5 · partial confirm then reject", () => {
     try {
       await storage.init();
       const providers = createAppProviders({ openAiApiKey: "" });
-      useAppStore.setState({ storage, providers, phase: "ready", newsQueue: [newsOne] });
+      useAppStore.setState({ storage, providers, phase: "companion", newsQueue: [newsOne] });
       useIngestStore.getState().setActiveNewsId("news-1");
       useIngestStore.getState().setPendingProposals([proposalA, proposalB]);
 

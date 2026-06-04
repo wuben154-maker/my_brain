@@ -28,7 +28,7 @@ export function useAgentScheduler(): void {
   const schedulerRef = useRef<AgentScheduler | null>(null);
 
   useEffect(() => {
-    if (phase !== "ready" && phase !== "onboarding") {
+    if (phase !== "companion") {
       return;
     }
     if (!storage || !providers) {

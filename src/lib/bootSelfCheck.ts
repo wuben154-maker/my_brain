@@ -2,6 +2,8 @@ import type { AppEnv } from "@/lib/env";
 import type { BootCheckStatus, SelfCheckItem } from "@/stores/appStore";
 
 export const BOOT_STAGGER_MS = 200;
+/** V0 boot intro on black field before self-check (V1 adds motion). */
+export const BOOT_INTRO_MS = 700;
 export const BOOT_TAIL_MS = 350;
 /** Each diagnostic row stays in「检测中」at least this long so the animation is visible. */
 export const BOOT_CHECK_VISIBLE_MS = 450;

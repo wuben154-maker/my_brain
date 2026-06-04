@@ -13,7 +13,7 @@ export function useProposalInboxInit(): void {
     if (visualId === "inbox" || visualId === "insight") {
       return;
     }
-    if (phase !== "ready" && phase !== "onboarding") {
+    if (phase !== "companion") {
       return;
     }
     if (!storage) {

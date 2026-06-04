@@ -27,7 +27,7 @@ describe("useManualGraphOps confirmProposals", () => {
   beforeEach(() => {
     useManualGraphStore.getState().clearPending();
     useAppStore.setState({
-      phase: "ready",
+      phase: "companion",
       newsQueue: [],
       providers: null,
       storage: null,
@@ -38,7 +38,7 @@ describe("useManualGraphOps confirmProposals", () => {
     const { storage, cleanup } = createTempStorage();
     try {
       await storage.init();
-      useAppStore.setState({ storage, phase: "ready" });
+      useAppStore.setState({ storage, phase: "companion" });
       useManualGraphStore.getState().setPendingProposals([proposalA, proposalB]);
 
       const { result } = renderHook(() => useManualGraphOps());

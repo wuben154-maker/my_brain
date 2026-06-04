@@ -4,10 +4,10 @@ import type { AppProviders } from "@/providers";
 import type { StorageProvider } from "@/storage/types";
 
 export type LaunchPhase =
+  | "boot"
   | "self_check"
   | "loading"
-  | "ready"
-  | "onboarding"
+  | "companion"
   | "error";
 
 export type BootCheckStatus = "pending" | "syncing" | "ok" | "warn";
@@ -47,7 +47,7 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  phase: "self_check",
+  phase: "boot",
   selfChecks: [],
   bootProgress: 0,
   bootLogs: [],

@@ -32,7 +32,7 @@ describe("useNewsIngestSession confirmProposal", () => {
   beforeEach(() => {
     useIngestStore.getState().reset();
     useAppStore.setState({
-      phase: "ready",
+      phase: "companion",
       newsQueue: [],
       providers: null,
       storage: null,
@@ -43,7 +43,7 @@ describe("useNewsIngestSession confirmProposal", () => {
     const { storage, cleanup } = createTempStorage();
     try {
       await storage.init();
-      useAppStore.setState({ storage, phase: "ready" });
+      useAppStore.setState({ storage, phase: "companion" });
       useIngestStore.getState().setActiveNewsId("news-1");
       useIngestStore.getState().setPendingProposals([proposalA, proposalB]);
 
@@ -83,7 +83,7 @@ describe("useNewsIngestSession rejectProposal", () => {
   beforeEach(() => {
     useIngestStore.getState().reset();
     useAppStore.setState({
-      phase: "ready",
+      phase: "companion",
       newsQueue: [],
       providers: null,
       storage: null,
@@ -113,7 +113,7 @@ describe("useNewsIngestSession rejectProposal", () => {
       await storage.init();
       useAppStore.setState({
         storage,
-        phase: "ready",
+        phase: "companion",
         newsQueue: [
           {
             id: "news-1",

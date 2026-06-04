@@ -1,6 +1,6 @@
 # V0 — 沉浸式外壳（`immersive-shell`）
 
-- **阶段：** V 系列地基 · **状态：** 📝 待实现
+- **阶段：** V 系列地基 · **状态：** ✅ 已实现
 - **上游：** — · **下游：** V1–V7
 - **复用：** 现有 `AppShell` / `NavRail` / `TopBar` / `MainSectionContent` / `VoicePanel`
 - **依赖 / 前置里程碑：** 无（V 系列起点）
@@ -56,12 +56,12 @@ src/lib/navSections.ts / uiStore.activeSection
 | `uiStore` | V0 主流程不依赖 `activeSection`；不得因未选 section 而空白 |
 
 ## 5. 验收清单
-- [ ] 默认启动后进入 `ImmersiveScene`：全屏星图 + `VoiceOrb` + 角落设置图标可见。
-- [ ] 主路径无 `NavRail` / `TopBar` / `MainSectionContent` / 多栏 `VoicePanel` 布局。
-- [ ] `LaunchPhase` 仅含五态；旧 `ready`/`onboarding` 已删除，编译期无残留引用。
-- [ ] `boot` 态可见短屏（黑场 + logo），且**不**挂载 `ImmersiveScene` / `NavRail`。
-- [ ] `pnpm dev` mock 路径可进入 `companion` 并渲染空/已有图谱（与现 storage 加载一致）。
-- [ ] **视觉双轨**：`?visual=main` 冻结保留至 V6（见 V6）；v2 默认用户路径不走 main 布局。
+- [x] 默认启动后进入 `ImmersiveScene`：全屏星图 + `VoiceOrb` + 角落设置图标可见。
+- [x] 主路径无 `NavRail` / `TopBar` / `MainSectionContent` / 多栏 `VoicePanel` 布局。
+- [x] `LaunchPhase` 仅含五态；旧 `ready`/`onboarding` 已删除，编译期无残留引用。
+- [x] `boot` 态可见短屏（黑场 + logo），且**不**挂载 `ImmersiveScene` / `NavRail`。
+- [x] `pnpm dev` mock 路径可进入 `companion` 并渲染空/已有图谱（与现 storage 加载一致）。
+- [x] **视觉双轨**：`?visual=main` 冻结保留至 V6（见 V6）；v2 默认用户路径不走 main 布局。
 
 ## 6. 涉及不变量
 - 本地优先；Provider 可替换（壳层不绑厂商 SDK）。

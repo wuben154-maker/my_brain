@@ -65,7 +65,7 @@ export function applyVisualSnapshot(id: VisualSnapshotId): void {
   }
 
   if (id === "inbox") {
-    useAppStore.getState().setPhase("ready");
+    useAppStore.getState().setPhase("companion");
     useGraphStore.getState().setGraph(createGraphDemoSnapshot());
     useProposalStore.setState({ pending: [VISUAL_INBOX_ENVELOPE] });
     useAgentInboxStore.getState().setInboxOpen(true);
@@ -73,7 +73,7 @@ export function applyVisualSnapshot(id: VisualSnapshotId): void {
   }
 
   if (id === "insight") {
-    useAppStore.getState().setPhase("ready");
+    useAppStore.getState().setPhase("companion");
     useGraphStore.getState().setGraph(createGraphDemoSnapshot());
     useResearchRunStore.setState({
       runs: [VISUAL_INSIGHT_RUN],
@@ -86,5 +86,5 @@ export function applyVisualSnapshot(id: VisualSnapshotId): void {
   }
 
   useGraphStore.getState().setGraph(createGraphDemoSnapshot());
-  useAppStore.getState().setPhase("ready");
+  useAppStore.getState().setPhase("companion");
 }
