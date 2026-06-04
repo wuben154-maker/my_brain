@@ -6,7 +6,7 @@
 A **voice-first, locally-stored AI companion** that helps the user follow AI news + GitHub trends and hand-builds a **self-updating "brain" knowledge graph**. The longer it's used, the better it knows the user. Sci-fi knowledge-graph UI + real-time voice.
 
 ## Status
-**Scaffolded.** Tauri 2 + React 18 + Vite + Tailwind + Zustand skeleton is in place. Provider interfaces (`VoiceProvider`, `LLMProvider`, `NewsSource`) and dual-target storage (`better-sqlite3` web-dev / Tauri SQL desktop) are wired as stubs. Next: Realtime voice loop, cold-start onboarding, graph mutations with suggest-then-confirm.
+**v2 大换血进行中（沉浸式语音伴侣）.** spec 级功能（A/B/C/M/N/G/H 系列）已宽覆盖且 mock 可演示。v2 正把形态从「多分区仪表盘 + 逐条审批」重做为「**全屏星图 + 语音光球的沉浸式伴侣**」，落地工作单见 `specs/V*.md`。底层 provider/domain/storage/lib/agent 逻辑大量复用；旧 A/B/C/N/G spec 标 `superseded`。**仍是 mock-first，验收期才接真 API key。**
 
 ---
 
@@ -25,17 +25,17 @@ A **voice-first, locally-stored AI companion** that helps the user follow AI new
 ---
 
 ## Core invariants (NEVER violate these)
-These encode the product's soul. Breaking them breaks the product.
+These encode the product's soul. Breaking them breaks the product. **v2 改写了 #2/#3/#6**（见标注）。
 
 1. **Three memory layers, kept separate:**
-   - Raw audio / full articles → **discarded after the conversation**.
-   - Knowledge graph (concept + short intro + relations + source link) → **permanent**.
-   - User profile (interests, what they know/don't, explanation prefs, habits) → **permanent, continuously grown**. Before discarding audio, distill user-profile signals into this layer.
-2. **The user owns the brain.** Every AI resource is **asked one-by-one** ("入库?") before entering the knowledge base. Other categories are chat-only and **discarded** unless the user explicitly asks to save.
-3. **Suggest-then-confirm for ANY graph mutation.** Merge, archive, delete, link, attach-to-concept → AI proposes, user approves. Never auto-mutate the graph.
+ - Raw audio / full articles → **discarded after the conversation**.
+ - Knowledge graph (concept + short intro + relations + source link) → **permanent**.
+ - User profile (interests, what they know/don't, explanation prefs, habits) → **permanent, continuously grown**. Before discarding audio, distill user-profile signals into this layer. **v2：画像蒸馏静默执行，无需用户确认。**
+2. **入库 = 用户决定（保留）.** 每条 AI 资源在进入知识库前**逐条语音确认**（"入/不要/讲细点"）。其他类目仅聊天、聊完即丢，除非用户主动要求保存。
+3. **【v2 改写】入库后的图谱结构整理 = AI 自动执行，不再要确认.** Merge / archive / link / attach / edge-migrate 由 AI 在入库后**自动完成**。兜底三件套：**① 归档=隐藏不真删；② 每次结构变更进变更历史且可一键撤销；③ 偶尔语音口头汇报**。（注意：**新建概念节点仍受 #2 用户确认门控**；自动的只是"入库之后的整理"。）
 4. **Delete = archive, not hard-delete.** Outdated nodes are hidden but recoverable. Edges of a replaced node **migrate** to the new node.
 5. **Node = a concept + short intro** (not a news fragment). Multiple news items feed/update the same concept.
-6. **Interruptible voice is mandatory** in MVP. The user can cut in mid-sentence and the assistant stops and listens.
+6. **【v2 改写】Interruptible voice is mandatory.** 用户可随时打断、助手立即停说转听。**Agent/curation 层现拥有"整理类"图谱写能力（merge/archive/link，自动执行）**，但**新建节点仍只能经"用户语音确认入库"出口**；**记忆引擎仍绝不写图谱/画像**（见 §memory-boundary）。
 7. **Local-first / privacy.** User data stays on the user's machine in MVP.
 
 ---
