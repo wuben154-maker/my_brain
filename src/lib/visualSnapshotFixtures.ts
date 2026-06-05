@@ -174,9 +174,9 @@ export const VISUAL_GRAPH_PINNED_POSITIONS: Record<
 > = {
   "vis-ai": { x: 0, y: 6 },
   "vis-ml": companionPin(-108, -82),
-  "vis-cv": companionPin(128, -72),
-  "vis-nlp": companionPin(-92, 118),
-  "vis-rl": companionPin(112, 122),
+  "vis-cv": companionPin(105, -82),
+  "vis-nlp": companionPin(-90, 125),
+  "vis-rl": companionPin(35, 122),
   "vis-supervised": companionPin(-198, -148),
   "vis-unsupervised": companionPin(-172, -112),
   "vis-semisupervised": companionPin(-218, -92),
@@ -186,22 +186,22 @@ export const VISUAL_GRAPH_PINNED_POSITIONS: Record<
   "vis-eval": companionPin(-162, -22),
   "vis-nn": companionPin(-92, -152),
   "vis-transformer": companionPin(-48, -128),
-  "vis-imgcls": companionPin(208, -138),
-  "vis-det": companionPin(192, -92),
-  "vis-seg": companionPin(218, -48),
-  "vis-3d": companionPin(172, -152),
-  "vis-face": companionPin(238, -108),
-  "vis-wordvec": companionPin(-192, 172),
-  "vis-txtgen": companionPin(-162, 142),
-  "vis-mt": companionPin(-208, 102),
-  "vis-sent": companionPin(-138, 192),
-  "vis-ner": companionPin(-222, 142),
-  "vis-qa": companionPin(-172, 208),
-  "vis-ql": companionPin(198, 182),
-  "vis-pg": companionPin(172, 152),
-  "vis-dqn": companionPin(218, 138),
-  "vis-mcts": companionPin(192, 208),
-  "vis-marl": companionPin(238, 168),
+  "vis-imgcls": companionPin(175, -155),
+  "vis-det": companionPin(168, -115),
+  "vis-seg": companionPin(142, 82),
+  "vis-3d": companionPin(148, -162),
+  "vis-face": companionPin(188, -58),
+  "vis-wordvec": companionPin(-218, 205),
+  "vis-txtgen": companionPin(-142, 48),
+  "vis-mt": companionPin(-292, 48),
+  "vis-sent": companionPin(-98, 238),
+  "vis-ner": companionPin(-302, 168),
+  "vis-qa": companionPin(-122, 272),
+  "vis-ql": companionPin(72, 182),
+  "vis-pg": companionPin(58, 152),
+  "vis-dqn": companionPin(88, 135),
+  "vis-mcts": companionPin(68, 208),
+  "vis-marl": companionPin(92, 168),
 };
 
 interface CompanionNodeSeed {
@@ -317,6 +317,14 @@ const COMPANION_EDGE_SEEDS: Array<{
   { source: "vis-pg", target: "vis-ql", relation: "related" },
   { source: "vis-ai", target: "vis-transformer", relation: "related" },
 ];
+
+/** Shorter hub subtitles for companion captures — avoids label/subtitle collisions. */
+export const COMPANION_HUB_INTRO_SHORT: Record<string, string> = {
+  "vis-ml": "从数据中学习",
+  "vis-cv": "理解图像与视频",
+  "vis-nlp": "理解与生成语言",
+  "vis-rl": "交互中学习策略",
+};
 
 /** Stable cluster bucket per companion node (matches mockup color families). */
 export const COMPANION_NODE_CLUSTER: Record<string, number> = {

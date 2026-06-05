@@ -1,4 +1,16 @@
-const innerBars = [16, 28, 42, 32, 46, 24, 36, 20];
+/** Build a symmetric multi-bar spectrum for the orb waveform (presentational). */
+function buildOrbWaveform(barCount: number): number[] {
+  const bars: number[] = [];
+  for (let index = 0; index < barCount; index++) {
+    const phase = index / Math.max(1, barCount - 1);
+    const envelope = Math.sin(phase * Math.PI);
+    const ripple = 0.55 + 0.45 * Math.sin(phase * Math.PI * 10);
+    bars.push(Math.round(3 + envelope * ripple * 46));
+  }
+  return bars;
+}
+
+const innerBars = buildOrbWaveform(48);
 
 export function VisualVoiceOrb() {
   return (
@@ -11,12 +23,16 @@ export function VisualVoiceOrb() {
         <div className="absolute inset-6 rounded-full border border-accent-cyan/45" />
         <div className="absolute inset-9 rounded-full bg-accent-cyan/20 shadow-glow-cyan" />
 
-        <div className="absolute inset-x-2 top-1/2 flex -translate-y-1/2 items-center justify-center gap-0.5">
+        <div className="absolute inset-x-[0.875rem] top-1/2 flex -translate-y-1/2 items-center gap-px">
           {innerBars.map((height, index) => (
             <span
               key={index}
-              className="w-0.5 rounded-full bg-accent-cyan"
-              style={{ height: `${height}px`, opacity: 0.92 }}
+              className="min-w-0 flex-1 rounded-full bg-accent-cyan"
+              style={{
+                height: `${height}px`,
+                maxWidth: "3px",
+                opacity: 0.84 + (index % 5) * 0.03,
+              }}
             />
           ))}
         </div>

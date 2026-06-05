@@ -61,22 +61,22 @@ export function GraphZoomControls({
         </div>
 
         <div
-          className="graph-layer-slider pointer-events-auto absolute right-4 top-1/2 z-[2] flex -translate-y-1/2 flex-col items-center gap-1.5"
+          className="graph-layer-slider pointer-events-auto absolute right-5 top-1/2 z-[2] flex -translate-y-1/2 flex-col items-center gap-2 py-1"
           aria-label="图谱深度"
         >
           <span className="font-hud text-caption uppercase tracking-hud text-muted">
             图谱深度
           </span>
           <span className="font-hud text-caption text-accent-cyan">6层</span>
-          <div className="relative flex flex-col items-center">
+          <div className="relative flex h-[9.75rem] flex-col items-center justify-center">
             <div
-              className="absolute inset-y-1 left-1/2 flex -translate-x-1/2 flex-col justify-between py-0.5"
+              className="pointer-events-none absolute inset-y-2 left-1/2 flex -translate-x-1/2 flex-col justify-between"
               aria-hidden
             >
               {DEPTH_TICKS.map((tick) => (
                 <span
                   key={tick}
-                  className="h-2 w-2 rounded-full border border-accent-cyan/25 bg-accent-cyan/40 shadow-[0_0_6px_rgba(34,211,238,0.35)]"
+                  className="h-2.5 w-2.5 rounded-full border border-accent-cyan/35 bg-accent-cyan/50 shadow-[0_0_8px_rgba(34,211,238,0.45)]"
                 />
               ))}
             </div>

@@ -22,6 +22,7 @@ import { GRAPH_ZOOM_TOPIC_MAX } from "@/lib/memoryLayers";
 import { salienceVisualAlpha } from "@/lib/salience";
 import { readVisualSnapshotId } from "@/lib/visualSnapshotMode";
 import {
+  COMPANION_HUB_INTRO_SHORT,
   COMPANION_NODE_CLUSTER,
   VISUAL_GRAPH_PINNED_POSITIONS,
 } from "@/lib/visualSnapshotFixtures";
@@ -233,7 +234,7 @@ export function BrainGraphView() {
       return;
     }
     const timer = window.setTimeout(() => {
-      graphRef.current?.zoomToFit(320, 112);
+      graphRef.current?.zoomToFit(320, 140);
       const k = graphRef.current?.zoom() ?? 1;
       setZoomPercentLabel(`${Math.round(k * 100)}%`);
     }, 120);
@@ -277,7 +278,7 @@ export function BrainGraphView() {
   }, [syncZoomLabel]);
 
   const handleReset = useCallback(() => {
-    const padding = isCompanionVisual ? 112 : 48;
+    const padding = isCompanionVisual ? 140 : 48;
     graphRef.current?.zoomToFit(280, padding);
     window.setTimeout(syncZoomLabel, 320);
   }, [isCompanionVisual, syncZoomLabel]);
@@ -323,7 +324,7 @@ export function BrainGraphView() {
               // Fit once the simulation settles so we never freeze a half-laid-out
               // (and therefore wildly over-zoomed) view.
               if (pinGraphLayout) {
-                graphRef.current?.zoomToFit(400, 112);
+                graphRef.current?.zoomToFit(400, 140);
                 syncZoomLabel();
               } else {
                 graphRef.current?.zoomToFit(500, 90);
@@ -590,11 +591,15 @@ export function BrainGraphView() {
                     : y;
                 ctx.fillText(graphNode.title, labelX, labelY);
                 if (hubLevel === 1 && graphNode.intro) {
+                  const introText =
+                    isCompanionVisual && COMPANION_HUB_INTRO_SHORT[nodeId]
+                      ? COMPANION_HUB_INTRO_SHORT[nodeId]
+                      : graphNode.intro;
                   const subSize = labelSize * 0.62;
                   ctx.font = `400 ${subSize}px var(--font-sans)`;
                   ctx.fillStyle = "rgba(148, 163, 184, 0.85)";
                   ctx.textBaseline = "top";
-                  ctx.fillText(graphNode.intro, labelX, y + labelSize * 0.2);
+                  ctx.fillText(introText, labelX, y + labelSize * 0.2);
                 }
               }
               ctx.restore();
