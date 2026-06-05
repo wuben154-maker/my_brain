@@ -1,7 +1,10 @@
 import { toResearchTempId } from "@/agent/jobs/topicResearchJob";
 import type { AgentTraceStep, ProposalEnvelope } from "@/agent/types";
+import type { BrainGraphSnapshot } from "@/domain/graph";
 import type { ResearchRunRecord } from "@/stores/researchRunStore";
 import type { SelfCheckItem } from "@/stores/appStore";
+
+const VISUAL_GRAPH_NOW = "2026-06-01T00:00:00.000Z";
 
 export const VISUAL_INSIGHT_RUN_ID = "visual-research-run";
 
@@ -158,19 +161,217 @@ export const VISUAL_INBOX_ENVELOPE: ProposalEnvelope = {
   },
 };
 
-/** Pinned force-graph coordinates for stable main UI captures (`?visual=main`). */
+/** Pinned layout for `?visual=companion` hub-and-spoke knowledge graph captures. */
 export const VISUAL_GRAPH_PINNED_POSITIONS: Record<
   string,
   { x: number; y: number }
 > = {
-  "demo-transformer": { x: 40, y: -20 },
-  "demo-attention": { x: -120, y: 60 },
-  "demo-rag": { x: 160, y: 80 },
-  "demo-agent": { x: -40, y: 140 },
-  "demo-llm": { x: 120, y: -100 },
-  "demo-mcp": { x: -160, y: -80 },
-  "demo-bert": { x: 200, y: -40 },
+  "vis-ai": { x: 0, y: 8 },
+  "vis-ml": { x: -108, y: -82 },
+  "vis-cv": { x: 128, y: -72 },
+  "vis-nlp": { x: -92, y: 118 },
+  "vis-rl": { x: 112, y: 122 },
+  "vis-supervised": { x: -198, y: -148 },
+  "vis-unsupervised": { x: -172, y: -112 },
+  "vis-semisupervised": { x: -218, y: -92 },
+  "vis-ensemble": { x: -152, y: -168 },
+  "vis-dt": { x: -188, y: -52 },
+  "vis-fe": { x: -228, y: -32 },
+  "vis-eval": { x: -162, y: -22 },
+  "vis-nn": { x: -92, y: -152 },
+  "vis-transformer": { x: -48, y: -128 },
+  "vis-imgcls": { x: 208, y: -138 },
+  "vis-det": { x: 192, y: -92 },
+  "vis-seg": { x: 218, y: -48 },
+  "vis-3d": { x: 172, y: -152 },
+  "vis-face": { x: 238, y: -108 },
+  "vis-wordvec": { x: -192, y: 172 },
+  "vis-txtgen": { x: -162, y: 142 },
+  "vis-mt": { x: -208, y: 102 },
+  "vis-sent": { x: -138, y: 192 },
+  "vis-ner": { x: -222, y: 142 },
+  "vis-qa": { x: -172, y: 208 },
+  "vis-ql": { x: 198, y: 182 },
+  "vis-pg": { x: 172, y: 152 },
+  "vis-dqn": { x: 218, y: 138 },
+  "vis-mcts": { x: 192, y: 208 },
+  "vis-marl": { x: 238, y: 168 },
 };
+
+interface CompanionNodeSeed {
+  id: string;
+  title: string;
+  intro: string;
+  hubLevel?: 1 | 2;
+}
+
+const COMPANION_NODE_SEEDS: CompanionNodeSeed[] = [
+  {
+    id: "vis-ai",
+    title: "人工智能",
+    intro: "模拟人类智能的计算机系统",
+    hubLevel: 2,
+  },
+  {
+    id: "vis-ml",
+    title: "机器学习",
+    intro: "让系统从数据中学习",
+    hubLevel: 1,
+  },
+  {
+    id: "vis-cv",
+    title: "计算机视觉",
+    intro: "让计算机理解图像与视频",
+    hubLevel: 1,
+  },
+  {
+    id: "vis-nlp",
+    title: "自然语言处理",
+    intro: "让机器理解并生成人类语言",
+    hubLevel: 1,
+  },
+  {
+    id: "vis-rl",
+    title: "强化学习",
+    intro: "通过与环境交互学习最优策略",
+    hubLevel: 1,
+  },
+  { id: "vis-supervised", title: "监督学习", intro: "有标签数据训练" },
+  { id: "vis-unsupervised", title: "无监督学习", intro: "发现数据内在结构" },
+  { id: "vis-semisupervised", title: "半监督学习", intro: "少量标签 + 大量无标签" },
+  { id: "vis-ensemble", title: "集成学习", intro: "组合多个模型" },
+  { id: "vis-dt", title: "决策树", intro: "树形规则划分" },
+  { id: "vis-fe", title: "特征工程", intro: "构造有效输入特征" },
+  { id: "vis-eval", title: "模型评估", intro: "度量泛化与偏差" },
+  { id: "vis-nn", title: "神经网络", intro: "多层非线性变换" },
+  { id: "vis-transformer", title: "Transformer", intro: "自注意力序列建模" },
+  { id: "vis-imgcls", title: "图像分类", intro: "判定图像类别" },
+  { id: "vis-det", title: "目标检测", intro: "定位并识别物体" },
+  { id: "vis-seg", title: "图像分割", intro: "像素级区域划分" },
+  { id: "vis-3d", title: "三维视觉", intro: "深度与点云理解" },
+  { id: "vis-face", title: "人脸识别", intro: "身份特征匹配" },
+  { id: "vis-wordvec", title: "词向量", intro: "分布式词表示" },
+  { id: "vis-txtgen", title: "文本生成", intro: "续写与创作" },
+  { id: "vis-mt", title: "机器翻译", intro: "跨语言转换" },
+  { id: "vis-sent", title: "情感分析", intro: "极性与情绪识别" },
+  { id: "vis-ner", title: "命名实体识别", intro: "抽取人名地名等" },
+  { id: "vis-qa", title: "问答系统", intro: "检索或生成答案" },
+  { id: "vis-ql", title: "Q学习", intro: "值函数迭代" },
+  { id: "vis-pg", title: "策略梯度", intro: "直接优化策略" },
+  { id: "vis-dqn", title: "深度Q网络", intro: "深度强化值学习" },
+  { id: "vis-mcts", title: "蒙特卡洛树搜索", intro: "模拟 rollout 规划" },
+  { id: "vis-marl", title: "多智能体学习", intro: "协作与博弈" },
+];
+
+const COMPANION_EDGE_SEEDS: Array<{
+  source: string;
+  target: string;
+  relation: BrainGraphSnapshot["edges"][number]["relationType"];
+}> = [
+  { source: "vis-ai", target: "vis-ml", relation: "related" },
+  { source: "vis-ai", target: "vis-cv", relation: "related" },
+  { source: "vis-ai", target: "vis-nlp", relation: "related" },
+  { source: "vis-ai", target: "vis-rl", relation: "related" },
+  { source: "vis-ml", target: "vis-supervised", relation: "is_a" },
+  { source: "vis-ml", target: "vis-unsupervised", relation: "is_a" },
+  { source: "vis-ml", target: "vis-semisupervised", relation: "is_a" },
+  { source: "vis-ml", target: "vis-ensemble", relation: "is_a" },
+  { source: "vis-ml", target: "vis-dt", relation: "is_a" },
+  { source: "vis-ml", target: "vis-fe", relation: "is_a" },
+  { source: "vis-ml", target: "vis-eval", relation: "depends_on" },
+  { source: "vis-ml", target: "vis-nn", relation: "depends_on" },
+  { source: "vis-ml", target: "vis-transformer", relation: "depends_on" },
+  { source: "vis-cv", target: "vis-imgcls", relation: "is_a" },
+  { source: "vis-cv", target: "vis-det", relation: "is_a" },
+  { source: "vis-cv", target: "vis-seg", relation: "is_a" },
+  { source: "vis-cv", target: "vis-3d", relation: "related" },
+  { source: "vis-cv", target: "vis-face", relation: "related" },
+  { source: "vis-nlp", target: "vis-wordvec", relation: "depends_on" },
+  { source: "vis-nlp", target: "vis-txtgen", relation: "is_a" },
+  { source: "vis-nlp", target: "vis-mt", relation: "is_a" },
+  { source: "vis-nlp", target: "vis-sent", relation: "related" },
+  { source: "vis-nlp", target: "vis-ner", relation: "related" },
+  { source: "vis-nlp", target: "vis-qa", relation: "depends_on" },
+  { source: "vis-rl", target: "vis-ql", relation: "is_a" },
+  { source: "vis-rl", target: "vis-pg", relation: "is_a" },
+  { source: "vis-rl", target: "vis-dqn", relation: "depends_on" },
+  { source: "vis-rl", target: "vis-mcts", relation: "related" },
+  { source: "vis-rl", target: "vis-marl", relation: "related" },
+  { source: "vis-supervised", target: "vis-unsupervised", relation: "related" },
+  { source: "vis-fe", target: "vis-eval", relation: "depends_on" },
+  { source: "vis-ensemble", target: "vis-supervised", relation: "depends_on" },
+  { source: "vis-nn", target: "vis-transformer", relation: "depends_on" },
+  { source: "vis-transformer", target: "vis-wordvec", relation: "related" },
+  { source: "vis-transformer", target: "vis-nlp", relation: "related" },
+  { source: "vis-nn", target: "vis-imgcls", relation: "related" },
+  { source: "vis-transformer", target: "vis-txtgen", relation: "related" },
+  { source: "vis-det", target: "vis-seg", relation: "related" },
+  { source: "vis-mt", target: "vis-qa", relation: "depends_on" },
+  { source: "vis-ql", target: "vis-dqn", relation: "depends_on" },
+  { source: "vis-pg", target: "vis-ql", relation: "related" },
+  { source: "vis-ai", target: "vis-transformer", relation: "related" },
+];
+
+/** Stable cluster bucket per companion node (matches mockup color families). */
+export const COMPANION_NODE_CLUSTER: Record<string, number> = {
+  "vis-ai": 0,
+  "vis-ml": 2,
+  "vis-supervised": 2,
+  "vis-unsupervised": 2,
+  "vis-semisupervised": 2,
+  "vis-ensemble": 2,
+  "vis-dt": 2,
+  "vis-fe": 2,
+  "vis-eval": 2,
+  "vis-nn": 2,
+  "vis-transformer": 2,
+  "vis-cv": 1,
+  "vis-imgcls": 1,
+  "vis-det": 1,
+  "vis-seg": 1,
+  "vis-3d": 1,
+  "vis-face": 1,
+  "vis-nlp": 3,
+  "vis-wordvec": 3,
+  "vis-txtgen": 3,
+  "vis-mt": 3,
+  "vis-sent": 3,
+  "vis-ner": 3,
+  "vis-qa": 3,
+  "vis-rl": 0,
+  "vis-ql": 0,
+  "vis-pg": 0,
+  "vis-dqn": 0,
+  "vis-mcts": 0,
+  "vis-marl": 0,
+};
+
+/** Dev-only dense hub-and-spoke graph for `?visual=companion` pixel baseline. */
+export function createCompanionVisualGraphSnapshot(): BrainGraphSnapshot {
+  const nodes = COMPANION_NODE_SEEDS.map((seed) => ({
+    id: seed.id,
+    title: seed.title,
+    intro: seed.intro,
+    sourceUrl: null,
+    archived: false,
+    createdAt: VISUAL_GRAPH_NOW,
+    updatedAt: VISUAL_GRAPH_NOW,
+    ...(seed.hubLevel !== undefined ? { hubLevel: seed.hubLevel } : {}),
+  }));
+
+  const edges = COMPANION_EDGE_SEEDS.filter(
+    (edge) =>
+      nodes.some((node) => node.id === edge.source) &&
+      nodes.some((node) => node.id === edge.target),
+  ).map((edge, index) => ({
+    id: `vis-e${index + 1}`,
+    sourceId: edge.source,
+    targetId: edge.target,
+    relationType: edge.relation,
+  }));
+
+  return { nodes, edges };
+}
 
 /** Dev-only sample conversation for the `?graphDemo` first screen. Display only. */
 export const DEMO_VOICE_TRANSCRIPTS = [

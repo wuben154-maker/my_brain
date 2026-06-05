@@ -1,5 +1,6 @@
 import { shouldEnableDemoModes } from "@/lib/devOnlyGuards";
 import { createGraphDemoSnapshot } from "@/lib/graphDemoSeed";
+import { createCompanionVisualGraphSnapshot } from "@/lib/visualSnapshotFixtures";
 import { persistGraphSnapshot } from "@/lib/graphMutations";
 import { createStorageProvider } from "@/storage/createStorageProvider";
 import {
@@ -95,6 +96,12 @@ export function applyVisualSnapshot(id: VisualSnapshotId): void {
     useProposalStore.setState({ pending: VISUAL_INSIGHT_ENVELOPES });
     useUiStore.getState().setSection("insight");
     document.documentElement.dataset.visualInsightReady = "true";
+    return;
+  }
+
+  if (id === "companion") {
+    useGraphStore.getState().setGraph(createCompanionVisualGraphSnapshot());
+    useAppStore.getState().setPhase("companion");
     return;
   }
 

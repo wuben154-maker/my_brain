@@ -12,6 +12,7 @@ import type { RelationType } from "@/domain/graph";
 import {
   clusterColorForNodeId,
   graphAccentCyan,
+  graphClusterColors,
   graphEdgeColor,
   invalidateGraphVisualTokenCache,
   withAlpha,
@@ -19,7 +20,10 @@ import {
 import { GRAPH_ZOOM_TOPIC_MAX } from "@/lib/memoryLayers";
 import { salienceVisualAlpha } from "@/lib/salience";
 import { readVisualSnapshotId } from "@/lib/visualSnapshotMode";
-import { VISUAL_GRAPH_PINNED_POSITIONS } from "@/lib/visualSnapshotFixtures";
+import {
+  COMPANION_NODE_CLUSTER,
+  VISUAL_GRAPH_PINNED_POSITIONS,
+} from "@/lib/visualSnapshotFixtures";
 import { useGraphStore } from "@/stores/graphStore";
 
 const HOVER_SCALE = 1.06;
@@ -29,17 +33,37 @@ const ARCHIVED_OPACITY = 0.35;
 const LINK_DISTANCE_MIN = 36;
 const LINK_DISTANCE_MAX = 140;
 
-interface GraphNode extends NodeObject {
+/** Node payload passed to ForceGraph2D (must match `graphData.nodes` shape). */
+type GraphDatumNode = {
   id: string;
   title: string;
+  intro: string;
   archived: boolean;
   salienceAlpha: number;
   previewGhost?: boolean;
-}
+  hubLevel?: 1 | 2;
+  fx?: number;
+  fy?: number;
+};
 
-interface GraphLink extends LinkObject {
+type GraphDatumLink = {
   id: string;
+  source: string;
+  target: string;
   relationType: string;
+};
+
+type GraphNode = NodeObject<GraphDatumNode>;
+type GraphLink = LinkObject<GraphDatumLink>;
+
+function resolveClusterColor(nodeId: string, companionVisual: boolean): string {
+  if (companionVisual) {
+    const bucket = COMPANION_NODE_CLUSTER[nodeId];
+    if (bucket !== undefined) {
+      return graphClusterColors()[bucket] ?? clusterColorForNodeId(nodeId);
+    }
+  }
+  return clusterColorForNodeId(nodeId);
 }
 
 function nodeVisualState(
@@ -59,9 +83,9 @@ function nodeVisualState(
 
 export function BrainGraphView() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const graphRef = useRef<ForceGraphMethods<GraphNode, GraphLink> | undefined>(
-    undefined,
-  );
+  const graphRef = useRef<
+    ForceGraphMethods<GraphNode, GraphLink> | undefined
+  >(undefined);
   const [dimensions, setDimensions] = useState({ width: 800, height: 520 });
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [hoveredLink, setHoveredLink] = useState<GraphLink | null>(null);
@@ -93,7 +117,9 @@ export function BrainGraphView() {
     return LINK_DISTANCE_MIN + (LINK_DISTANCE_MAX - LINK_DISTANCE_MIN) * t;
   }, [layerDepth]);
 
-  const pinGraphLayout = readVisualSnapshotId() === "companion";
+  const visualSnapshotId = readVisualSnapshotId();
+  const pinGraphLayout = visualSnapshotId === "companion";
+  const isCompanionVisual = visualSnapshotId === "companion";
 
   const graphData = useMemo(
     () => ({
@@ -102,21 +128,28 @@ export function BrainGraphView() {
           const pinned = pinGraphLayout
             ? VISUAL_GRAPH_PINNED_POSITIONS[node.id]
             : undefined;
-          return {
+          const graphNode: GraphDatumNode = {
             id: node.id,
             title: node.title,
+            intro: node.intro,
             archived: node.archived,
             salienceAlpha: salienceVisualAlpha(node),
+            hubLevel: node.hubLevel,
             ...(pinned ? { fx: pinned.x, fy: pinned.y } : {}),
           };
+          return graphNode;
         }),
-        ...previewGhostNodes.map((node) => ({
-          id: node.id,
-          title: node.title,
-          archived: false,
-          previewGhost: true,
-          salienceAlpha: 1,
-        })),
+        ...previewGhostNodes.map((node) => {
+          const graphNode: GraphDatumNode = {
+            id: node.id,
+            title: node.title,
+            intro: node.intro,
+            archived: false,
+            previewGhost: true,
+            salienceAlpha: 1,
+          };
+          return graphNode;
+        }),
       ],
       links: [
         ...edges.map((edge) => ({
@@ -149,11 +182,11 @@ export function BrainGraphView() {
           x: position.x,
           y: position.y,
           archived: node.archived,
-          color: clusterColorForNodeId(node.id),
+          color: resolveClusterColor(node.id, isCompanionVisual),
         };
       })
       .filter((node): node is MinimapNode => node !== null);
-  }, [graphData.nodes, minimapTick]);
+  }, [graphData.nodes, minimapTick, isCompanionVisual]);
 
   useEffect(() => {
     invalidateGraphVisualTokenCache();
@@ -198,9 +231,8 @@ export function BrainGraphView() {
       return;
     }
     const timer = window.setTimeout(() => {
-      graphRef.current?.zoom(1.15, 0);
-      graphRef.current?.centerAt(0, 20, 0);
-    }, 80);
+      graphRef.current?.zoomToFit(320, 72);
+    }, 120);
     return () => window.clearTimeout(timer);
   }, [graphData.nodes.length, pinGraphLayout]);
 
@@ -241,13 +273,15 @@ export function BrainGraphView() {
     <div
       ref={containerRef}
       data-testid="brain-graph-view"
-      className="graph-canvas-shell relative h-full min-h-[420px] w-full overflow-hidden rounded-md border border-hud bg-bg-base/80"
+      className={`graph-canvas-shell relative h-full min-h-[420px] w-full overflow-hidden rounded-md border border-hud bg-bg-base/80${isCompanionVisual ? " graph-canvas-starfield" : ""}`}
     >
-      <div className="pointer-events-none absolute left-4 top-4 z-[1] font-hud text-label uppercase tracking-hud text-muted">
-        大脑星图 · {activeCount} 概念
-        {archivedCount > 0 ? ` · ${archivedCount} 归档` : ""} · {edges.length}{" "}
-        关联
-      </div>
+      {!isCompanionVisual ? (
+        <div className="pointer-events-none absolute left-4 top-4 z-[1] font-hud text-label uppercase tracking-hud text-muted">
+          大脑星图 · {activeCount} 概念
+          {archivedCount > 0 ? ` · ${archivedCount} 归档` : ""} · {edges.length}{" "}
+          关联
+        </div>
+      ) : null}
 
       {graphData.nodes.length === 0 ? (
         <div className="flex h-full items-center justify-center text-body text-muted">
@@ -275,7 +309,9 @@ export function BrainGraphView() {
               setMinimapTick((value) => value + 1);
               // Fit once the simulation settles so we never freeze a half-laid-out
               // (and therefore wildly over-zoomed) view.
-              if (!pinGraphLayout) {
+              if (pinGraphLayout) {
+                graphRef.current?.zoomToFit(400, 72);
+              } else {
                 graphRef.current?.zoomToFit(500, 90);
               }
             }}
@@ -296,14 +332,20 @@ export function BrainGraphView() {
             }}
             linkColor={(link) => {
               const linkId = String((link as GraphLink).id);
-              return highlightedEdgeIds.includes(linkId)
-                ? graphAccentCyan()
-                : graphEdgeColor();
+              if (highlightedEdgeIds.includes(linkId)) {
+                return graphAccentCyan();
+              }
+              if (isCompanionVisual) {
+                return withAlpha(graphAccentCyan(), 0.22);
+              }
+              return graphEdgeColor();
             }}
             linkWidth={(link) =>
               highlightedEdgeIds.includes(String((link as GraphLink).id))
                 ? 2
-                : 1
+                : isCompanionVisual
+                  ? 1.15
+                  : 1
             }
             linkDirectionalArrowLength={4}
             linkDirectionalArrowRelPos={1}
@@ -340,17 +382,23 @@ export function BrainGraphView() {
               );
               const emphasis = visual === "emphasis";
               const scale = emphasis ? HOVER_SCALE : 1;
-              const baseRadius = graphNode.archived
+              const hubLevel = graphNode.hubLevel;
+              let baseRadius = graphNode.archived
                 ? BASE_RADIUS - 1
                 : emphasis
                   ? ACTIVE_RADIUS
                   : BASE_RADIUS;
+              if (!graphNode.archived && hubLevel === 2) {
+                baseRadius = emphasis ? 16 : 14;
+              } else if (!graphNode.archived && hubLevel === 1) {
+                baseRadius = emphasis ? 11 : 9;
+              }
               const radius = baseRadius * scale;
               const x = node.x ?? 0;
               const y = node.y ?? 0;
               const clusterColor = isGhost
                 ? graphAccentCyan()
-                : clusterColorForNodeId(nodeId);
+                : resolveClusterColor(nodeId, isCompanionVisual);
 
               ctx.save();
               const salienceMul = graphNode.salienceAlpha;
@@ -365,17 +413,23 @@ export function BrainGraphView() {
               // Soft radial bloom behind every live node so the starfield glows
               // as a whole, not just on hover. Falls off to fully transparent.
               if (!graphNode.archived) {
-                const bloomRadius = radius * (emphasis ? 5.2 : 3.6);
+                const bloomScale =
+                  hubLevel === 2 ? 7.8 : hubLevel === 1 ? 5.4 : emphasis ? 5.2 : 4.1;
+                const bloomRadius = radius * bloomScale;
+                const bloomCore =
+                  hubLevel === 2 ? 0.62 : hubLevel === 1 ? 0.44 : emphasis ? 0.5 : 0.32;
+                const bloomMid =
+                  hubLevel === 2 ? 0.28 : hubLevel === 1 ? 0.2 : emphasis ? 0.18 : 0.12;
                 const bloom = ctx.createRadialGradient(
                   x,
                   y,
-                  radius * 0.4,
+                  radius * 0.35,
                   x,
                   y,
                   bloomRadius,
                 );
-                bloom.addColorStop(0, withAlpha(clusterColor, emphasis ? 0.5 : 0.28));
-                bloom.addColorStop(0.6, withAlpha(clusterColor, emphasis ? 0.18 : 0.1));
+                bloom.addColorStop(0, withAlpha(clusterColor, bloomCore));
+                bloom.addColorStop(0.55, withAlpha(clusterColor, bloomMid));
                 bloom.addColorStop(1, withAlpha(clusterColor, 0));
                 ctx.beginPath();
                 ctx.arc(x, y, bloomRadius, 0, 2 * Math.PI, false);
@@ -392,14 +446,30 @@ export function BrainGraphView() {
                 ctx.shadowBlur = 22;
               } else if (!graphNode.archived) {
                 ctx.shadowColor = clusterColor;
-                ctx.shadowBlur = 12;
+                ctx.shadowBlur =
+                  hubLevel === 2 ? 28 : hubLevel === 1 ? 18 : 14;
               }
 
               ctx.beginPath();
               ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
               ctx.fillStyle =
-                emphasis && !graphNode.archived ? "#e0f2fe" : clusterColor;
+                emphasis && !graphNode.archived
+                  ? "#e0f2fe"
+                  : hubLevel === 2
+                    ? "#f0f9ff"
+                    : clusterColor;
               ctx.fill();
+
+              if (!graphNode.archived && hubLevel !== undefined) {
+                ctx.beginPath();
+                ctx.arc(x, y, radius + (hubLevel === 2 ? 5 : 3.5), 0, 2 * Math.PI);
+                ctx.strokeStyle = withAlpha(
+                  graphAccentCyan(),
+                  hubLevel === 2 ? 0.75 : 0.45,
+                );
+                ctx.lineWidth = (hubLevel === 2 ? 2.2 : 1.4) / globalScale;
+                ctx.stroke();
+              }
               if (isGhost) {
                 ctx.setLineDash([3 / globalScale, 3 / globalScale]);
                 ctx.lineWidth = 1.5 / globalScale;
@@ -413,16 +483,35 @@ export function BrainGraphView() {
               // with the graph and never balloons relative to the dot, whatever
               // the current zoom. Hide it only when zoomed far out.
               if (globalScale > GRAPH_ZOOM_TOPIC_MAX) {
-                const labelSize = radius * 1.5;
-                ctx.font = `500 ${labelSize}px var(--font-sans)`;
-                ctx.textBaseline = "middle";
-                ctx.fillStyle =
-                  graphNode.archived
-                    ? "rgba(154, 172, 196, 0.55)"
-                    : emphasis
+                const labelSize =
+                  hubLevel === 2
+                    ? radius * 1.35
+                    : hubLevel === 1
+                      ? radius * 1.2
+                      : radius * 1.5;
+                const labelWeight = hubLevel !== undefined ? 600 : 500;
+                ctx.font = `${labelWeight} ${labelSize}px var(--font-sans)`;
+                ctx.textBaseline = hubLevel === 1 ? "bottom" : "middle";
+                ctx.fillStyle = graphNode.archived
+                  ? "rgba(154, 172, 196, 0.55)"
+                  : emphasis
+                    ? "#f8fafc"
+                    : hubLevel === 2
                       ? "#f8fafc"
                       : "#cbd5e1";
-                ctx.fillText(graphNode.title, x + radius + labelSize * 0.4, y);
+                const labelX = x + radius + labelSize * 0.35;
+                const labelY =
+                  hubLevel === 1 && graphNode.intro
+                    ? y - labelSize * 0.15
+                    : y;
+                ctx.fillText(graphNode.title, labelX, labelY);
+                if (hubLevel === 1 && graphNode.intro) {
+                  const subSize = labelSize * 0.62;
+                  ctx.font = `400 ${subSize}px var(--font-sans)`;
+                  ctx.fillStyle = "rgba(148, 163, 184, 0.85)";
+                  ctx.textBaseline = "top";
+                  ctx.fillText(graphNode.intro, labelX, y + labelSize * 0.2);
+                }
               }
               ctx.restore();
             }}

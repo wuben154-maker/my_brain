@@ -12,6 +12,8 @@ export interface ConceptNode {
   salience?: number;
   /** M2: last user/agent touch for decay (defaults to updatedAt). */
   lastTouchedAt?: string;
+  /** Visual snapshot only: 2 = central hub, 1 = sub-hub; omit for leaf nodes. */
+  hubLevel?: 1 | 2;
 }
 
 export interface GraphEdge {

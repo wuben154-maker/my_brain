@@ -180,6 +180,28 @@ body {
       );
   }
 
+  /* Faint star dust behind companion graph canvas (visual snapshot only). */
+  .graph-canvas-starfield::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.35;
+    background-image:
+      radial-gradient(circle, rgba(186, 210, 255, 0.55) 0.6px, transparent 0.7px),
+      radial-gradient(circle, rgba(120, 180, 255, 0.35) 0.5px, transparent 0.6px),
+      radial-gradient(circle, rgba(200, 220, 255, 0.4) 0.45px, transparent 0.55px);
+    background-size:
+      73px 89px,
+      97px 71px,
+      61px 103px;
+    background-position:
+      12px 18px,
+      41px 7px,
+      3px 52px;
+  }
+
   .boot-orb-halo {
     background: radial-gradient(
       circle,
