@@ -1,5 +1,10 @@
-import { useEffect, useRef } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { BootBrainSphere } from "@/components/launch/BootBrainSphere";
+import {
+  BootAmbientTelemetry,
+  BootBottomRibbon,
+  BootTopBar,
+} from "@/components/launch/BootScreenChrome";
 import { VisualBootDiagnostics } from "@/components/launch/VisualBootDiagnostics";
 import { statusLabel } from "@/lib/bootSelfCheck";
 import { readVisualSnapshotId } from "@/lib/visualSnapshotMode";
@@ -8,21 +13,6 @@ import {
   type BootCheckStatus,
   type SelfCheckItem,
 } from "@/stores/appStore";
-
-function NeuralCoreOrb() {
-  return (
-    <div
-      className="relative flex h-44 w-44 shrink-0 items-center justify-center lg:h-56 lg:w-56"
-      aria-hidden
-    >
-      <div className="boot-orb-halo absolute inset-0 rounded-full" />
-      <div className="boot-orb-ring absolute inset-3 rounded-full" />
-      <div className="boot-orb-core relative z-10 flex h-28 w-28 items-center justify-center rounded-full lg:h-32 lg:w-32">
-        <div className="h-14 w-14 rounded-full bg-accent-cyan/20 shadow-glow-cyan lg:h-16 lg:w-16" />
-      </div>
-    </div>
-  );
-}
 
 function CheckStatusIcon({ status }: { status: BootCheckStatus }) {
   if (status === "syncing") {
@@ -109,106 +99,45 @@ function BootCheckRow({ item, index }: { item: SelfCheckItem; index: number }) {
   );
 }
 
-function BootProgressBar() {
-  const progress = useAppStore((state) => state.bootProgress);
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between font-hud text-caption uppercase tracking-hud text-muted">
-        <span>boot progress</span>
-        <span className="text-accent-cyan">{progress}%</span>
-      </div>
-      <div
-        className="h-1 overflow-hidden rounded-full bg-bg-elevated"
-        role="progressbar"
-        aria-valuenow={progress}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      >
-        <div
-          className="boot-progress-fill h-full rounded-full bg-accent-cyan shadow-glow-cyan"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function BootLogStream() {
-  const logs = useAppStore((state) => state.bootLogs);
-  const endRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [logs.length]);
-
-  return (
-    <GlassCard className="max-h-32 overflow-hidden p-0" as="div">
-      <div
-        className="max-h-32 overflow-y-auto px-4 py-3 font-hud text-caption leading-relaxed text-secondary"
-        aria-live="polite"
-        aria-label="系统日志"
-      >
-        {logs.map((line, index) => (
-          <p
-            key={`${index}-${line}`}
-            className={
-              line.startsWith("✓")
-                ? "text-status-ok"
-                : line.startsWith("!")
-                  ? "text-status-warn"
-                  : line.startsWith(">")
-                    ? "text-accent-cyan"
-                    : undefined
-            }
-          >
-            {line}
-          </p>
-        ))}
-        <div ref={endRef} />
-      </div>
-    </GlassCard>
-  );
-}
-
 interface BootSelfCheckProps {
   onSkipVoice?: () => void;
 }
 
-/** MVP boot screen — orb, staggered diagnostics, progress, log stream. */
+/** Full-bleed sci-fi boot screen — grid layout fits 1440×900 without clipping. */
 export function BootSelfCheck({ onSkipVoice }: BootSelfCheckProps) {
   const checks = useAppStore((state) => state.selfChecks);
+  const logs = useAppStore((state) => state.bootLogs);
   const visualBoot = readVisualSnapshotId() === "boot";
 
   return (
     <section
       data-testid="boot-self-check"
-      className="relative flex h-full min-h-[560px] flex-col overflow-hidden"
+      className="boot-screen relative h-full min-h-0 overflow-hidden"
     >
-      <div className="boot-ambient pointer-events-none absolute inset-0" aria-hidden />
+      <div className="boot-cosmic-bg pointer-events-none absolute inset-0" aria-hidden />
+      <div className="boot-grid-floor pointer-events-none absolute inset-x-0 bottom-[18%]" aria-hidden />
 
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-10 px-8 py-10 lg:flex-row lg:items-center lg:justify-center lg:gap-20">
-        <NeuralCoreOrb />
+      <BootTopBar />
 
-        <div className="w-full max-w-lg space-y-5">
-          <header className="text-center lg:text-left">
-            <h1 className="font-hud text-display font-medium uppercase tracking-hud text-accent-cyan">
-              INITIALIZING SECOND BRAIN
-            </h1>
-            <p className="mt-3 text-h2 font-medium text-primary">系统自检</p>
-            <p className="mt-2 text-body text-secondary">
-              正在确认语音、网络与本地大脑是否就绪…
-            </p>
-          </header>
+      <main className="boot-main">
+        <BootAmbientTelemetry />
 
+        <div className="boot-hero-col">
+          <BootBrainSphere />
+        </div>
+
+        <div className="boot-diag-col">
           {visualBoot ? (
             <VisualBootDiagnostics />
           ) : (
-            <GlassCard active className="p-4" data-testid="boot-diagnostics">
+            <GlassCard active className="h-full p-4" data-testid="boot-diagnostics">
               <p className="mb-3 font-hud text-label uppercase tracking-hud text-muted">
-                诊断清单
+                System Diagnostics
               </p>
-              <ul className="space-y-1">
+              <p className="mb-3 text-caption text-secondary">
+                Pre-flight check in progress
+              </p>
+              <ul className="space-y-1 overflow-y-auto">
                 {checks.map((item, index) => (
                   <BootCheckRow key={item.id} item={item} index={index} />
                 ))}
@@ -216,24 +145,9 @@ export function BootSelfCheck({ onSkipVoice }: BootSelfCheckProps) {
             </GlassCard>
           )}
         </div>
-      </div>
+      </main>
 
-      <footer className="relative z-10 mx-auto w-full max-w-3xl space-y-4 px-6 pb-8">
-        {onSkipVoice ? (
-          <div className="flex justify-end">
-            <button
-              type="button"
-              data-testid="boot-skip-voice"
-              className="font-hud text-caption uppercase tracking-hud text-muted transition-colors hover:text-accent-cyan"
-              onClick={onSkipVoice}
-            >
-              跳过语音播报
-            </button>
-          </div>
-        ) : null}
-        <BootProgressBar />
-        <BootLogStream />
-      </footer>
+      <BootBottomRibbon logs={logs} onSkipVoice={onSkipVoice} />
     </section>
   );
 }

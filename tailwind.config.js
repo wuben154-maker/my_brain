@@ -85,6 +85,10 @@ export default {
       animation: {
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         "sync-spin": "sync-spin 1.2s linear infinite",
+        "brain-spin": "brain-spin 48s linear infinite",
+        "beam-pulse": "beam-pulse 2.8s ease-in-out infinite",
+        "radar-sweep": "radar-sweep 4s linear infinite",
+        "particle-drift": "particle-drift 3s ease-in-out infinite",
       },
       keyframes: {
         "pulse-glow": {
@@ -93,6 +97,20 @@ export default {
         },
         "sync-spin": {
           to: { transform: "rotate(360deg)" },
+        },
+        "brain-spin": {
+          to: { transform: "rotate(360deg)" },
+        },
+        "beam-pulse": {
+          "0%, 100%": { opacity: "0.35", transform: "scaleY(0.92)" },
+          "50%": { opacity: "1", transform: "scaleY(1)" },
+        },
+        "radar-sweep": {
+          to: { transform: "rotate(360deg)" },
+        },
+        "particle-drift": {
+          "0%, 100%": { opacity: "0.2", transform: "translateY(0)" },
+          "50%": { opacity: "0.9", transform: "translateY(-6px)" },
         },
       },
     },

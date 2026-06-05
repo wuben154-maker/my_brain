@@ -74,16 +74,22 @@ export function VisualBootDiagnostics() {
         </p>
       </header>
 
-      <div className="relative z-10 mb-4">
-        <div className="relative h-2 overflow-hidden rounded-full bg-bg-elevated">
+      <div className="relative z-10 mb-3 flex items-center gap-3">
+        <div
+          className="relative h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-bg-elevated"
+          role="progressbar"
+          aria-valuenow={progress}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
           <div
-            className="h-full rounded-full bg-accent-cyan shadow-glow-cyan"
+            className="boot-progress-fill h-full rounded-full bg-accent-cyan shadow-glow-cyan"
             style={{ width: `${progress}%` }}
           />
-          <span className="absolute right-0 top-1/2 -translate-y-1/2 pr-1 font-hud text-[0.625rem] text-accent-cyan">
-            {progress}%
-          </span>
         </div>
+        <span className="shrink-0 font-hud text-[0.75rem] tabular-nums text-accent-cyan">
+          {progress}%
+        </span>
       </div>
 
       <ul className="relative z-10">
