@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState } from "react";
 
 function useLiveClock() {
   const [now, setNow] = useState(() => new Date());
@@ -116,7 +116,7 @@ function BootLogStream({ logs }: BootLogStreamProps) {
   }, [logs.length]);
 
   return (
-    <div className="boot-log-panel" aria-live="polite" aria-label="系统日志">
+    <div className="boot-ribbon-glass boot-log-panel" aria-live="polite" aria-label="系统日志">
       <p className="boot-ribbon-label">SYSTEM LOG</p>
       <div className="boot-log-scroll">
         {logs.map((line, index) => (
@@ -154,7 +154,7 @@ export function BootBottomRibbon({
 }) {
   return (
     <footer className="boot-bottom-ribbon">
-      <div className="boot-ribbon-quote" aria-hidden>
+      <div className="boot-ribbon-glass boot-ribbon-quote" aria-hidden>
         <div className="boot-quote-icosahedron" />
         <blockquote className="boot-quote-text">
           &ldquo;The mind is not a vessel to be filled, but a fire to be kindled.&rdquo;
@@ -162,7 +162,7 @@ export function BootBottomRibbon({
         </blockquote>
       </div>
 
-      <div className="boot-ribbon-objectives" aria-hidden>
+      <div className="boot-ribbon-glass boot-ribbon-objectives" aria-hidden>
         <p className="boot-ribbon-label">ACTIVE OBJECTIVE</p>
         <ul className="boot-objective-list">
           <li>Organize knowledge</li>
@@ -171,11 +171,21 @@ export function BootBottomRibbon({
         </ul>
       </div>
 
-      <div className="boot-ribbon-services" aria-hidden>
+      <div className="boot-ribbon-glass boot-ribbon-services" aria-hidden>
         <p className="boot-ribbon-label">CONNECTED SERVICES</p>
         <div className="boot-service-icons">
-          {["N", "G", "S", "X", "D", "L", "M"].map((glyph, i) => (
-            <span key={i} className="boot-service-icon" style={{ "--hue": i * 42 } as CSSProperties}>
+          {(
+            [
+              { glyph: "N", brand: "notion" },
+              { glyph: "G", brand: "drive" },
+              { glyph: "S", brand: "slack" },
+              { glyph: "X", brand: "twitter" },
+              { glyph: "D", brand: "discord" },
+              { glyph: "L", brand: "linkedin" },
+              { glyph: "M", brand: "microsoft" },
+            ] as const
+          ).map(({ glyph, brand }) => (
+            <span key={brand} className={`boot-service-icon boot-service-${brand}`}>
               {glyph}
             </span>
           ))}

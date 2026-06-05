@@ -36,10 +36,15 @@ export function BootBrainSphere() {
           xmlns="http://www.w3.org/2000/svg"
         >
           <defs>
-            <radialGradient id="bootSphereGlow" cx="50%" cy="48%" r="52%">
-              <stop offset="0%" stopColor="rgba(120,235,255,0.55)" />
-              <stop offset="38%" stopColor="rgba(34,211,238,0.28)" />
-              <stop offset="72%" stopColor="rgba(34,150,238,0.12)" />
+            <radialGradient id="bootSphereGlow" cx="50%" cy="46%" r="54%">
+              <stop offset="0%" stopColor="rgba(80,245,255,0.62)" />
+              <stop offset="28%" stopColor="rgba(34,211,238,0.38)" />
+              <stop offset="58%" stopColor="rgba(34,180,238,0.16)" />
+              <stop offset="100%" stopColor="transparent" />
+            </radialGradient>
+            <radialGradient id="bootCorePulse" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="rgba(120,250,255,0.75)" />
+              <stop offset="45%" stopColor="rgba(34,211,238,0.35)" />
               <stop offset="100%" stopColor="transparent" />
             </radialGradient>
             <radialGradient id="bootSphereRim" cx="50%" cy="50%" r="50%">
@@ -47,8 +52,8 @@ export function BootBrainSphere() {
               <stop offset="94%" stopColor="rgba(34,211,238,0.16)" />
               <stop offset="100%" stopColor="rgba(120,235,255,0.4)" />
             </radialGradient>
-            <filter id="bootSphereBloom" x="-40%" y="-40%" width="180%" height="180%">
-              <feGaussianBlur stdDeviation="2.4" result="blur" />
+            <filter id="bootHexGlow" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="1.2" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
                 <feMergeNode in="SourceGraphic" />
@@ -101,11 +106,14 @@ export function BootBrainSphere() {
             ))}
           </g>
 
+          {/* Tight core bloom — kept separate from hex so the N stays crisp */}
+          <circle cx={CENTER} cy={CENTER} r="22" fill="url(#bootCorePulse)" className="boot-brain-core-glow" />
+
           {/* Hex "N" core */}
           <polygon
             points="100,80 114,88 114,112 100,120 86,112 86,88"
             className="boot-brain-hex"
-            filter="url(#bootSphereBloom)"
+            filter="url(#bootHexGlow)"
           />
           <polygon
             points="100,86 109,91 109,109 100,114 91,109 91,91"
