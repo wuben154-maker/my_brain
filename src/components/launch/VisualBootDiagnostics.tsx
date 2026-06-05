@@ -26,9 +26,62 @@ function DesignCheckIcon({ status, index }: { status: BootCheckStatus; index: nu
   );
 }
 
-function DesignCheckRow({ item, index }: { item: SelfCheckItem; index: number }) {
+function DesignStatusPill({ status }: { status: BootCheckStatus }) {
+  if (status === "ok") {
+    return (
+      <span className="visual-boot-pill visual-boot-pill-ok">
+        <span className="visual-boot-pill-check" aria-hidden>
+          ✓
+        </span>
+        OK
+      </span>
+    );
+  }
+
+  if (status === "syncing") {
+    return (
+      <span className="visual-boot-pill visual-boot-pill-syncing">
+        <span
+          className="h-3 w-3 animate-sync-spin rounded-full border-[1.5px] border-status-syncing border-t-transparent"
+          aria-hidden
+        />
+        SYNCING
+      </span>
+    );
+  }
+
+  if (status === "warn") {
+    return (
+      <span className="visual-boot-pill visual-boot-pill-warn">
+        <span className="visual-boot-pill-check" aria-hidden>
+          !
+        </span>
+        WARN
+      </span>
+    );
+  }
+
   return (
-    <li className="visual-boot-row flex items-center gap-3 border-b border-hud/60 py-2.5 last:border-b-0">
+    <span className="visual-boot-pill visual-boot-pill-pending">
+      <span className="visual-boot-pill-clock" aria-hidden>
+        ◷
+      </span>
+      PENDING
+    </span>
+  );
+}
+
+function DesignCheckRow({ item, index }: { item: SelfCheckItem; index: number }) {
+  const dim = item.status === "pending";
+  return (
+    <li
+      className={[
+        "visual-boot-row flex items-center gap-3 border-b border-hud/40 py-2.5 last:border-b-0",
+        dim ? "opacity-55" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <DesignCheckIcon status={item.status} index={index} />
       <div className="min-w-0 flex-1">
         <p className="text-[0.8125rem] font-medium leading-tight text-primary">
@@ -40,16 +93,8 @@ function DesignCheckRow({ item, index }: { item: SelfCheckItem; index: number })
           </p>
         ) : null}
       </div>
-      <div className="flex w-8 shrink-0 items-center justify-end">
-        {item.status === "ok" ? (
-          <span className="flex h-5 w-5 items-center justify-center rounded-full border border-status-ok/40 bg-status-ok/10 text-[0.625rem] text-status-ok">
-            ✓
-          </span>
-        ) : item.status === "syncing" ? (
-          <span className="font-hud text-[0.625rem] uppercase tracking-hud text-status-syncing">
-            SYNCING
-          </span>
-        ) : null}
+      <div className="flex shrink-0 items-center justify-end">
+        <DesignStatusPill status={item.status} />
       </div>
     </li>
   );

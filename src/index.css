@@ -182,18 +182,24 @@ body {
   .boot-cosmic-bg {
     background-color: #040b16;
     background-image:
-      radial-gradient(ellipse 90% 60% at 22% 35%, rgba(34, 211, 238, 0.09), transparent 58%),
-      radial-gradient(ellipse 70% 50% at 78% 22%, rgba(59, 130, 246, 0.1), transparent 55%),
-      radial-gradient(ellipse 55% 40% at 50% 85%, rgba(99, 102, 241, 0.06), transparent 50%),
-      radial-gradient(circle, rgba(186, 210, 255, 0.45) 0.5px, transparent 0.6px),
-      radial-gradient(circle, rgba(120, 180, 255, 0.3) 0.4px, transparent 0.5px);
+      radial-gradient(ellipse 60% 55% at 50% 46%, rgba(34, 211, 238, 0.16), transparent 60%),
+      radial-gradient(ellipse 85% 60% at 20% 30%, rgba(99, 102, 241, 0.16), transparent 58%),
+      radial-gradient(ellipse 75% 55% at 82% 24%, rgba(139, 92, 246, 0.14), transparent 56%),
+      radial-gradient(ellipse 70% 50% at 78% 80%, rgba(59, 130, 246, 0.12), transparent 55%),
+      radial-gradient(ellipse 60% 45% at 25% 82%, rgba(124, 58, 237, 0.1), transparent 52%),
+      radial-gradient(circle, rgba(186, 210, 255, 0.5) 0.5px, transparent 0.6px),
+      radial-gradient(circle, rgba(150, 180, 255, 0.32) 0.4px, transparent 0.5px);
     background-size:
+      auto,
+      auto,
       auto,
       auto,
       auto,
       73px 89px,
       97px 71px;
     background-position:
+      0 0,
+      0 0,
       0 0,
       0 0,
       0 0,
@@ -362,9 +368,14 @@ body {
 
   .boot-telemetry-card {
     padding: var(--space-2) var(--space-3);
-    border: 1px solid rgba(120, 160, 220, 0.12);
+    border: 1px solid rgba(90, 150, 220, 0.28);
     border-radius: var(--radius-sm);
-    background: rgba(8, 14, 26, 0.45);
+    background: linear-gradient(160deg, rgba(22, 36, 60, 0.55), rgba(8, 14, 26, 0.45));
+    box-shadow:
+      inset 0 1px 0 rgba(150, 220, 255, 0.07),
+      inset 0 0 20px rgba(34, 120, 200, 0.08),
+      0 6px 18px rgba(2, 8, 20, 0.4);
+    backdrop-filter: blur(10px);
   }
 
   .boot-telemetry-label {
@@ -466,11 +477,83 @@ body {
     overflow-y: auto;
   }
 
+  /* Stronger glassmorphism so the panel reads as glass over the cosmic field. */
+  .visual-boot-panel {
+    background:
+      linear-gradient(160deg, rgba(24, 38, 64, 0.62), rgba(10, 16, 30, 0.5));
+    border: 1px solid rgba(90, 150, 220, 0.32);
+    box-shadow:
+      0 0 0 1px rgba(34, 211, 238, 0.06),
+      inset 0 1px 0 rgba(150, 220, 255, 0.08),
+      inset 0 0 36px rgba(34, 120, 200, 0.1),
+      0 18px 48px rgba(2, 8, 20, 0.55),
+      0 0 28px rgba(34, 211, 238, 0.12);
+    backdrop-filter: blur(18px);
+  }
+
+  /* Diagnostics status pills */
+  .visual-boot-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-hud);
+    font-size: 0.625rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .visual-boot-pill-check,
+  .visual-boot-pill-clock {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    font-size: 0.5rem;
+    line-height: 1;
+  }
+
+  .visual-boot-pill-ok {
+    color: var(--status-ok);
+  }
+
+  .visual-boot-pill-ok .visual-boot-pill-check {
+    color: var(--status-ok);
+    border: 1px solid rgba(52, 211, 153, 0.55);
+    background: rgba(52, 211, 153, 0.14);
+    box-shadow: 0 0 8px rgba(52, 211, 153, 0.3);
+  }
+
+  .visual-boot-pill-syncing {
+    color: var(--status-syncing);
+  }
+
+  .visual-boot-pill-warn {
+    color: var(--status-warn);
+  }
+
+  .visual-boot-pill-warn .visual-boot-pill-check {
+    color: var(--status-warn);
+    border: 1px solid rgba(251, 191, 36, 0.55);
+    background: rgba(251, 191, 36, 0.14);
+  }
+
+  .visual-boot-pill-pending {
+    color: var(--text-muted);
+  }
+
+  .visual-boot-pill-pending .visual-boot-pill-clock {
+    color: var(--text-muted);
+    font-size: 0.6875rem;
+  }
+
   /* Brain sphere hero */
   .boot-brain-sphere {
     position: relative;
-    width: min(46vw, 420px);
-    height: min(52vh, 460px);
+    width: min(54vw, 520px);
+    height: min(64vh, 560px);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -479,9 +562,10 @@ body {
 
   .boot-brain-orb-wrap {
     position: relative;
-    width: min(40vw, 320px);
+    width: min(50vw, 430px);
     aspect-ratio: 1;
     z-index: 2;
+    filter: drop-shadow(0 0 26px rgba(34, 211, 238, 0.32));
   }
 
   .boot-brain-wireframe {
@@ -492,64 +576,114 @@ body {
   .boot-brain-svg {
     width: 100%;
     height: 100%;
+    overflow: visible;
   }
 
   .boot-brain-lat,
   .boot-brain-lon {
-    stroke: rgba(34, 211, 238, 0.45);
-    stroke-width: 0.6;
+    stroke: rgba(80, 224, 255, 0.6);
+    stroke-width: 0.7;
     vector-effect: non-scaling-stroke;
   }
 
   .boot-brain-lon {
-    stroke: rgba(34, 211, 238, 0.32);
+    stroke: rgba(60, 200, 250, 0.42);
+  }
+
+  .boot-brain-outline {
+    stroke: rgba(120, 235, 255, 0.75);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+    filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.6));
   }
 
   .boot-brain-node {
-    fill: var(--accent-cyan);
-    filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.8));
+    fill: rgba(150, 240, 255, 0.95);
+    filter: drop-shadow(0 0 5px rgba(80, 224, 255, 0.95));
   }
 
   .boot-brain-hex {
-    fill: rgba(8, 18, 32, 0.85);
+    fill: rgba(6, 16, 30, 0.9);
     stroke: var(--accent-cyan);
-    stroke-width: 1.2;
+    stroke-width: 1.6;
+  }
+
+  .boot-brain-hex-inner {
+    fill: none;
+    stroke: rgba(120, 235, 255, 0.55);
+    stroke-width: 0.8;
   }
 
   .boot-brain-glyph {
-    fill: var(--accent-cyan);
+    fill: rgba(170, 245, 255, 0.95);
     font-family: var(--font-hud);
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 15px;
+    font-weight: 700;
   }
 
   .boot-brain-beam {
     position: absolute;
     left: 50%;
-    width: 3px;
+    width: 4px;
     transform: translateX(-50%);
     background: linear-gradient(
       to bottom,
       transparent,
-      rgba(34, 211, 238, 0.9),
-      rgba(34, 211, 238, 0.2),
+      rgba(150, 240, 255, 0.95),
+      rgba(34, 211, 238, 0.4),
       transparent
     );
-    box-shadow: 0 0 20px rgba(34, 211, 238, 0.6);
-    z-index: 1;
+    box-shadow:
+      0 0 18px rgba(34, 211, 238, 0.85),
+      0 0 36px rgba(34, 211, 238, 0.45);
+    z-index: 3;
     animation: beam-pulse 2.8s ease-in-out infinite;
   }
 
   .boot-brain-beam-up {
-    bottom: 58%;
-    height: 28%;
+    bottom: 56%;
+    height: 34%;
     transform-origin: bottom center;
   }
 
   .boot-brain-beam-down {
-    top: 58%;
-    height: 22%;
+    top: 54%;
+    height: 30%;
     transform-origin: top center;
+  }
+
+  /* Bright glowing apex point at top of the beam */
+  .boot-brain-apex {
+    position: absolute;
+    left: 50%;
+    top: 8%;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, #ffffff, rgba(150, 240, 255, 0.9) 45%, transparent 75%);
+    box-shadow:
+      0 0 16px rgba(150, 240, 255, 0.95),
+      0 0 32px rgba(34, 211, 238, 0.6);
+    z-index: 4;
+    animation: beam-pulse 2.8s ease-in-out infinite;
+  }
+
+  /* Bright convergence point where the lower beam meets the projector base */
+  .boot-brain-converge {
+    position: absolute;
+    left: 50%;
+    bottom: 22%;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    transform: translate(-50%, 50%);
+    background: radial-gradient(circle, #ffffff, rgba(150, 240, 255, 0.85) 40%, transparent 72%);
+    box-shadow:
+      0 0 20px rgba(150, 240, 255, 0.95),
+      0 0 44px rgba(34, 211, 238, 0.7);
+    z-index: 4;
+    animation: beam-pulse 2.8s ease-in-out 0.3s infinite;
   }
 
   .boot-brain-particles {
@@ -584,32 +718,34 @@ body {
   .boot-brain-ring {
     position: absolute;
     left: 50%;
-    border: 1px solid rgba(34, 211, 238, 0.25);
+    border: 1px solid rgba(80, 224, 255, 0.45);
     border-radius: 50%;
     transform: translateX(-50%);
-    box-shadow: 0 0 16px rgba(34, 211, 238, 0.12);
+    box-shadow:
+      0 0 22px rgba(34, 211, 238, 0.28),
+      inset 0 0 18px rgba(34, 211, 238, 0.18);
   }
 
   .boot-brain-ring-1 {
     bottom: 0;
-    width: 88%;
-    height: 22%;
+    width: 96%;
+    height: 24%;
     animation: orb-breathe 3s ease-in-out infinite;
   }
 
   .boot-brain-ring-2 {
-    bottom: 8%;
-    width: 62%;
-    height: 16%;
-    border-color: rgba(34, 211, 238, 0.18);
+    bottom: 7%;
+    width: 68%;
+    height: 17%;
+    border-color: rgba(80, 224, 255, 0.34);
     animation: orb-breathe 3s ease-in-out 0.4s infinite;
   }
 
   .boot-brain-ring-3 {
-    bottom: 14%;
-    width: 38%;
-    height: 10%;
-    border-color: rgba(34, 211, 238, 0.12);
+    bottom: 13%;
+    width: 42%;
+    height: 11%;
+    border-color: rgba(80, 224, 255, 0.24);
     animation: orb-breathe 3s ease-in-out 0.8s infinite;
   }
 
@@ -1078,14 +1214,21 @@ html[data-visual-snapshot] .boot-check-done {
 
 html[data-visual-snapshot] .boot-orb-halo,
 html[data-visual-snapshot] .boot-orb-ring,
-html[data-visual-snapshot] .boot-brain-wireframe,
-html[data-visual-snapshot] .boot-brain-orb-wrap,
-html[data-visual-snapshot] .boot-brain-beam,
-html[data-visual-snapshot] .boot-brain-ring,
 html[data-visual-snapshot] .boot-radar-sweep,
 html[data-visual-snapshot] .boot-brain-particle {
   animation: none !important;
   opacity: 0.85 !important;
+}
+
+/* Freeze sphere motion but keep it full-brightness for the snapshot. */
+html[data-visual-snapshot] .boot-brain-wireframe,
+html[data-visual-snapshot] .boot-brain-orb-wrap,
+html[data-visual-snapshot] .boot-brain-beam,
+html[data-visual-snapshot] .boot-brain-apex,
+html[data-visual-snapshot] .boot-brain-converge,
+html[data-visual-snapshot] .boot-brain-ring {
+  animation: none !important;
+  opacity: 1 !important;
 }
 
 html[data-visual-snapshot] .boot-orb-halo,
@@ -1096,7 +1239,7 @@ html[data-visual-snapshot] .boot-orb-ring {
 html[data-visual-snapshot="boot"] .visual-boot-panel {
   position: relative;
   overflow: hidden;
-  min-width: 560px;
+  min-width: 0;
 }
 
 html[data-visual-snapshot="boot"] .visual-boot-panel::before {

@@ -129,6 +129,24 @@ export const VISUAL_BOOT_CHECKS: SelfCheckItem[] = [
     detail: "Fetching latest global updates",
     status: "syncing",
   },
+  {
+    id: "vault",
+    label: "User Data Vault",
+    detail: "Verifying personal data integrity",
+    status: "pending",
+  },
+  {
+    id: "plugins",
+    label: "Plugins & Extensions",
+    detail: "Loading installed modules",
+    status: "pending",
+  },
+  {
+    id: "security",
+    label: "Security Protocols",
+    detail: "Establishing secure enclave",
+    status: "pending",
+  },
 ];
 
 export const VISUAL_BOOT_LOGS = [
