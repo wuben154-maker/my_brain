@@ -29,7 +29,7 @@ export function TopBar() {
       <div className="relative mx-2 hidden max-w-xl flex-1 items-center md:flex">
         <svg
           viewBox="0 0 24 24"
-          className="pointer-events-none absolute left-3 h-4 w-4 text-muted"
+          className="pointer-events-none absolute left-4 h-4 w-4 text-muted"
           fill="none"
           stroke="currentColor"
           strokeWidth="1.6"
@@ -42,11 +42,11 @@ export function TopBar() {
           type="search"
           placeholder="搜索知识、概念、文档…"
           aria-label="搜索知识、概念、文档"
-          className="w-full rounded-sm border border-hud bg-bg-overlay/60 py-2 pl-9 pr-3 text-body text-primary placeholder:text-muted focus:border-hud-active focus:outline-none"
+          className="w-full rounded-full border border-hud bg-bg-overlay/60 py-2 pl-10 pr-4 text-body text-primary placeholder:text-muted focus:border-hud-active focus:outline-none"
         />
       </div>
 
-      <div className="ml-auto flex items-center gap-3">
+      <div className="ml-auto flex items-center gap-2">
         <span className="hidden items-center gap-2 rounded-full border border-hud bg-bg-panel px-3 py-1.5 sm:flex">
           <span className="font-hud text-label uppercase tracking-hud text-secondary">
             智能模式
@@ -56,26 +56,44 @@ export function TopBar() {
           </span>
         </span>
 
-        {[0, 1].map((key) => (
-          <button key={key} type="button" className="graph-hud-btn" aria-hidden>
-            <svg
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-            >
-              {key === 0 ? (
-                <>
-                  <path d="M12 3v2M12 19v2M3 12h2M19 12h2" />
-                  <circle cx="12" cy="12" r="5" />
-                </>
-              ) : (
-                <path d="M6 8h12M6 12h12M6 16h8" />
-              )}
-            </svg>
-          </button>
-        ))}
+        <button type="button" className="graph-hud-btn" aria-label="智能助手">
+          <svg
+            viewBox="0 0 24 24"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            aria-hidden
+          >
+            <path d="M12 2 3 7v10l9 5 9-5V7z" />
+          </svg>
+        </button>
+        <button type="button" className="graph-hud-btn" aria-label="收藏">
+          <svg
+            viewBox="0 0 24 24"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            aria-hidden
+          >
+            <path d="m12 2 2.4 7.2H22l-6 4.6 2.3 7.2L12 17l-6.3 4 2.3-7.2-6-4.6h7.6z" />
+          </svg>
+        </button>
+        <button type="button" className="graph-hud-btn relative" aria-label="通知">
+          <svg
+            viewBox="0 0 24 24"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            aria-hidden
+          >
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+          <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-status-warn shadow-glow-cyan" />
+        </button>
 
         <span className="flex h-8 w-8 items-center justify-center rounded-full border border-hud-active bg-bg-panel font-hud text-label text-accent-cyan">
           N

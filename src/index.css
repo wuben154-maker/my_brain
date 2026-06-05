@@ -160,6 +160,26 @@ body {
       );
   }
 
+  .companion-nebula {
+    background-color: var(--bg-base);
+    background-image:
+      radial-gradient(
+        ellipse 80% 55% at 18% 42%,
+        rgba(34, 211, 238, 0.07),
+        transparent 62%
+      ),
+      radial-gradient(
+        ellipse 70% 50% at 72% 28%,
+        rgba(59, 130, 246, 0.08),
+        transparent 58%
+      ),
+      radial-gradient(
+        ellipse 60% 45% at 55% 78%,
+        rgba(167, 139, 250, 0.05),
+        transparent 55%
+      );
+  }
+
   .boot-orb-halo {
     background: radial-gradient(
       circle,
