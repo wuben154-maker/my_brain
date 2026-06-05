@@ -12,12 +12,15 @@ interface GraphMinimapProps {
   nodes: MinimapNode[];
   width?: number;
   height?: number;
+  /** When true, omit absolute positioning (parent stack handles layout). */
+  embedded?: boolean;
 }
 
 export function GraphMinimap({
   nodes,
   width = 128,
   height = 88,
+  embedded = false,
 }: GraphMinimapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -87,7 +90,12 @@ export function GraphMinimap({
 
   return (
     <div
-      className="graph-minimap absolute bottom-20 left-4 z-[2]"
+      data-testid="graph-minimap"
+      className={
+        embedded
+          ? "graph-minimap shrink-0"
+          : "graph-minimap absolute bottom-4 left-4 z-[2]"
+      }
       aria-label="图谱小地图"
     >
       <canvas ref={canvasRef} className="rounded-sm" />

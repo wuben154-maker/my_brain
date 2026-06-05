@@ -162,40 +162,46 @@ export const VISUAL_INBOX_ENVELOPE: ProposalEnvelope = {
 };
 
 /** Pinned layout for `?visual=companion` hub-and-spoke knowledge graph captures. */
+/** Pull leaf coords inward so labels stay inside the companion graph pane at default zoom. */
+function companionPin(x: number, y: number): { x: number; y: number } {
+  const scale = 0.7;
+  return { x: Math.round(x * scale), y: Math.round(y * scale) };
+}
+
 export const VISUAL_GRAPH_PINNED_POSITIONS: Record<
   string,
   { x: number; y: number }
 > = {
-  "vis-ai": { x: 0, y: 8 },
-  "vis-ml": { x: -108, y: -82 },
-  "vis-cv": { x: 128, y: -72 },
-  "vis-nlp": { x: -92, y: 118 },
-  "vis-rl": { x: 112, y: 122 },
-  "vis-supervised": { x: -198, y: -148 },
-  "vis-unsupervised": { x: -172, y: -112 },
-  "vis-semisupervised": { x: -218, y: -92 },
-  "vis-ensemble": { x: -152, y: -168 },
-  "vis-dt": { x: -188, y: -52 },
-  "vis-fe": { x: -228, y: -32 },
-  "vis-eval": { x: -162, y: -22 },
-  "vis-nn": { x: -92, y: -152 },
-  "vis-transformer": { x: -48, y: -128 },
-  "vis-imgcls": { x: 208, y: -138 },
-  "vis-det": { x: 192, y: -92 },
-  "vis-seg": { x: 218, y: -48 },
-  "vis-3d": { x: 172, y: -152 },
-  "vis-face": { x: 238, y: -108 },
-  "vis-wordvec": { x: -192, y: 172 },
-  "vis-txtgen": { x: -162, y: 142 },
-  "vis-mt": { x: -208, y: 102 },
-  "vis-sent": { x: -138, y: 192 },
-  "vis-ner": { x: -222, y: 142 },
-  "vis-qa": { x: -172, y: 208 },
-  "vis-ql": { x: 198, y: 182 },
-  "vis-pg": { x: 172, y: 152 },
-  "vis-dqn": { x: 218, y: 138 },
-  "vis-mcts": { x: 192, y: 208 },
-  "vis-marl": { x: 238, y: 168 },
+  "vis-ai": { x: 0, y: 6 },
+  "vis-ml": companionPin(-108, -82),
+  "vis-cv": companionPin(128, -72),
+  "vis-nlp": companionPin(-92, 118),
+  "vis-rl": companionPin(112, 122),
+  "vis-supervised": companionPin(-198, -148),
+  "vis-unsupervised": companionPin(-172, -112),
+  "vis-semisupervised": companionPin(-218, -92),
+  "vis-ensemble": companionPin(-152, -168),
+  "vis-dt": companionPin(-188, -52),
+  "vis-fe": companionPin(-228, -32),
+  "vis-eval": companionPin(-162, -22),
+  "vis-nn": companionPin(-92, -152),
+  "vis-transformer": companionPin(-48, -128),
+  "vis-imgcls": companionPin(208, -138),
+  "vis-det": companionPin(192, -92),
+  "vis-seg": companionPin(218, -48),
+  "vis-3d": companionPin(172, -152),
+  "vis-face": companionPin(238, -108),
+  "vis-wordvec": companionPin(-192, 172),
+  "vis-txtgen": companionPin(-162, 142),
+  "vis-mt": companionPin(-208, 102),
+  "vis-sent": companionPin(-138, 192),
+  "vis-ner": companionPin(-222, 142),
+  "vis-qa": companionPin(-172, 208),
+  "vis-ql": companionPin(198, 182),
+  "vis-pg": companionPin(172, 152),
+  "vis-dqn": companionPin(218, 138),
+  "vis-mcts": companionPin(192, 208),
+  "vis-marl": companionPin(238, 168),
 };
 
 interface CompanionNodeSeed {

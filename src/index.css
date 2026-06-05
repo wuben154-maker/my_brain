@@ -113,9 +113,20 @@ body {
     accent-color: var(--accent-cyan);
   }
 
+  .graph-layer-range-companion {
+    height: 132px;
+    background: transparent;
+  }
+
   .graph-minimap canvas {
     border: var(--border-hud);
     box-shadow: var(--glow-soft);
+    border-radius: var(--radius-sm);
+  }
+
+  .graph-minimap.embedded canvas,
+  .graph-minimap.shrink-0 canvas {
+    display: block;
   }
 
   .glass-card {

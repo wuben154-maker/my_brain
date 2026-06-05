@@ -11,7 +11,6 @@ import {
   VISUAL_VOICE_TRANSCRIPTS,
 } from "@/lib/visualSnapshotFixtures";
 import { isVisualSnapshotMode } from "@/lib/visualSnapshotMode";
-import { useGraphStore } from "@/stores/graphStore";
 
 const TRANSCRIPT_TIMESTAMPS = ["14:28", "14:29", "14:31", "14:32"] as const;
 
@@ -19,31 +18,8 @@ function formatTranscriptTime(index: number): string {
   return TRANSCRIPT_TIMESTAMPS[index % TRANSCRIPT_TIMESTAMPS.length] ?? "14:30";
 }
 
-/** Presentational graph pane overlays — title, toolbar, stats. */
+/** Presentational graph pane overlays — title, toolbar. */
 function GraphPaneChrome() {
-  const visualSnapshot = isVisualSnapshotMode();
-  const nodes = useGraphStore((state) => state.nodes);
-  const edges = useGraphStore((state) => state.edges);
-  const activeNodes = nodes.filter((node) => !node.archived).length;
-
-  const stats = useMemo(() => {
-    if (visualSnapshot) {
-      return {
-        concepts: "1,386",
-        edges: "4,892",
-        docs: "256",
-        depth: "6",
-      };
-    }
-    return {
-      concepts:
-        activeNodes > 0 ? activeNodes.toLocaleString() : "1,386",
-      edges: edges.length > 0 ? edges.length.toLocaleString() : "4,892",
-      docs: "256",
-      depth: "6",
-    };
-  }, [activeNodes, edges.length, visualSnapshot]);
-
   return (
     <div className="pointer-events-none absolute inset-0 z-10">
       <div className="absolute left-4 top-4 flex items-center gap-2">
@@ -114,25 +90,6 @@ function GraphPaneChrome() {
         >
           3D 视图
         </button>
-      </div>
-
-      <div className="glass-card absolute bottom-[7.5rem] left-4 w-44 p-3">
-        <p className="font-hud text-label uppercase tracking-hud text-accent-cyan">
-          图谱统计
-        </p>
-        <dl className="mt-2 space-y-1.5 text-caption">
-          {[
-            ["概念节点", stats.concepts],
-            ["连接关系", stats.edges],
-            ["文档资源", stats.docs],
-            ["图谱深度", `${stats.depth}层`],
-          ].map(([label, value]) => (
-            <div key={label} className="flex items-center justify-between gap-2">
-              <dt className="text-muted">{label}</dt>
-              <dd className="font-hud text-secondary">{value}</dd>
-            </div>
-          ))}
-        </dl>
       </div>
     </div>
   );

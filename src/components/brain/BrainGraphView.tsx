@@ -5,6 +5,7 @@ import ForceGraph2D, {
   type NodeObject,
 } from "react-force-graph-2d";
 import { EdgeHoverLabel } from "@/components/brain/EdgeHoverLabel";
+import { CompanionGraphStatsPanel } from "@/components/brain/CompanionGraphStatsPanel";
 import { GraphMinimap, type MinimapNode } from "@/components/brain/GraphMinimap";
 import { GraphZoomControls } from "@/components/brain/GraphZoomControls";
 import { NodeHoverCard } from "@/components/brain/NodeHoverCard";
@@ -90,6 +91,7 @@ export function BrainGraphView() {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [hoveredLink, setHoveredLink] = useState<GraphLink | null>(null);
   const [layerDepth, setLayerDepth] = useState(45);
+  const [zoomPercentLabel, setZoomPercentLabel] = useState("100%");
   const [minimapTick, setMinimapTick] = useState(0);
   const nodePositionsRef = useRef<Map<string, { x: number; y: number }>>(
     new Map(),
@@ -231,7 +233,9 @@ export function BrainGraphView() {
       return;
     }
     const timer = window.setTimeout(() => {
-      graphRef.current?.zoomToFit(320, 72);
+      graphRef.current?.zoomToFit(320, 112);
+      const k = graphRef.current?.zoom() ?? 1;
+      setZoomPercentLabel(`${Math.round(k * 100)}%`);
     }, 120);
     return () => window.clearTimeout(timer);
   }, [graphData.nodes.length, pinGraphLayout]);
@@ -249,13 +253,19 @@ export function BrainGraphView() {
     }
   }, [linkDistance, graphData.nodes.length]);
 
+  const syncZoomLabel = useCallback(() => {
+    const k = graphRef.current?.zoom() ?? 1;
+    setZoomPercentLabel(`${Math.round(k * 100)}%`);
+  }, []);
+
   const handleZoomIn = useCallback(() => {
     const graph = graphRef.current;
     if (!graph) {
       return;
     }
     graph.zoom(graph.zoom() * 1.2, 150);
-  }, []);
+    window.setTimeout(syncZoomLabel, 160);
+  }, [syncZoomLabel]);
 
   const handleZoomOut = useCallback(() => {
     const graph = graphRef.current;
@@ -263,11 +273,14 @@ export function BrainGraphView() {
       return;
     }
     graph.zoom(graph.zoom() / 1.2, 150);
-  }, []);
+    window.setTimeout(syncZoomLabel, 160);
+  }, [syncZoomLabel]);
 
   const handleReset = useCallback(() => {
-    graphRef.current?.zoomToFit(280, 48);
-  }, []);
+    const padding = isCompanionVisual ? 112 : 48;
+    graphRef.current?.zoomToFit(280, padding);
+    window.setTimeout(syncZoomLabel, 320);
+  }, [isCompanionVisual, syncZoomLabel]);
 
   return (
     <div
@@ -310,9 +323,15 @@ export function BrainGraphView() {
               // Fit once the simulation settles so we never freeze a half-laid-out
               // (and therefore wildly over-zoomed) view.
               if (pinGraphLayout) {
-                graphRef.current?.zoomToFit(400, 72);
+                graphRef.current?.zoomToFit(400, 112);
+                syncZoomLabel();
               } else {
                 graphRef.current?.zoomToFit(500, 90);
+              }
+            }}
+            onZoom={() => {
+              if (isCompanionVisual) {
+                syncZoomLabel();
               }
             }}
             onRenderFramePost={() => {
@@ -336,18 +355,24 @@ export function BrainGraphView() {
                 return graphAccentCyan();
               }
               if (isCompanionVisual) {
-                return withAlpha(graphAccentCyan(), 0.22);
+                return withAlpha(graphClusterColors()[2] ?? graphAccentCyan(), 0.4);
               }
               return graphEdgeColor();
             }}
             linkWidth={(link) =>
               highlightedEdgeIds.includes(String((link as GraphLink).id))
-                ? 2
+                ? 2.2
                 : isCompanionVisual
-                  ? 1.15
+                  ? 1.85
                   : 1
             }
-            linkDirectionalArrowLength={4}
+            linkDirectionalParticles={isCompanionVisual ? 3 : 0}
+            linkDirectionalParticleWidth={2.2}
+            linkDirectionalParticleSpeed={0.0055}
+            linkDirectionalParticleColor={() =>
+              withAlpha(graphAccentCyan(), 0.65)
+            }
+            linkDirectionalArrowLength={isCompanionVisual ? 0 : 4}
             linkDirectionalArrowRelPos={1}
             nodeLabel="title"
             onNodeClick={(node) => {
@@ -383,13 +408,21 @@ export function BrainGraphView() {
               const emphasis = visual === "emphasis";
               const scale = emphasis ? HOVER_SCALE : 1;
               const hubLevel = graphNode.hubLevel;
+              const isCompanionHub =
+                isCompanionVisual && hubLevel === 2 && nodeId === "vis-ai";
               let baseRadius = graphNode.archived
                 ? BASE_RADIUS - 1
                 : emphasis
                   ? ACTIVE_RADIUS
                   : BASE_RADIUS;
               if (!graphNode.archived && hubLevel === 2) {
-                baseRadius = emphasis ? 16 : 14;
+                baseRadius = isCompanionHub
+                  ? emphasis
+                    ? 30
+                    : 28
+                  : emphasis
+                    ? 16
+                    : 14;
               } else if (!graphNode.archived && hubLevel === 1) {
                 baseRadius = emphasis ? 11 : 9;
               }
@@ -413,13 +446,34 @@ export function BrainGraphView() {
               // Soft radial bloom behind every live node so the starfield glows
               // as a whole, not just on hover. Falls off to fully transparent.
               if (!graphNode.archived) {
-                const bloomScale =
-                  hubLevel === 2 ? 7.8 : hubLevel === 1 ? 5.4 : emphasis ? 5.2 : 4.1;
+                const bloomScale = isCompanionHub
+                  ? 11.5
+                  : hubLevel === 2
+                    ? 7.8
+                    : hubLevel === 1
+                      ? 5.4
+                      : emphasis
+                        ? 5.2
+                        : 4.1;
                 const bloomRadius = radius * bloomScale;
-                const bloomCore =
-                  hubLevel === 2 ? 0.62 : hubLevel === 1 ? 0.44 : emphasis ? 0.5 : 0.32;
-                const bloomMid =
-                  hubLevel === 2 ? 0.28 : hubLevel === 1 ? 0.2 : emphasis ? 0.18 : 0.12;
+                const bloomCore = isCompanionHub
+                  ? 0.88
+                  : hubLevel === 2
+                    ? 0.62
+                    : hubLevel === 1
+                      ? 0.44
+                      : emphasis
+                        ? 0.5
+                        : 0.32;
+                const bloomMid = isCompanionHub
+                  ? 0.48
+                  : hubLevel === 2
+                    ? 0.28
+                    : hubLevel === 1
+                      ? 0.2
+                      : emphasis
+                        ? 0.18
+                        : 0.12;
                 const bloom = ctx.createRadialGradient(
                   x,
                   y,
@@ -446,14 +500,20 @@ export function BrainGraphView() {
                 ctx.shadowBlur = 22;
               } else if (!graphNode.archived) {
                 ctx.shadowColor = clusterColor;
-                ctx.shadowBlur =
-                  hubLevel === 2 ? 28 : hubLevel === 1 ? 18 : 14;
+                ctx.shadowBlur = isCompanionHub
+                  ? 48
+                  : hubLevel === 2
+                    ? 28
+                    : hubLevel === 1
+                      ? 18
+                      : 14;
               }
 
               ctx.beginPath();
               ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
-              ctx.fillStyle =
-                emphasis && !graphNode.archived
+              ctx.fillStyle = isCompanionHub
+                ? "#060d18"
+                : emphasis && !graphNode.archived
                   ? "#e0f2fe"
                   : hubLevel === 2
                     ? "#f0f9ff"
@@ -461,14 +521,28 @@ export function BrainGraphView() {
               ctx.fill();
 
               if (!graphNode.archived && hubLevel !== undefined) {
+                const ringPad = isCompanionHub ? 9 : hubLevel === 2 ? 5 : 3.5;
                 ctx.beginPath();
-                ctx.arc(x, y, radius + (hubLevel === 2 ? 5 : 3.5), 0, 2 * Math.PI);
+                ctx.arc(x, y, radius + ringPad, 0, 2 * Math.PI);
                 ctx.strokeStyle = withAlpha(
                   graphAccentCyan(),
-                  hubLevel === 2 ? 0.75 : 0.45,
+                  isCompanionHub ? 0.98 : hubLevel === 2 ? 0.75 : 0.45,
                 );
-                ctx.lineWidth = (hubLevel === 2 ? 2.2 : 1.4) / globalScale;
+                ctx.lineWidth =
+                  (isCompanionHub ? 4 : hubLevel === 2 ? 2.2 : 1.4) / globalScale;
                 ctx.stroke();
+                if (isCompanionHub) {
+                  ctx.beginPath();
+                  ctx.arc(x, y, radius + ringPad + 5, 0, 2 * Math.PI);
+                  ctx.strokeStyle = withAlpha(graphAccentCyan(), 0.42);
+                  ctx.lineWidth = 2.2 / globalScale;
+                  ctx.stroke();
+                  ctx.beginPath();
+                  ctx.arc(x, y, radius + ringPad + 10, 0, 2 * Math.PI);
+                  ctx.strokeStyle = withAlpha(graphAccentCyan(), 0.18);
+                  ctx.lineWidth = 1.2 / globalScale;
+                  ctx.stroke();
+                }
               }
               if (isGhost) {
                 ctx.setLineDash([3 / globalScale, 3 / globalScale]);
@@ -483,15 +557,23 @@ export function BrainGraphView() {
               // with the graph and never balloons relative to the dot, whatever
               // the current zoom. Hide it only when zoomed far out.
               if (globalScale > GRAPH_ZOOM_TOPIC_MAX) {
-                const labelSize =
-                  hubLevel === 2
+                const labelSize = isCompanionHub
+                  ? radius * 0.82
+                  : hubLevel === 2
                     ? radius * 1.35
                     : hubLevel === 1
                       ? radius * 1.2
                       : radius * 1.5;
-                const labelWeight = hubLevel !== undefined ? 600 : 500;
+                const labelWeight =
+                  isCompanionHub || hubLevel !== undefined ? 700 : 500;
                 ctx.font = `${labelWeight} ${labelSize}px var(--font-sans)`;
-                ctx.textBaseline = hubLevel === 1 ? "bottom" : "middle";
+                if (isCompanionHub) {
+                  ctx.textAlign = "center";
+                  ctx.textBaseline = "middle";
+                } else {
+                  ctx.textAlign = "left";
+                  ctx.textBaseline = hubLevel === 1 ? "bottom" : "middle";
+                }
                 ctx.fillStyle = graphNode.archived
                   ? "rgba(154, 172, 196, 0.55)"
                   : emphasis
@@ -499,9 +581,11 @@ export function BrainGraphView() {
                     : hubLevel === 2
                       ? "#f8fafc"
                       : "#cbd5e1";
-                const labelX = x + radius + labelSize * 0.35;
+                const labelX = isCompanionHub
+                  ? x
+                  : x + radius + labelSize * 0.35;
                 const labelY =
-                  hubLevel === 1 && graphNode.intro
+                  hubLevel === 1 && graphNode.intro && !isCompanionHub
                     ? y - labelSize * 0.15
                     : y;
                 ctx.fillText(graphNode.title, labelX, labelY);
@@ -528,8 +612,22 @@ export function BrainGraphView() {
             />
           ) : null}
 
-          <GraphMinimap nodes={minimapNodes} />
+          {isCompanionVisual ? (
+            <div
+              className="pointer-events-none absolute bottom-4 left-4 z-[3] flex flex-col gap-2.5"
+              aria-label="图谱左下角控件"
+            >
+              <CompanionGraphStatsPanel />
+              <GraphMinimap nodes={minimapNodes} embedded />
+            </div>
+          ) : (
+            <GraphMinimap nodes={minimapNodes} />
+          )}
           <GraphZoomControls
+            companionChrome={isCompanionVisual}
+            zoomPercentLabel={
+              isCompanionVisual && pinGraphLayout ? "100%" : zoomPercentLabel
+            }
             layerDepth={layerDepth}
             onLayerDepthChange={setLayerDepth}
             onZoomIn={handleZoomIn}
