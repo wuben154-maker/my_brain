@@ -317,9 +317,7 @@ export function BrainGraphView() {
               }
             }}
             onZoom={() => {
-              if (isCompanionVisual) {
-                syncZoomLabel();
-              }
+              syncZoomLabel();
             }}
             onRenderFramePost={() => {
               setMinimapTick((value) => (value + 1) % 240);
@@ -603,22 +601,15 @@ export function BrainGraphView() {
             />
           ) : null}
 
-          {isCompanionVisual ? (
-            <div
-              className="pointer-events-none absolute bottom-4 left-4 z-[3] flex flex-col gap-2.5"
-              aria-label="图谱左下角控件"
-            >
-              <CompanionGraphStatsPanel />
-              <GraphMinimap nodes={minimapNodes} embedded />
-            </div>
-          ) : (
-            <GraphMinimap nodes={minimapNodes} />
-          )}
+          <div
+            className="pointer-events-none absolute bottom-4 left-4 z-[3] flex flex-col gap-2.5"
+            aria-label="图谱左下角控件"
+          >
+            <CompanionGraphStatsPanel />
+            <GraphMinimap nodes={minimapNodes} embedded />
+          </div>
           <GraphZoomControls
-            companionChrome={isCompanionVisual}
-            zoomPercentLabel={
-              isCompanionVisual && pinGraphLayout ? "100%" : zoomPercentLabel
-            }
+            zoomPercentLabel={zoomPercentLabel}
             layerDepth={layerDepth}
             onLayerDepthChange={setLayerDepth}
             onZoomIn={handleZoomIn}

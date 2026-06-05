@@ -15,8 +15,6 @@ const innerBars = buildOrbWaveform(48);
 export function VisualVoiceOrb() {
   return (
     <div className="visual-voice-orb relative flex h-full min-h-[170px] flex-col items-center justify-center overflow-hidden rounded-md border border-hud/80 bg-[rgba(8,12,22,0.72)] px-3 pb-7 pt-5">
-      <span className="absolute right-2 top-2 text-[0.625rem] text-muted/80">⌃</span>
-
       <div className="relative flex h-[7.5rem] w-[7.5rem] items-center justify-center">
         <div className="absolute inset-0 rounded-full border border-dashed border-accent-cyan/25" />
         <div className="absolute inset-3 rounded-full border border-accent-cyan/35" />
@@ -47,10 +45,6 @@ export function VisualVoiceOrb() {
           />
         ))}
       </div>
-
-      <span className="absolute bottom-2 right-2 flex h-6 w-6 items-center justify-center rounded-full border border-hud text-[0.625rem] text-secondary/90">
-        ⚙
-      </span>
     </div>
   );
 }

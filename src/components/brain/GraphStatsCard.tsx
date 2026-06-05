@@ -1,46 +1,7 @@
 import { useMemo } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { computeGraphDepth } from "@/lib/computeGraphDepth";
 import { useGraphStore } from "@/stores/graphStore";
-
-/** Longest BFS tier across the undirected graph (图谱深度 N 层). */
-function computeGraphDepth(
-  nodeIds: string[],
-  edges: { sourceId: string; targetId: string }[],
-): number {
-  if (nodeIds.length === 0) {
-    return 0;
-  }
-  const adjacency = new Map<string, string[]>();
-  for (const id of nodeIds) {
-    adjacency.set(id, []);
-  }
-  for (const edge of edges) {
-    adjacency.get(edge.sourceId)?.push(edge.targetId);
-    adjacency.get(edge.targetId)?.push(edge.sourceId);
-  }
-  const degree = (id: string) => adjacency.get(id)?.length ?? 0;
-  const root = [...nodeIds].sort((a, b) => degree(b) - degree(a))[0]!;
-
-  const visited = new Set<string>([root]);
-  let frontier = [root];
-  let depth = 1;
-  while (frontier.length > 0) {
-    const next: string[] = [];
-    for (const id of frontier) {
-      for (const neighbor of adjacency.get(id) ?? []) {
-        if (!visited.has(neighbor)) {
-          visited.add(neighbor);
-          next.push(neighbor);
-        }
-      }
-    }
-    if (next.length > 0) {
-      depth += 1;
-    }
-    frontier = next;
-  }
-  return depth;
-}
 
 /** Bottom-left graph stats panel (DESIGN.md §7 GlassCard). Live store counts. */
 export function GraphStatsCard() {
@@ -54,12 +15,15 @@ export function GraphStatsCard() {
       active.map((node) => node.id),
       edges.map((edge) => ({ sourceId: edge.sourceId, targetId: edge.targetId })),
     );
-    return [
+    const rows = [
       { label: "概念节点", value: active.length.toLocaleString() },
       { label: "连接关系", value: edges.length.toLocaleString() },
-      { label: "文档资源", value: sources.toLocaleString() },
-      { label: "图谱深度", value: `${depth} 层` },
     ];
+    if (sources > 0) {
+      rows.push({ label: "文档资源", value: sources.toLocaleString() });
+    }
+    rows.push({ label: "图谱深度", value: `${depth} 层` });
+    return rows;
   }, [nodes, edges]);
 
   return (

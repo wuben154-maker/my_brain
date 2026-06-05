@@ -30,29 +30,6 @@ function GraphPaneChrome() {
   );
 }
 
-function TranscriptActionIcons() {
-  return (
-    <div className="mt-1.5 flex items-center gap-2 text-muted">
-      <button type="button" aria-label="复制" className="hover:text-accent-cyan">
-        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
-          <rect x="9" y="9" width="11" height="11" rx="1" />
-          <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
-        </svg>
-      </button>
-      <button type="button" aria-label="点赞" className="hover:text-accent-cyan">
-        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
-          <path d="M7 10v11M15 5.88 14 10h5.83a1 1 0 0 1 .94 1.34l-2.18 6.7a1 1 0 0 1-.94.66H9" />
-        </svg>
-      </button>
-      <button type="button" aria-label="点踩" className="hover:text-accent-cyan">
-        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
-          <path d="M17 14V3M9 18.12 10 14H4.17a1 1 0 0 1-.94-1.34l2.18-6.7A1 1 0 0 1 6.35 5H15" />
-        </svg>
-      </button>
-    </div>
-  );
-}
-
 /** Transcript bubbles — display-only; reuses VoicePanel transcript sources. */
 function VoiceConversationFeed() {
   const visualSnapshot = isVisualSnapshotMode();
@@ -126,7 +103,6 @@ function VoiceConversationFeed() {
                   <p className="rounded-md rounded-tl-sm border border-hud bg-bg-panel px-3 py-2 text-body text-secondary">
                     {line.text}
                   </p>
-                  <TranscriptActionIcons />
                 </div>
               </li>
             ),
@@ -152,21 +128,6 @@ function VoiceVisualizationPanel() {
       <div className="relative z-[1] w-full max-w-[20rem]">
         <VisualVoiceOrb />
       </div>
-
-      <button
-        type="button"
-        aria-label="麦克风"
-        className="absolute bottom-3 left-3 flex h-8 w-8 items-center justify-center rounded-full border border-hud bg-bg-panel text-secondary backdrop-blur-md"
-      >
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
-          <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-          <path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8" />
-        </svg>
-      </button>
-      <span
-        className="absolute bottom-3 right-3 h-2 w-2 rounded-full bg-accent-cyan shadow-glow-cyan"
-        aria-hidden
-      />
     </div>
   );
 }
@@ -239,19 +200,8 @@ export function ImmersiveScene() {
                 语音交互
               </h2>
             </div>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                aria-label="折叠语音面板"
-                className="flex h-8 w-8 items-center justify-center rounded-sm text-muted hover:text-accent-cyan"
-              >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
-                  <path d="m6 9 6 6 6-6" />
-                </svg>
-              </button>
-              <div className="relative">
-                <SettingsOverlay />
-              </div>
+            <div className="relative">
+              <SettingsOverlay />
             </div>
           </div>
 
