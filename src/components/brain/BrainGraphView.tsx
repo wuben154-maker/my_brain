@@ -109,12 +109,6 @@ export function BrainGraphView() {
   const selectedNodeId = useGraphStore((state) => state.selectedNodeId);
   const selectNode = useGraphStore((state) => state.selectNode);
 
-  const activeCount = useMemo(
-    () => nodes.filter((node) => !node.archived).length,
-    [nodes],
-  );
-  const archivedCount = nodes.length - activeCount;
-
   const linkDistance = useMemo(() => {
     const t = layerDepth / 100;
     return LINK_DISTANCE_MIN + (LINK_DISTANCE_MAX - LINK_DISTANCE_MIN) * t;
@@ -289,14 +283,6 @@ export function BrainGraphView() {
       data-testid="brain-graph-view"
       className={`graph-canvas-shell relative h-full min-h-[420px] w-full overflow-hidden rounded-md border border-hud bg-bg-base/80${isCompanionVisual ? " graph-canvas-starfield" : ""}`}
     >
-      {!isCompanionVisual ? (
-        <div className="pointer-events-none absolute left-4 top-4 z-[1] font-hud text-label uppercase tracking-hud text-muted">
-          大脑星图 · {activeCount} 概念
-          {archivedCount > 0 ? ` · ${archivedCount} 归档` : ""} · {edges.length}{" "}
-          关联
-        </div>
-      ) : null}
-
       {graphData.nodes.length === 0 ? (
         <div className="flex h-full items-center justify-center text-body text-muted">
           大脑星图等待第一颗星…

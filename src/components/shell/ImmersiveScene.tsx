@@ -3,6 +3,7 @@ import { BrainGraphView } from "@/components/brain/BrainGraphView";
 import { TopBar } from "@/components/layout/TopBar";
 import { GraphUndoControl } from "@/components/shell/GraphUndoControl";
 import { SettingsOverlay } from "@/components/settings/SettingsOverlay";
+import { VisualVoiceOrb } from "@/components/voice/VisualVoiceChrome";
 import { VoiceOrb } from "@/components/voice/VoiceOrb";
 import { useVoiceSession } from "@/hooks/useVoiceSession";
 import { isGraphDemoMode } from "@/lib/graphDemoSeed";
@@ -18,79 +19,13 @@ function formatTranscriptTime(index: number): string {
   return TRANSCRIPT_TIMESTAMPS[index % TRANSCRIPT_TIMESTAMPS.length] ?? "14:30";
 }
 
-/** Presentational graph pane overlays — title, toolbar. */
+/** Presentational graph pane overlays — title only. */
 function GraphPaneChrome() {
   return (
     <div className="pointer-events-none absolute inset-0 z-10">
-      <div className="absolute left-4 top-4 flex items-center gap-2">
-        <button
-          type="button"
-          className="pointer-events-auto flex items-center gap-2 rounded-sm px-1 py-1 font-hud text-h1 font-semibold tracking-hud text-primary"
-        >
-          人工智能知识图谱
-          <svg
-            viewBox="0 0 24 24"
-            className="h-4 w-4 text-secondary"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            aria-hidden
-          >
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-        </button>
-      </div>
-
-      <div className="absolute right-4 top-4 flex items-center gap-2">
-        <button
-          type="button"
-          className="pointer-events-auto rounded-full border border-hud bg-bg-panel px-3 py-1.5 font-hud text-label uppercase tracking-hud text-secondary backdrop-blur-md"
-        >
-          力导向布局
-          <span className="ml-1 text-muted" aria-hidden>
-            ▾
-          </span>
-        </button>
-        <button
-          type="button"
-          aria-label="全屏"
-          className="graph-hud-btn pointer-events-auto"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            aria-hidden
-          >
-            <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          aria-label="主题"
-          className="graph-hud-btn pointer-events-auto"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            aria-hidden
-          >
-            <circle cx="12" cy="12" r="4" />
-            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          className="pointer-events-auto rounded-full border border-accent-cyan bg-accent-cyan/15 px-3 py-1.5 font-hud text-label uppercase tracking-hud text-accent-cyan shadow-glow-cyan backdrop-blur-md"
-        >
-          3D 视图
-        </button>
-      </div>
+      <h1 className="absolute left-4 top-4 font-hud text-h1 font-semibold tracking-hud text-primary">
+        人工智能知识图谱
+      </h1>
     </div>
   );
 }
@@ -204,7 +139,7 @@ function VoiceConversationFeed() {
 
 function VoiceVisualizationPanel() {
   return (
-    <div className="glass-card relative flex min-h-[13rem] shrink-0 items-center justify-center overflow-hidden px-4 py-6">
+    <div className="glass-card relative flex shrink-0 items-center justify-center overflow-hidden px-4 py-5">
       <div
         className="pointer-events-none absolute inset-0 opacity-40"
         aria-hidden
@@ -214,8 +149,8 @@ function VoiceVisualizationPanel() {
         <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full border border-accent-blue/10" />
       </div>
 
-      <div className="relative z-[1] w-full max-w-[20rem] scale-110">
-        <VoiceOrb />
+      <div className="relative z-[1] w-full max-w-[20rem]">
+        <VisualVoiceOrb />
       </div>
 
       <button
@@ -321,6 +256,7 @@ export function ImmersiveScene() {
           </div>
 
           <VoiceVisualizationPanel />
+          <VoiceOrb />
           <VoiceConversationFeed />
           <CompanionListeningBar />
         </div>

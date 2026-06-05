@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useRef } from "react";
-import { VisualVoiceOrb } from "@/components/voice/VisualVoiceChrome";
+import { useEffect, useRef } from "react";
 import { useConversationSession } from "@/hooks/useConversationSession";
 import { isGraphDemoMode } from "@/lib/graphDemoSeed";
 import { isVisualSnapshotMode } from "@/lib/visualSnapshotMode";
 import { useVoiceSession } from "@/hooks/useVoiceSession";
 
 /**
- * Immersive voice orb �?visual chrome + voice loop (V0 shell, V2 conductor).
+ * Functional voice controls ? status + connect/disconnect/interrupt.
+ * Decorative orb visual lives in VoiceVisualizationPanel (ImmersiveScene).
  */
 export function VoiceOrb() {
   const visualSnapshot = isVisualSnapshotMode();
@@ -48,46 +48,19 @@ export function VoiceOrb() {
   };
 
   const showConnected = demoMode || isConnected;
-  const displayStatus = demoMode ? "待命" : statusLabel;
-
-  const orbActive = useMemo(
-    () =>
-      demoMode ||
-      voiceState === "listening" ||
-      voiceState === "speaking",
-    [demoMode, voiceState],
-  );
+  const displayStatus = demoMode ? "??" : statusLabel;
 
   if (visualSnapshot || demoMode) {
-    return (
-      <div
-        data-testid="voice-orb"
-        className={[
-          "pointer-events-none w-[min(100%,22rem)]",
-          orbActive ? "opacity-100" : "opacity-90",
-        ].join(" ")}
-      >
-        <VisualVoiceOrb />
-      </div>
-    );
+    return <div data-testid="voice-orb" className="sr-only" aria-hidden />;
   }
 
   return (
     <div
       data-testid="voice-orb"
-      className="flex w-[min(100%,22rem)] flex-col items-center gap-3"
+      className="flex w-full shrink-0 flex-col items-center gap-3"
     >
-      <div
-        className={[
-          "w-full transition-opacity duration-200",
-          orbActive ? "opacity-100" : "opacity-85",
-        ].join(" ")}
-      >
-        <VisualVoiceOrb />
-      </div>
-
       <div className="w-full rounded-md border border-hud/60 bg-bg-elevated/50 px-3 py-2 text-center text-caption text-secondary">
-        <p className="text-primary">状态：{displayStatus}</p>
+        <p className="text-primary">???{displayStatus}</p>
         {errorMessage ? (
           <p className="mt-1 text-status-error">{errorMessage}</p>
         ) : null}
@@ -101,7 +74,7 @@ export function VoiceOrb() {
             onClick={() => void connect()}
             className="rounded-sm bg-accent-cyan px-4 py-2 text-body font-medium text-bg-base disabled:cursor-not-allowed disabled:opacity-40"
           >
-            连接语音
+            ????
           </button>
         ) : (
           <>
@@ -111,7 +84,7 @@ export function VoiceOrb() {
               onClick={() => void handleInterrupt()}
               className="rounded-sm border border-hud px-3 py-1.5 text-caption text-primary disabled:opacity-40"
             >
-              打断
+              ??
             </button>
             <button
               type="button"
@@ -119,7 +92,7 @@ export function VoiceOrb() {
               onClick={() => void disconnect()}
               className="rounded-sm border border-status-error/40 px-3 py-1.5 text-caption text-status-error disabled:opacity-40"
             >
-              断开
+              ??
             </button>
           </>
         )}
