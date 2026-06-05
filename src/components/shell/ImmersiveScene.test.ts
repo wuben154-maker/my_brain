@@ -18,6 +18,24 @@ describe("ImmersiveScene (V0)", () => {
     expect(screen.getByTestId("settings-corner")).toBeTruthy();
   });
 
+  it("renders 2/3 graph pane and 1/3 voice pane with orb inside voice pane", () => {
+    render(createElement(ImmersiveScene));
+
+    const graphPane = screen.getByTestId("graph-pane");
+    const voicePane = screen.getByTestId("voice-pane");
+    const voiceOrb = screen.getByTestId("voice-orb");
+
+    expect(graphPane).toBeTruthy();
+    expect(voicePane).toBeTruthy();
+    expect(
+      graphPane.compareDocumentPosition(voicePane) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(voicePane.contains(voiceOrb)).toBe(true);
+    expect(screen.getByTestId("settings-corner")).toBeTruthy();
+    expect(screen.queryByRole("navigation", { name: "主导航" })).toBeNull();
+  });
+
   it("does not mount proposal inbox or inbox-approve UI (V4)", () => {
     render(createElement(ImmersiveScene));
     expect(screen.queryByTestId("proposal-inbox-inline")).toBeNull();
