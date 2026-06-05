@@ -7,7 +7,7 @@ import {
 describe("companion visual graph fixture", () => {
   it("seeds a dense hub-and-spoke graph with pinned layout parity", () => {
     const { nodes, edges } = createCompanionVisualGraphSnapshot();
-    expect(nodes).toHaveLength(30);
+    expect(nodes).toHaveLength(37);
     expect(edges.length).toBeGreaterThanOrEqual(40);
 
     const hubIds = nodes.filter((node) => node.hubLevel !== undefined).map((n) => n.id);

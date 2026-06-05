@@ -29,15 +29,15 @@ export function CompanionGraphStatsPanel() {
   }, [nodes, edges]);
 
   return (
-    <div className="glass-card w-44 shrink-0 p-3">
-      <p className="font-hud text-label uppercase tracking-hud text-accent-cyan">
+    <div className="companion-graph-stats glass-card w-[11.5rem] shrink-0 p-3 backdrop-blur-md">
+      <p className="font-hud text-label font-medium uppercase tracking-hud text-accent-cyan">
         图谱统计
       </p>
-      <dl className="mt-2 space-y-1.5 text-caption">
+      <dl className="mt-2.5 space-y-2 text-caption">
         {rows.map(([label, value]) => (
           <div key={label} className="flex items-center justify-between gap-2">
             <dt className="text-muted">{label}</dt>
-            <dd className="font-hud text-secondary">{value}</dd>
+            <dd className="font-hud font-medium text-primary">{value}</dd>
           </div>
         ))}
       </dl>

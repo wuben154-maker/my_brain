@@ -55,7 +55,7 @@ export async function captureAllScreenshots(baseUrl = DEV_SERVER_URL) {
         await page.waitForSelector(".graph-canvas-shell canvas", {
           timeout: 15000,
         });
-        await page.waitForTimeout(1200);
+        await page.waitForTimeout(1800);
       } else if (target.id === "inbox") {
         await page.waitForSelector("[data-testid='main-shell']", {
           timeout: 15000,
@@ -66,7 +66,7 @@ export async function captureAllScreenshots(baseUrl = DEV_SERVER_URL) {
         await page.waitForSelector(".graph-canvas-shell canvas", {
           timeout: 15000,
         });
-        await page.waitForTimeout(1200);
+        await page.waitForTimeout(1800);
       } else if (target.id === "insight") {
         await page.setViewportSize({ width: 1440, height: 900 });
         await page.waitForSelector("[data-testid='main-shell']", {

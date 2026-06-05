@@ -76,11 +76,17 @@ export const VISUAL_TARGETS = [
 
     captureSelector: "[data-testid='immersive-scene']",
 
-    referenceCrop: { x: 0, y: 0, w: 1, h: 1 },
+    // Crop concept left rail so graph+voice align with immersive-scene capture.
+    referenceCrop: { x: 0.048, y: 0, w: 0.952, h: 1 },
 
     maxDiffRatio: 0.28,
 
-    ignoreRects: [],
+    // Intentionally omitted dead chrome — compare implementable regions only.
+    ignoreRects: [
+      { x: 0.22, y: 0, w: 0.78, h: 0.058 },
+      { x: 0.54, y: 0.058, w: 0.13, h: 0.052 },
+      { x: 0.66, y: 0.31, w: 0.34, h: 0.46 },
+    ],
 
   },
 

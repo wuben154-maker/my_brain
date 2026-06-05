@@ -20,7 +20,7 @@ export function GraphZoomControls({
   return (
     <>
       <div
-        className="graph-hud-controls pointer-events-auto absolute bottom-4 left-1/2 z-[2] flex -translate-x-1/2 items-center gap-1 rounded-full border border-hud bg-bg-panel/90 px-2 py-1.5 font-hud text-caption text-secondary shadow-glow-soft backdrop-blur-md"
+        className="graph-hud-controls companion-zoom-hud pointer-events-auto absolute bottom-4 left-1/2 z-[2] flex -translate-x-1/2 items-center gap-1 rounded-full border border-hud/80 bg-bg-panel/92 px-2.5 py-1.5 font-hud text-caption text-secondary shadow-glow-soft backdrop-blur-md"
         aria-label="图谱缩放控件"
       >
         <button
@@ -54,14 +54,18 @@ export function GraphZoomControls({
       </div>
 
       <div
-        className="graph-layer-slider pointer-events-auto absolute right-5 top-1/2 z-[2] flex -translate-y-1/2 flex-col items-center gap-2 py-1"
+        className="graph-layer-slider companion-depth-scale pointer-events-auto absolute right-4 top-1/2 z-[2] flex -translate-y-1/2 flex-col items-center gap-1.5 py-1"
         aria-label="图谱深度"
       >
         <span className="font-hud text-caption uppercase tracking-hud text-muted">
           图谱深度
         </span>
         <span className="font-hud text-caption text-accent-cyan">6层</span>
-        <div className="relative flex h-[9.75rem] flex-col items-center justify-center">
+        <div className="relative flex h-[10.5rem] flex-col items-center justify-center">
+          <div
+            className="pointer-events-none absolute inset-y-1 left-1/2 w-px -translate-x-1/2 bg-accent-cyan/25"
+            aria-hidden
+          />
           <div
             className="pointer-events-none absolute inset-y-2 left-1/2 flex -translate-x-1/2 flex-col justify-between"
             aria-hidden
@@ -69,7 +73,10 @@ export function GraphZoomControls({
             {DEPTH_TICKS.map((tick) => (
               <span
                 key={tick}
-                className="h-2.5 w-2.5 rounded-full border border-accent-cyan/35 bg-accent-cyan/50 shadow-[0_0_8px_rgba(34,211,238,0.45)]"
+                className={[
+                  "rounded-full border border-accent-cyan/40 bg-accent-cyan/45 shadow-[0_0_8px_rgba(34,211,238,0.4)]",
+                  tick === 4 ? "h-3 w-3 bg-accent-cyan/80" : "h-2 w-2",
+                ].join(" ")}
               />
             ))}
           </div>

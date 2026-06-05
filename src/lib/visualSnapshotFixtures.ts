@@ -180,9 +180,9 @@ export const VISUAL_INBOX_ENVELOPE: ProposalEnvelope = {
 };
 
 /** Pinned layout for `?visual=companion` hub-and-spoke knowledge graph captures. */
-/** Pull leaf coords inward so labels stay inside the companion graph pane at default zoom. */
+/** Scale hub-and-spoke coords — spread clusters to quadrants without clipping labels. */
 function companionPin(x: number, y: number): { x: number; y: number } {
-  const scale = 0.7;
+  const scale = 0.82;
   return { x: Math.round(x * scale), y: Math.round(y * scale) };
 }
 
@@ -190,11 +190,11 @@ export const VISUAL_GRAPH_PINNED_POSITIONS: Record<
   string,
   { x: number; y: number }
 > = {
-  "vis-ai": { x: 0, y: 6 },
-  "vis-ml": companionPin(-108, -82),
-  "vis-cv": companionPin(105, -82),
-  "vis-nlp": companionPin(-90, 125),
-  "vis-rl": companionPin(35, 122),
+  "vis-ai": { x: 0, y: 0 },
+  "vis-ml": companionPin(-118, -88),
+  "vis-cv": companionPin(112, -86),
+  "vis-nlp": companionPin(-96, 118),
+  "vis-rl": companionPin(42, 116),
   "vis-supervised": companionPin(-198, -148),
   "vis-unsupervised": companionPin(-172, -112),
   "vis-semisupervised": companionPin(-218, -92),
@@ -220,6 +220,13 @@ export const VISUAL_GRAPH_PINNED_POSITIONS: Record<
   "vis-dqn": companionPin(88, 135),
   "vis-mcts": companionPin(68, 208),
   "vis-marl": companionPin(92, 168),
+  "vis-svm": companionPin(-248, -72),
+  "vis-knn": companionPin(-132, -42),
+  "vis-gan": companionPin(-58, -168),
+  "vis-ocr": companionPin(205, -88),
+  "vis-summ": companionPin(-248, 138),
+  "vis-chat": companionPin(-168, 248),
+  "vis-bandit": companionPin(108, 228),
 };
 
 interface CompanionNodeSeed {
@@ -285,6 +292,13 @@ const COMPANION_NODE_SEEDS: CompanionNodeSeed[] = [
   { id: "vis-dqn", title: "深度Q网络", intro: "深度强化值学习" },
   { id: "vis-mcts", title: "蒙特卡洛树搜索", intro: "模拟 rollout 规划" },
   { id: "vis-marl", title: "多智能体学习", intro: "协作与博弈" },
+  { id: "vis-svm", title: "支持向量机", intro: "最大间隔分类" },
+  { id: "vis-knn", title: "K近邻", intro: "基于距离的分类" },
+  { id: "vis-gan", title: "生成对抗网络", intro: "对抗式生成建模" },
+  { id: "vis-ocr", title: "光学字符识别", intro: "图像转文本" },
+  { id: "vis-summ", title: "文本摘要", intro: "长文压缩" },
+  { id: "vis-chat", title: "对话系统", intro: "多轮交互" },
+  { id: "vis-bandit", title: "多臂老虎机", intro: "探索与利用" },
 ];
 
 const COMPANION_EDGE_SEEDS: Array<{
@@ -334,10 +348,20 @@ const COMPANION_EDGE_SEEDS: Array<{
   { source: "vis-ql", target: "vis-dqn", relation: "depends_on" },
   { source: "vis-pg", target: "vis-ql", relation: "related" },
   { source: "vis-ai", target: "vis-transformer", relation: "related" },
+  { source: "vis-ml", target: "vis-svm", relation: "is_a" },
+  { source: "vis-ml", target: "vis-knn", relation: "is_a" },
+  { source: "vis-nn", target: "vis-gan", relation: "related" },
+  { source: "vis-cv", target: "vis-ocr", relation: "related" },
+  { source: "vis-nlp", target: "vis-summ", relation: "is_a" },
+  { source: "vis-nlp", target: "vis-chat", relation: "related" },
+  { source: "vis-rl", target: "vis-bandit", relation: "related" },
+  { source: "vis-supervised", target: "vis-svm", relation: "depends_on" },
+  { source: "vis-unsupervised", target: "vis-knn", relation: "depends_on" },
 ];
 
 /** Shorter hub subtitles for companion captures — avoids label/subtitle collisions. */
 export const COMPANION_HUB_INTRO_SHORT: Record<string, string> = {
+  "vis-ai": "模拟人类智能的计算机系统",
   "vis-ml": "从数据中学习",
   "vis-cv": "理解图像与视频",
   "vis-nlp": "理解与生成语言",
@@ -376,6 +400,13 @@ export const COMPANION_NODE_CLUSTER: Record<string, number> = {
   "vis-dqn": 0,
   "vis-mcts": 0,
   "vis-marl": 0,
+  "vis-svm": 2,
+  "vis-knn": 2,
+  "vis-gan": 2,
+  "vis-ocr": 1,
+  "vis-summ": 3,
+  "vis-chat": 3,
+  "vis-bandit": 0,
 };
 
 /** Dev-only dense hub-and-spoke graph for `?visual=companion` pixel baseline. */
@@ -433,6 +464,13 @@ export const DEMO_VOICE_TRANSCRIPTS = [
   },
 ];
 
+export const VISUAL_VOICE_TRANSCRIPT_TIMES = [
+  "10:24:15",
+  "10:24:18",
+  "10:24:32",
+  "10:24:35",
+] as const;
+
 export const VISUAL_VOICE_TRANSCRIPTS = [
   {
     id: "visual-user-1",
@@ -443,7 +481,7 @@ export const VISUAL_VOICE_TRANSCRIPTS = [
   {
     id: "visual-assistant-1",
     role: "assistant" as const,
-    text: "深度学习是机器学习的一个分支，它使用多层神经网络模拟人脑处理信息的方式…",
+    text: "深度学习是机器学习的一个分支，它使用多层神经网络模拟人脑处理信息的方式。通过大量数据训练，网络能自动学习特征表示。",
     final: true,
   },
   {
@@ -455,7 +493,7 @@ export const VISUAL_VOICE_TRANSCRIPTS = [
   {
     id: "visual-assistant-2",
     role: "assistant" as const,
-    text: "机器学习是更广泛的概念，而深度学习是其中的一个子集…",
+    text: "机器学习是更广泛的概念，而深度学习是其中的一个子集，专注于使用深层神经网络。",
     final: true,
   },
 ];

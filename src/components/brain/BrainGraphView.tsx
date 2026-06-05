@@ -30,6 +30,7 @@ import { useGraphStore } from "@/stores/graphStore";
 
 const HOVER_SCALE = 1.06;
 const BASE_RADIUS = 5;
+const COMPANION_LEAF_RADIUS = 3.8;
 const ACTIVE_RADIUS = 8;
 const ARCHIVED_OPACITY = 0.35;
 const LINK_DISTANCE_MIN = 36;
@@ -66,6 +67,22 @@ function resolveClusterColor(nodeId: string, companionVisual: boolean): string {
     }
   }
   return clusterColorForNodeId(nodeId);
+}
+
+function resolveLinkClusterColor(
+  link: GraphLink,
+  companionVisual: boolean,
+): string {
+  const sourceId =
+    typeof link.source === "object"
+      ? String((link.source as unknown as GraphDatumNode).id)
+      : String(link.source);
+  const targetId =
+    typeof link.target === "object"
+      ? String((link.target as unknown as GraphDatumNode).id)
+      : String(link.target);
+  const focusId = sourceId === "vis-ai" ? targetId : sourceId;
+  return resolveClusterColor(focusId, companionVisual);
 }
 
 function nodeVisualState(
@@ -228,9 +245,12 @@ export function BrainGraphView() {
       return;
     }
     const timer = window.setTimeout(() => {
-      graphRef.current?.zoomToFit(320, 140);
+      graphRef.current?.zoomToFit(320, 280);
       const k = graphRef.current?.zoom() ?? 1;
-      setZoomPercentLabel(`${Math.round(k * 100)}%`);
+      if (k > 1.02) {
+        graphRef.current?.zoom(1, 0);
+      }
+      setZoomPercentLabel(`${Math.round((graphRef.current?.zoom() ?? 1) * 100)}%`);
     }, 120);
     return () => window.clearTimeout(timer);
   }, [graphData.nodes.length, pinGraphLayout]);
@@ -272,7 +292,7 @@ export function BrainGraphView() {
   }, [syncZoomLabel]);
 
   const handleReset = useCallback(() => {
-    const padding = isCompanionVisual ? 140 : 48;
+    const padding = isCompanionVisual ? 200 : 48;
     graphRef.current?.zoomToFit(280, padding);
     window.setTimeout(syncZoomLabel, 320);
   }, [isCompanionVisual, syncZoomLabel]);
@@ -281,7 +301,7 @@ export function BrainGraphView() {
     <div
       ref={containerRef}
       data-testid="brain-graph-view"
-      className={`graph-canvas-shell relative h-full min-h-[420px] w-full overflow-hidden rounded-md border border-hud bg-bg-base/80${isCompanionVisual ? " graph-canvas-starfield" : ""}`}
+      className={`graph-canvas-shell relative h-full min-h-[420px] w-full overflow-hidden${isCompanionVisual ? " graph-canvas-starfield graph-canvas-companion" : " rounded-md border border-hud bg-bg-base/80"}`}
     >
       {graphData.nodes.length === 0 ? (
         <div className="flex h-full items-center justify-center text-body text-muted">
@@ -302,7 +322,7 @@ export function BrainGraphView() {
             enableNodeDrag
             enableZoomInteraction
             enablePanInteraction
-            cooldownTicks={80}
+            cooldownTicks={pinGraphLayout ? 0 : 80}
             minZoom={0.4}
             maxZoom={3.2}
             onEngineStop={() => {
@@ -310,7 +330,11 @@ export function BrainGraphView() {
               // Fit once the simulation settles so we never freeze a half-laid-out
               // (and therefore wildly over-zoomed) view.
               if (pinGraphLayout) {
-                graphRef.current?.zoomToFit(400, 140);
+                graphRef.current?.zoomToFit(400, 280);
+                const k = graphRef.current?.zoom() ?? 1;
+                if (k > 1.02) {
+                  graphRef.current?.zoom(1, 0);
+                }
                 syncZoomLabel();
               } else {
                 graphRef.current?.zoomToFit(500, 90);
@@ -335,24 +359,29 @@ export function BrainGraphView() {
               }
             }}
             linkColor={(link) => {
-              const linkId = String((link as GraphLink).id);
+              const graphLink = link as GraphLink;
+              const linkId = String(graphLink.id);
               if (highlightedEdgeIds.includes(linkId)) {
                 return graphAccentCyan();
               }
               if (isCompanionVisual) {
-                return withAlpha(graphClusterColors()[2] ?? graphAccentCyan(), 0.4);
+                return withAlpha(
+                  resolveLinkClusterColor(graphLink, true),
+                  0.38,
+                );
               }
               return graphEdgeColor();
             }}
             linkWidth={(link) =>
               highlightedEdgeIds.includes(String((link as GraphLink).id))
-                ? 2.2
+                ? 2
                 : isCompanionVisual
-                  ? 1.85
+                  ? 1.05
                   : 1
             }
-            linkDirectionalParticles={isCompanionVisual ? 3 : 0}
-            linkDirectionalParticleWidth={2.2}
+            linkCurvature={isCompanionVisual ? 0 : 0.25}
+            linkDirectionalParticles={0}
+            linkDirectionalParticleWidth={1.6}
             linkDirectionalParticleSpeed={0.0055}
             linkDirectionalParticleColor={() =>
               withAlpha(graphAccentCyan(), 0.65)
@@ -395,16 +424,19 @@ export function BrainGraphView() {
               const hubLevel = graphNode.hubLevel;
               const isCompanionHub =
                 isCompanionVisual && hubLevel === 2 && nodeId === "vis-ai";
+              const leafRadius = isCompanionVisual
+                ? COMPANION_LEAF_RADIUS
+                : BASE_RADIUS;
               let baseRadius = graphNode.archived
-                ? BASE_RADIUS - 1
+                ? leafRadius - 0.5
                 : emphasis
                   ? ACTIVE_RADIUS
-                  : BASE_RADIUS;
+                  : leafRadius;
               if (!graphNode.archived && hubLevel === 2) {
                 baseRadius = isCompanionHub
                   ? emphasis
-                    ? 30
-                    : 28
+                    ? 34
+                    : 32
                   : emphasis
                     ? 16
                     : 14;
@@ -432,33 +464,33 @@ export function BrainGraphView() {
               // as a whole, not just on hover. Falls off to fully transparent.
               if (!graphNode.archived) {
                 const bloomScale = isCompanionHub
-                  ? 11.5
+                  ? 14
                   : hubLevel === 2
-                    ? 7.8
+                    ? 8.5
                     : hubLevel === 1
-                      ? 5.4
+                      ? 5.8
                       : emphasis
                         ? 5.2
-                        : 4.1;
+                        : 4.4;
                 const bloomRadius = radius * bloomScale;
                 const bloomCore = isCompanionHub
-                  ? 0.88
+                  ? 0.95
                   : hubLevel === 2
-                    ? 0.62
+                    ? 0.68
                     : hubLevel === 1
-                      ? 0.44
+                      ? 0.48
                       : emphasis
                         ? 0.5
-                        : 0.32;
+                        : 0.34;
                 const bloomMid = isCompanionHub
-                  ? 0.48
+                  ? 0.55
                   : hubLevel === 2
-                    ? 0.28
+                    ? 0.32
                     : hubLevel === 1
-                      ? 0.2
+                      ? 0.22
                       : emphasis
                         ? 0.18
-                        : 0.12;
+                        : 0.13;
                 const bloom = ctx.createRadialGradient(
                   x,
                   y,
@@ -486,18 +518,18 @@ export function BrainGraphView() {
               } else if (!graphNode.archived) {
                 ctx.shadowColor = clusterColor;
                 ctx.shadowBlur = isCompanionHub
-                  ? 48
+                  ? 58
                   : hubLevel === 2
-                    ? 28
+                    ? 30
                     : hubLevel === 1
-                      ? 18
+                      ? 20
                       : 14;
               }
 
               ctx.beginPath();
               ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
               ctx.fillStyle = isCompanionHub
-                ? "#060d18"
+                ? "#e8f7ff"
                 : emphasis && !graphNode.archived
                   ? "#e0f2fe"
                   : hubLevel === 2
@@ -506,26 +538,23 @@ export function BrainGraphView() {
               ctx.fill();
 
               if (!graphNode.archived && hubLevel !== undefined) {
-                const ringPad = isCompanionHub ? 9 : hubLevel === 2 ? 5 : 3.5;
-                ctx.beginPath();
-                ctx.arc(x, y, radius + ringPad, 0, 2 * Math.PI);
-                ctx.strokeStyle = withAlpha(
-                  graphAccentCyan(),
-                  isCompanionHub ? 0.98 : hubLevel === 2 ? 0.75 : 0.45,
-                );
-                ctx.lineWidth =
-                  (isCompanionHub ? 4 : hubLevel === 2 ? 2.2 : 1.4) / globalScale;
-                ctx.stroke();
-                if (isCompanionHub) {
+                const ringPad = isCompanionHub ? 10 : hubLevel === 2 ? 5 : 3.5;
+                const ringCount = isCompanionHub ? 4 : hubLevel === 2 ? 2 : 1;
+                for (let ring = 0; ring < ringCount; ring += 1) {
+                  const offset = ringPad + ring * (isCompanionHub ? 7 : 4);
                   ctx.beginPath();
-                  ctx.arc(x, y, radius + ringPad + 5, 0, 2 * Math.PI);
-                  ctx.strokeStyle = withAlpha(graphAccentCyan(), 0.42);
-                  ctx.lineWidth = 2.2 / globalScale;
-                  ctx.stroke();
-                  ctx.beginPath();
-                  ctx.arc(x, y, radius + ringPad + 10, 0, 2 * Math.PI);
-                  ctx.strokeStyle = withAlpha(graphAccentCyan(), 0.18);
-                  ctx.lineWidth = 1.2 / globalScale;
+                  ctx.arc(x, y, radius + offset, 0, 2 * Math.PI);
+                  ctx.strokeStyle = withAlpha(
+                    graphAccentCyan(),
+                    isCompanionHub
+                      ? 0.95 - ring * 0.22
+                      : hubLevel === 2
+                        ? 0.72 - ring * 0.2
+                        : 0.45,
+                  );
+                  ctx.lineWidth =
+                    (isCompanionHub ? 3.6 - ring * 0.6 : hubLevel === 2 ? 2.2 : 1.4) /
+                    globalScale;
                   ctx.stroke();
                 }
               }
@@ -543,7 +572,7 @@ export function BrainGraphView() {
               // the current zoom. Hide it only when zoomed far out.
               if (globalScale > GRAPH_ZOOM_TOPIC_MAX) {
                 const labelSize = isCompanionHub
-                  ? radius * 0.82
+                  ? radius * 0.52
                   : hubLevel === 2
                     ? radius * 1.35
                     : hubLevel === 1
@@ -551,39 +580,76 @@ export function BrainGraphView() {
                       : radius * 1.5;
                 const labelWeight =
                   isCompanionHub || hubLevel !== undefined ? 700 : 500;
-                ctx.font = `${labelWeight} ${labelSize}px var(--font-sans)`;
+
                 if (isCompanionHub) {
+                  const cardW = radius * 3.8;
+                  const cardH = radius * 1.55;
+                  const cardX = x - cardW / 2;
+                  const cardY = y - cardH / 2;
+                  ctx.fillStyle = "rgba(8, 14, 28, 0.82)";
+                  ctx.strokeStyle = withAlpha(graphAccentCyan(), 0.55);
+                  ctx.lineWidth = 1.2 / globalScale;
+                  const r = 6 / globalScale;
+                  ctx.beginPath();
+                  ctx.moveTo(cardX + r, cardY);
+                  ctx.lineTo(cardX + cardW - r, cardY);
+                  ctx.quadraticCurveTo(cardX + cardW, cardY, cardX + cardW, cardY + r);
+                  ctx.lineTo(cardX + cardW, cardY + cardH - r);
+                  ctx.quadraticCurveTo(
+                    cardX + cardW,
+                    cardY + cardH,
+                    cardX + cardW - r,
+                    cardY + cardH,
+                  );
+                  ctx.lineTo(cardX + r, cardY + cardH);
+                  ctx.quadraticCurveTo(cardX, cardY + cardH, cardX, cardY + cardH - r);
+                  ctx.lineTo(cardX, cardY + r);
+                  ctx.quadraticCurveTo(cardX, cardY, cardX + r, cardY);
+                  ctx.closePath();
+                  ctx.fill();
+                  ctx.stroke();
+
                   ctx.textAlign = "center";
                   ctx.textBaseline = "middle";
-                } else {
-                  ctx.textAlign = "left";
-                  ctx.textBaseline = hubLevel === 1 ? "bottom" : "middle";
-                }
-                ctx.fillStyle = graphNode.archived
-                  ? "rgba(154, 172, 196, 0.55)"
-                  : emphasis
-                    ? "#f8fafc"
-                    : hubLevel === 2
-                      ? "#f8fafc"
-                      : "#cbd5e1";
-                const labelX = isCompanionHub
-                  ? x
-                  : x + radius + labelSize * 0.35;
-                const labelY =
-                  hubLevel === 1 && graphNode.intro && !isCompanionHub
-                    ? y - labelSize * 0.15
-                    : y;
-                ctx.fillText(graphNode.title, labelX, labelY);
-                if (hubLevel === 1 && graphNode.intro) {
+                  ctx.font = `${labelWeight} ${labelSize}px var(--font-sans)`;
+                  ctx.fillStyle = "#f8fafc";
+                  ctx.fillText(graphNode.title, x, y - labelSize * 0.22);
                   const introText =
                     isCompanionVisual && COMPANION_HUB_INTRO_SHORT[nodeId]
                       ? COMPANION_HUB_INTRO_SHORT[nodeId]
                       : graphNode.intro;
-                  const subSize = labelSize * 0.62;
+                  const subSize = labelSize * 0.58;
                   ctx.font = `400 ${subSize}px var(--font-sans)`;
-                  ctx.fillStyle = "rgba(148, 163, 184, 0.85)";
-                  ctx.textBaseline = "top";
-                  ctx.fillText(introText, labelX, y + labelSize * 0.2);
+                  ctx.fillStyle = "rgba(148, 163, 184, 0.9)";
+                  ctx.fillText(introText, x, y + labelSize * 0.42);
+                } else {
+                  ctx.font = `${labelWeight} ${labelSize}px var(--font-sans)`;
+                  ctx.textAlign = "left";
+                  ctx.textBaseline = hubLevel === 1 ? "bottom" : "middle";
+                  ctx.fillStyle = graphNode.archived
+                    ? "rgba(154, 172, 196, 0.55)"
+                    : emphasis
+                      ? "#f8fafc"
+                      : hubLevel === 2
+                        ? "#f8fafc"
+                        : "#cbd5e1";
+                  const labelX = x + radius + labelSize * 0.35;
+                  const labelY =
+                    hubLevel === 1 && graphNode.intro
+                      ? y - labelSize * 0.15
+                      : y;
+                  ctx.fillText(graphNode.title, labelX, labelY);
+                  if (hubLevel === 1 && graphNode.intro) {
+                    const introText =
+                      isCompanionVisual && COMPANION_HUB_INTRO_SHORT[nodeId]
+                        ? COMPANION_HUB_INTRO_SHORT[nodeId]
+                        : graphNode.intro;
+                    const subSize = labelSize * 0.62;
+                    ctx.font = `400 ${subSize}px var(--font-sans)`;
+                    ctx.fillStyle = "rgba(148, 163, 184, 0.85)";
+                    ctx.textBaseline = "top";
+                    ctx.fillText(introText, labelX, y + labelSize * 0.2);
+                  }
                 }
               }
               ctx.restore();
