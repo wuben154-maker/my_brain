@@ -383,7 +383,7 @@ export function CompanionSelfCheckScreen({
 
     >
 
-      <SciFiAtmosphere />
+      <SciFiAtmosphere showCorners={false} />
 
       <header className="companion-selfcheck-top" data-testid="companion-selfcheck-top">
 

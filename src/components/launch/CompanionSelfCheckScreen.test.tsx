@@ -48,6 +48,7 @@ describe("CompanionSelfCheckScreen", () => {
     expect(document.querySelector(".companion-selfcheck-orb-ring-outer")).toBeTruthy();
     expect(document.querySelector(".companion-selfcheck-orb-scan")).toBeTruthy();
     expect(screen.getByTestId("companion-selfcheck-telemetry")).toBeTruthy();
-    expect(screen.getByTestId("sci-fi-corners")).toBeTruthy();
+    expect(screen.queryByTestId("sci-fi-corners")).toBeNull();
+    expect(document.querySelectorAll(".sci-fi-corner")).toHaveLength(0);
   });
 });
