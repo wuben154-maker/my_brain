@@ -1,5 +1,16 @@
+import {
+  buildTieredContext,
+  createEmptyWorking,
+  refreshWorkingPack,
+  type WorkingContext,
+} from "@/conversation/contextTiers";
 import { visibleGraph } from "@/lib/graphMutations";
-import type { ConversationContext, OnboardingProgress } from "@/conversation/types";
+import { conversationStateToPackMode } from "@/lib/graphContextPack";
+import type {
+  ConversationContext,
+  ConversationState,
+  OnboardingProgress,
+} from "@/conversation/types";
 import { DEFAULT_ONBOARDING } from "@/conversation/types";
 import type { NewsItem } from "@/domain/news";
 import type { UserProfile } from "@/domain/profile";
@@ -44,20 +55,66 @@ export function buildConversationContext(input: {
   profile: UserProfile;
   onboarding: OnboardingProgress;
   recalledMemories?: string;
+  conversationState?: ConversationState;
+  packQuery?: string;
+  highlightNodeIds?: string[];
+  working?: WorkingContext;
 }): ConversationContext {
   const onboarding = resolveOnboarding(
     input.graph,
     input.profile,
     input.onboarding,
   );
+
+  const conversationState = input.conversationState ?? "idle_chat";
+  const packMode = conversationStateToPackMode(conversationState);
+  const currentNews = input.newsQueue[input.newsCursor] ?? null;
+
+  const working = input.working ?? createEmptyWorking(conversationState);
+  working.state = conversationState;
+  if (currentNews) {
+    working.activeNewsId = currentNews.id;
+  }
+  if (input.highlightNodeIds && input.highlightNodeIds.length > 0) {
+    working.walkthroughNodeIds = [...input.highlightNodeIds];
+  }
+
+  refreshWorkingPack(
+    {
+      graph: input.graph,
+      profile: input.profile,
+      recalledMemories: input.recalledMemories,
+    },
+    working,
+    {
+      packQuery: input.packQuery,
+      newsTitle: currentNews?.title,
+    },
+  );
+
+  if (import.meta.env.DEV && working.pack) {
+    console.debug("[graphContextPack]", {
+      mode: working.pack.mode,
+      nodeIds: working.pack.nodeIds,
+      tokenEstimate: working.pack.tokenEstimate,
+    });
+  }
+
+  const tiered = buildTieredContext({
+    archival: {
+      graph: input.graph,
+      profile: input.profile,
+      recalledMemories: input.recalledMemories,
+    },
+    working,
+    mode: packMode,
+  });
+
   return {
     newsQueue: input.newsQueue,
     newsCursor: input.newsCursor,
-    graph: input.graph,
-    profile: input.profile,
-    personaId: input.profile.persona,
-    recalledMemories: input.recalledMemories,
     onboarding,
+    ...tiered,
   };
 }
 

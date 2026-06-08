@@ -32,7 +32,7 @@ export type ConversationEvent =
   | { type: "userInterrupt" }
   | { type: "newsAvailable"; queueLength: number }
   | { type: "ingestAnswer"; command: IngestCommand }
-  | { type: "ingestReprompt" }
+  | { type: "ingestReprompt"; reason?: string }
   | { type: "topicRequest"; topic: string; mode?: "single" | "walkthrough" };
 
 export interface ConversationContext {
@@ -42,6 +42,8 @@ export interface ConversationContext {
   profile: UserProfile;
   personaId: string;
   recalledMemories?: string;
+  /** Formatted profile + subgraph digest for LLM context injection. */
+  graphContextDigest?: string;
   onboarding: OnboardingProgress;
 }
 

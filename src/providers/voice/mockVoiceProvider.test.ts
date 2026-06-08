@@ -10,6 +10,27 @@ describe("MockVoiceProvider", () => {
     vi.useRealTimers();
   });
 
+  it("skips welcome utterance when skipWelcomeUtterance is set", async () => {
+    const voice = new MockVoiceProvider();
+    const lines: string[] = [];
+    voice.onTranscript((e) => {
+      if (e.final) {
+        lines.push(e.text);
+      }
+    });
+
+    const connectPromise = voice.connect({
+      apiKey: "",
+      skipWelcomeUtterance: true,
+    });
+    await vi.advanceTimersByTimeAsync(600);
+    await connectPromise;
+    await vi.runAllTimersAsync();
+
+    expect(voice.getState()).toBe("listening");
+    expect(lines).toEqual([]);
+  });
+
   it("connects and greets in mock mode", async () => {
     const voice = new MockVoiceProvider();
     const states: string[] = [];

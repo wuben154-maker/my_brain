@@ -42,9 +42,53 @@ export const VISUAL_TARGETS = [
 
   {
 
+    id: "companion-selfcheck",
+
+    label: "V2 语音自检 · HUD+面板",
+
+    referenceFile: "companion-selfcheck.png",
+
+    urlPath: "/?visual=companion-selfcheck",
+
+    waitSelector: "[data-testid='companion-selfcheck-screen']",
+
+    captureSelector: "[data-testid='companion-selfcheck-screen']",
+
+    referenceCrop: { x: 0, y: 0, w: 1, h: 1 },
+
+    maxDiffRatio: 0.12,
+
+    ignoreRects: [{ x: 0, y: 0.12, w: 0.58, h: 0.76 }],
+
+  },
+
+  {
+
+    id: "companion-main",
+
+    label: "V2 伴侣主场 · 星图+光球",
+
+    referenceFile: "companion-main.png",
+
+    urlPath: "/?visual=companion-main",
+
+    waitSelector: "[data-testid='immersive-scene']",
+
+    captureSelector: "[data-testid='immersive-scene']",
+
+    referenceCrop: { x: 0, y: 0, w: 1, h: 1 },
+
+    maxDiffRatio: 0.22,
+
+    ignoreRects: [{ x: 0, y: 0.08, w: 0.76, h: 0.84 }],
+
+  },
+
+  {
+
     id: "boot",
 
-    label: "启动自检 · 诊断区",
+    label: "启动自检 · 诊断区（legacy）",
 
     referenceFile: "boot-self-check.png",
 
@@ -66,7 +110,7 @@ export const VISUAL_TARGETS = [
 
     id: "companion",
 
-    label: "沉浸式伴侣 · 星图+光球",
+    label: "沉浸式伴侣 · 星图+光球（legacy alias）",
 
     referenceFile: "main-ui-graph-voice.png",
 
@@ -76,12 +120,12 @@ export const VISUAL_TARGETS = [
 
     captureSelector: "[data-testid='immersive-scene']",
 
-    // Crop concept left rail so graph+voice align with immersive-scene capture.
+    // Drop legacy left nav rail; mask header / chat / mic chrome we do not ship.
     referenceCrop: { x: 0.048, y: 0, w: 0.952, h: 1 },
 
-    maxDiffRatio: 0.28,
+    // Loose guard vs concept art graph content; strict V2 target is companion-main (0.30).
+    maxDiffRatio: 0.58,
 
-    // Intentionally omitted dead chrome — compare implementable regions only.
     ignoreRects: [
       { x: 0.22, y: 0, w: 0.78, h: 0.058 },
       { x: 0.54, y: 0.058, w: 0.13, h: 0.052 },
@@ -210,11 +254,11 @@ export function resolveVisualTargets(argv = process.argv.slice(2)) {
   }
   if (args.has("--companion")) {
     return VISUAL_TARGETS.filter((target) =>
-      ["boot", "companion"].includes(target.id),
+      ["companion-selfcheck", "companion-main"].includes(target.id),
     );
   }
   return VISUAL_TARGETS.filter((target) =>
-    ["boot", "companion"].includes(target.id),
+    ["companion-selfcheck", "companion-main"].includes(target.id),
   );
 }
 

@@ -1,4 +1,4 @@
-import { autoCurate } from "@/agent/curation/autoCurate";
+import { autoCurate, type AutoCurateProposal } from "@/agent/curation/autoCurate";
 import type { BrainGraphSnapshot } from "@/domain/graph";
 import type { GraphHistoryEntry } from "@/domain/graphHistory";
 import type { UserProfile } from "@/domain/profile";
@@ -20,7 +20,7 @@ export interface AutoCurateDeps {
 }
 
 function historyEntryFromApply(
-  proposal: { id: string; kind: GraphHistoryEntry["kind"]; summary: string },
+  proposal: AutoCurateProposal,
   before: BrainGraphSnapshot,
   after: BrainGraphSnapshot,
 ): GraphHistoryEntry {
@@ -29,6 +29,9 @@ function historyEntryFromApply(
     at: new Date().toISOString(),
     kind: proposal.kind,
     summary: proposal.summary,
+    reasonCode: proposal.reasonCode,
+    reasonDetail: proposal.reasonDetail,
+    affectedNodeIds: proposal.affectedNodeIds,
     before,
     after,
   };
@@ -45,7 +48,7 @@ export async function runAutoCurateAfterIngest(
     return [];
   }
 
-  const proposals = autoCurate(fullGraph, newNode, deps.profile);
+  const proposals = await autoCurate(fullGraph, newNode, deps.profile);
   if (proposals.length === 0) {
     return [];
   }

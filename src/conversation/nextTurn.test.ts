@@ -63,6 +63,20 @@ describe("nextTurn (pure state machine)", () => {
     expect(turn.nextState).toBe("ingest_decision");
   });
 
+  it("ingestReprompt with reason explains failure and stays in ingest_decision", async () => {
+    const ctx = createIdleCompanionContext();
+    const turn = await nextTurn(
+      "ingest_decision",
+      { type: "ingestReprompt", reason: "入库没成功：mock persist failed" },
+      ctx,
+      llm,
+    );
+    expect(turn.say).toMatch(/入库没成功/);
+    expect(turn.say).toMatch(/入库/);
+    expect(turn.nextState).toBe("ingest_decision");
+    expect(turn.expect).toBe("ingest");
+  });
+
   it("ingestAnswer skip advances toward idle", async () => {
     const ctx = createIdleCompanionContext();
     const turn = await nextTurn(

@@ -10,8 +10,16 @@ import type { ProposalEnvelope, ProposalStatus } from "@/agent/types";
 
 import { INITIAL_MIGRATION_SQL, STORAGE_DB_NAME } from "../migrations";
 
-import { migrateConceptSalienceColumnsTauri, migrateGraphHistoryTableTauri } from "../schemaMigrations";
-import type { GraphHistoryEntry } from "@/domain/graphHistory";
+import {
+  migrateConceptSalienceColumnsTauri,
+  migrateConceptTemporalColumnsTauri,
+  migrateGraphHistoryProvenanceTauri,
+  migrateGraphHistoryTableTauri,
+} from "../schemaMigrations";
+import type {
+  CurationReasonCode,
+  GraphHistoryEntry,
+} from "@/domain/graphHistory";
 
 import { normalizeConceptSalience } from "@/lib/salience";
 
@@ -72,7 +80,9 @@ export class TauriSqlStorageProvider implements StorageProvider {
     await this.db.execute(INITIAL_MIGRATION_SQL);
 
     await migrateConceptSalienceColumnsTauri(this.db);
+    await migrateConceptTemporalColumnsTauri(this.db);
     await migrateGraphHistoryTableTauri(this.db);
+    await migrateGraphHistoryProvenanceTauri(this.db);
 
   }
 
@@ -128,7 +138,13 @@ export class TauriSqlStorageProvider implements StorageProvider {
 
     const nodes = await db.select<
 
-      Array<Omit<ConceptNode, "archived"> & { archived: number }>
+      Array<
+        Omit<ConceptNode, "archived"> & {
+          archived: number;
+          archivedAt?: string | null;
+          supersedesNodeId?: string | null;
+        }
+      >
 
     >(
 
@@ -136,7 +152,9 @@ export class TauriSqlStorageProvider implements StorageProvider {
 
               created_at AS createdAt, updated_at AS updatedAt,
 
-              salience, last_touched_at AS lastTouchedAt
+              salience, last_touched_at AS lastTouchedAt,
+
+              archived_at AS archivedAt, supersedes_node_id AS supersedesNodeId
 
        FROM concepts`,
 
@@ -182,6 +200,10 @@ export class TauriSqlStorageProvider implements StorageProvider {
 
           lastTouchedAt: row.lastTouchedAt ?? undefined,
 
+          archivedAt: row.archivedAt ?? undefined,
+
+          supersedesNodeId: row.supersedesNodeId ?? undefined,
+
         }),
 
       ),
@@ -202,9 +224,9 @@ export class TauriSqlStorageProvider implements StorageProvider {
 
       `INSERT INTO concepts (id, title, intro, source_url, archived, created_at, updated_at,
 
-                            salience, last_touched_at)
+                            salience, last_touched_at, archived_at, supersedes_node_id)
 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 
        ON CONFLICT(id) DO UPDATE SET
 
@@ -220,7 +242,11 @@ export class TauriSqlStorageProvider implements StorageProvider {
 
          salience = $8,
 
-         last_touched_at = $9`,
+         last_touched_at = $9,
+
+         archived_at = $10,
+
+         supersedes_node_id = $11`,
 
       [
 
@@ -241,6 +267,10 @@ export class TauriSqlStorageProvider implements StorageProvider {
         node.salience ?? 1,
 
         node.lastTouchedAt ?? node.updatedAt,
+
+        node.archivedAt ?? null,
+
+        node.supersedesNodeId ?? null,
 
       ],
 
@@ -584,9 +614,14 @@ export class TauriSqlStorageProvider implements StorageProvider {
         before_json: string;
         after_json: string;
         undone: number;
+        reason_code?: string | null;
+        reason_detail?: string | null;
+        affected_node_ids?: string | null;
       }>
     >(
-      "SELECT id, at, kind, summary, before_json, after_json, undone FROM graph_history ORDER BY at DESC",
+      `SELECT id, at, kind, summary, before_json, after_json, undone,
+              reason_code, reason_detail, affected_node_ids
+       FROM graph_history ORDER BY at DESC`,
     );
     return rows.map((row) => ({
       id: row.id,
@@ -595,6 +630,9 @@ export class TauriSqlStorageProvider implements StorageProvider {
       summary: row.summary,
       before: JSON.parse(row.before_json),
       after: JSON.parse(row.after_json),
+      reasonCode: (row.reason_code ?? "manual") as CurationReasonCode,
+      reasonDetail: row.reason_detail ?? "",
+      affectedNodeIds: JSON.parse(row.affected_node_ids ?? "[]") as string[],
       undone: row.undone === 1 ? true : undefined,
     }));
   }
@@ -602,15 +640,19 @@ export class TauriSqlStorageProvider implements StorageProvider {
   async saveGraphHistoryEntry(entry: GraphHistoryEntry): Promise<void> {
     const db = this.requireDb();
     await db.execute(
-      `INSERT INTO graph_history (id, at, kind, summary, before_json, after_json, undone)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO graph_history (id, at, kind, summary, before_json, after_json, undone,
+                                  reason_code, reason_detail, affected_node_ids)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        ON CONFLICT(id) DO UPDATE SET
          at = excluded.at,
          kind = excluded.kind,
          summary = excluded.summary,
          before_json = excluded.before_json,
          after_json = excluded.after_json,
-         undone = excluded.undone`,
+         undone = excluded.undone,
+         reason_code = excluded.reason_code,
+         reason_detail = excluded.reason_detail,
+         affected_node_ids = excluded.affected_node_ids`,
       [
         entry.id,
         entry.at,
@@ -619,6 +661,9 @@ export class TauriSqlStorageProvider implements StorageProvider {
         JSON.stringify(entry.before),
         JSON.stringify(entry.after),
         entry.undone ? 1 : 0,
+        entry.reasonCode ?? "manual",
+        entry.reasonDetail ?? "",
+        JSON.stringify(entry.affectedNodeIds ?? []),
       ],
     );
   }

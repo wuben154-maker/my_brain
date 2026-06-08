@@ -51,12 +51,27 @@ describe("AppShell (V0 immersive shell)", () => {
     expect(screen.queryByTestId("immersive-scene")).toBeNull();
   });
 
-  it("renders boot intro without immersive scene or nav", () => {
+  it("renders self-check for legacy boot phase without BootBrainSphere", () => {
     useAppStore.setState({ phase: "boot" });
     render(createElement(AppShell));
-    expect(screen.getByTestId("boot-intro-screen")).toBeTruthy();
+    expect(screen.getByTestId("companion-selfcheck-screen")).toBeTruthy();
+    expect(screen.queryByTestId("boot-self-check")).toBeNull();
     expect(screen.queryByTestId("immersive-scene")).toBeNull();
     expect(screen.queryByRole("navigation", { name: "主导航" })).toBeNull();
+  });
+
+  it("shows companion self-check at default launch phase (no boot flash)", () => {
+    useAppStore.setState({
+      phase: "self_check",
+      errorMessage: null,
+      storage: null,
+      providers: null,
+      selfChecks: [{ id: "mic", label: "麦克风", status: "pending" }],
+    });
+    render(createElement(AppShell));
+    expect(screen.getByTestId("companion-selfcheck-screen")).toBeTruthy();
+    expect(screen.queryByTestId("boot-intro-screen")).toBeNull();
+    expect(screen.queryByTestId("immersive-scene")).toBeNull();
   });
 
   it("retires ?visual=main and keeps immersive companion shell", () => {

@@ -11,5 +11,9 @@ export function shouldSpeakCurationReport(
 }
 
 export function formatCurationReport(entry: GraphHistoryEntry): string {
+  const detail = entry.reasonDetail.trim();
+  if (detail) {
+    return `${entry.summary}：${detail}`;
+  }
   return entry.summary;
 }

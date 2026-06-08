@@ -17,7 +17,7 @@ const SPEAK_CHUNK_CHARS = 6;
 export const MOCK_DEFAULT_UTTERANCE = "今天有什么 AI 资讯？";
 
 const MOCK_GREETING =
-  "Mock 语音已连接。点「模拟说话」或按住空格说话、松开发送；助手回复时可点「打断」。";
+  "我已就绪，直接开口就好；说完我会接着回应。";
 
 interface MockReplyContext {
   newsCount?: number;
@@ -52,9 +52,11 @@ export class MockVoiceProvider implements VoiceProvider {
     }
     this.sessionConnected = true;
     this.setState("listening");
-    this.schedule(() => {
-      void this.streamAssistant(MOCK_GREETING);
-    }, 400);
+    if (!config.skipWelcomeUtterance) {
+      this.schedule(() => {
+        void this.streamAssistant(MOCK_GREETING);
+      }, 400);
+    }
   }
 
   async disconnect(): Promise<void> {

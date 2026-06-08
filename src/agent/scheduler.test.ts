@@ -1,10 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentJob, AgentRunResult } from "@/agent/types";
+import { createTempStorage } from "@/invariants/testStorage";
 import {
   createAgentScheduler,
   SchedulerBusyError,
   type SchedulerConfig,
 } from "./scheduler";
+import {
+  DEFAULT_PENDING_MAX_AGE_MS,
+  persistAgentRunResult,
+} from "./schedulerPersist";
 
 function makeResult(id: string): AgentRunResult {
   return {
@@ -168,14 +173,30 @@ describe("createAgentScheduler (A5)", () => {
   });
 
   it(
+    "persistAgentRunResult with empty proposals does not create pending proposals",
+    async () => {
+      const { storage, cleanup } = createTempStorage();
+      try {
+        await storage.init();
+        const pendingBefore = await storage.listPendingProposals();
+        expect(pendingBefore).toHaveLength(0);
+
+        await persistAgentRunResult(storage, makeResult("noop-empty"));
+
+        const pendingAfter = await storage.listPendingProposals();
+        expect(pendingAfter).toHaveLength(0);
+        expect((await storage.loadGraph()).nodes).toHaveLength(0);
+      } finally {
+        cleanup();
+      }
+    },
+    15_000,
+  );
+
+  it(
     "persistAgentRunResult marks stale pending as expired",
     async () => {
-    const { createTempStorage } = await import("@/invariants/testStorage");
-    const { persistAgentRunResult, DEFAULT_PENDING_MAX_AGE_MS } = await import(
-      "./schedulerPersist"
-    );
-
-    const { storage, cleanup } = createTempStorage();
+      const { storage, cleanup } = createTempStorage();
     try {
       await storage.init();
       const oldCreated = new Date(

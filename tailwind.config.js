@@ -6,14 +6,22 @@ export default {
       colors: {
         bg: {
           base: "var(--bg-base)",
+          deep: "var(--bg-deep)",
           elevated: "var(--bg-elevated)",
           panel: "var(--bg-panel)",
           overlay: "var(--bg-overlay)",
         },
+        panel: "var(--panel)",
+        star: "var(--star)",
         accent: {
           cyan: "var(--accent-cyan)",
+          "cyan-dim": "var(--accent-cyan-dim)",
+          violet: "var(--accent-violet)",
+          "violet-deep": "var(--accent-violet-deep)",
           blue: "var(--accent-blue)",
         },
+        ok: "var(--ok)",
+        err: "var(--err)",
         status: {
           ok: "var(--status-ok)",
           pending: "var(--status-pending)",
@@ -57,12 +65,21 @@ export default {
       boxShadow: {
         "glow-cyan": "var(--glow-cyan)",
         "glow-soft": "var(--glow-soft)",
+        glass: "var(--shadow-glass)",
       },
       fontFamily: {
         sans: ["var(--font-sans)"],
         hud: ["var(--font-hud)"],
       },
       fontSize: {
+        hero: [
+          "var(--font-size-hero)",
+          { lineHeight: "var(--line-height-hero)" },
+        ],
+        section: [
+          "var(--font-size-section)",
+          { lineHeight: "var(--line-height-section)" },
+        ],
         display: [
           "var(--font-size-display)",
           { lineHeight: "var(--line-height-display)" },

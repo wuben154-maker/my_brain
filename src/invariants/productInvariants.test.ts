@@ -19,7 +19,9 @@ import {
   createNewsSourceRegistry,
   type NewsSource,
 } from "@/providers/news/types";
+import { resolveRecalledMemoriesForTurn } from "@/conversation/contextTiers";
 import { createAppProviders } from "@/providers";
+import { MockMemoryProvider } from "@/providers/memory/mockMemoryProvider";
 import { MockVoiceProvider } from "@/providers/voice/mockVoiceProvider";
 import { INITIAL_MIGRATION_SQL } from "@/storage/migrations";
 import {
@@ -544,7 +546,7 @@ describe("Product invariants (AGENTS.md core)", () => {
     it("post-ingest curate can auto apply", () => {
       const autoCurate = readRepoSource("src/agent/curation/autoCurate.ts");
       const pipeline = readRepoSource("src/lib/runAutoCuratePipeline.ts");
-      expect(autoCurate).toContain("export function autoCurate");
+      expect(autoCurate).toContain("export async function autoCurate");
       expect(pipeline).toContain("applyGraphMutation");
       expect(pipeline).not.toContain("saveProposal");
     });
@@ -687,6 +689,48 @@ describe("Product invariants (AGENTS.md core)", () => {
       ]);
       const recalled = await providers.memory.recall({ query: "LLM", topK: 1 });
       expect(recalled.length).toBeGreaterThan(0);
+    });
+
+    it("memory recall does not mutate graph or profile in SQLite", async () => {
+      const { storage, cleanup } = createTempStorage();
+      try {
+        await storage.init();
+        await storage.saveConcept({
+          id: "mem-boundary-node",
+          title: "RAG",
+          intro: "检索增强生成",
+          sourceUrl: null,
+          archived: false,
+          createdAt: "2026-06-01T00:00:00.000Z",
+          updatedAt: "2026-06-01T00:00:00.000Z",
+        });
+        const graphBefore = await storage.loadGraph();
+        const profileBefore = await storage.loadUserProfile();
+
+        const memory = new MockMemoryProvider();
+        await memory.remember([
+          {
+            kind: "fact",
+            text: "用户关心 RAG 向量检索",
+            timestamp: Date.now(),
+          },
+        ]);
+        const recalled = await resolveRecalledMemoriesForTurn(
+          memory,
+          "RAG",
+          "teaching",
+        );
+        expect(recalled).toContain("RAG");
+
+        const graphAfter = await storage.loadGraph();
+        const profileAfter = await storage.loadUserProfile();
+        expect(graphAfter).toEqual(graphBefore);
+        expect(profileAfter).toEqual(profileBefore);
+        const pending = await storage.listPendingProposals();
+        expect(pending).toHaveLength(0);
+      } finally {
+        cleanup();
+      }
     });
   });
 });

@@ -7,6 +7,8 @@ import {
   VISUAL_BOOT_CHECKS,
   VISUAL_BOOT_LOGS,
   VISUAL_BOOT_PROGRESS,
+  VISUAL_COMPANION_SELFCHECK_CHECKS,
+  VISUAL_COMPANION_SELFCHECK_PROGRESS,
   VISUAL_INBOX_ENVELOPE,
   VISUAL_INSIGHT_ENVELOPES,
   VISUAL_INSIGHT_RUN,
@@ -18,7 +20,42 @@ import { useProposalStore } from "@/stores/proposalStore";
 import { useResearchRunStore } from "@/stores/researchRunStore";
 import { useUiStore } from "@/stores/uiStore";
 
-export type VisualSnapshotId = "boot" | "main" | "companion" | "inbox" | "insight";
+export type VisualSnapshotId =
+  | "boot"
+  | "companion-boot"
+  | "companion-selfcheck"
+  | "companion-main"
+  | "companion"
+  | "main"
+  | "inbox"
+  | "insight";
+
+const VISUAL_SNAPSHOT_ALIASES: Record<string, VisualSnapshotId> = {
+  main: "companion-main",
+  companion: "companion-main",
+};
+
+export function normalizeVisualSnapshotId(
+  value: string | null,
+): VisualSnapshotId | null {
+  if (!value) {
+    return null;
+  }
+  if (value in VISUAL_SNAPSHOT_ALIASES) {
+    return VISUAL_SNAPSHOT_ALIASES[value];
+  }
+  if (
+    value === "boot" ||
+    value === "companion-boot" ||
+    value === "companion-selfcheck" ||
+    value === "companion-main" ||
+    value === "inbox" ||
+    value === "insight"
+  ) {
+    return value;
+  }
+  return null;
+}
 
 export function readVisualSnapshotId(): VisualSnapshotId | null {
   if (!shouldEnableDemoModes()) {
@@ -28,22 +65,18 @@ export function readVisualSnapshotId(): VisualSnapshotId | null {
     return null;
   }
   const value = new URLSearchParams(window.location.search).get("visual");
-  if (value === "main") {
-    return "companion";
-  }
-  if (
-    value === "boot" ||
-    value === "companion" ||
-    value === "inbox" ||
-    value === "insight"
-  ) {
-    return value;
-  }
-  return null;
+  return normalizeVisualSnapshotId(value);
 }
 
 export function isVisualSnapshotMode(): boolean {
   return readVisualSnapshotId() !== null;
+}
+
+/** True when the snapshot should pin the companion main graph layout. */
+export function isCompanionMainVisualSnapshot(
+  id: VisualSnapshotId | null = readVisualSnapshotId(),
+): boolean {
+  return id === "companion-main" || id === "companion" || id === "main";
 }
 
 /** Seed dev SQLite for `?visual=inbox` so approve uses proposalStore, not memory-only graph. */
@@ -66,11 +99,23 @@ export function applyVisualSnapshot(id: VisualSnapshotId): void {
   }
   document.documentElement.dataset.visualSnapshot = id;
 
+  if (id === "companion-boot") {
+    // Boot intro removed — alias to self-check snapshot for legacy URLs.
+    applyVisualSnapshot("companion-selfcheck");
+    return;
+  }
+
+  if (id === "companion-selfcheck") {
+    const store = useAppStore.getState();
+    store.beginSelfCheckLaunch([...VISUAL_COMPANION_SELFCHECK_CHECKS]);
+    store.setBootProgress(VISUAL_COMPANION_SELFCHECK_PROGRESS);
+    store.appendBootLog("[BOOT] VOICE SYSTEM CHECK…");
+    return;
+  }
+
   if (id === "boot") {
     const store = useAppStore.getState();
-    store.resetBoot();
-    store.setPhase("self_check");
-    store.setSelfChecks([...VISUAL_BOOT_CHECKS]);
+    store.beginSelfCheckLaunch([...VISUAL_BOOT_CHECKS]);
     store.setBootProgress(VISUAL_BOOT_PROGRESS);
     for (const line of VISUAL_BOOT_LOGS) {
       store.appendBootLog(line);
@@ -99,7 +144,7 @@ export function applyVisualSnapshot(id: VisualSnapshotId): void {
     return;
   }
 
-  if (id === "companion") {
+  if (isCompanionMainVisualSnapshot(id)) {
     useGraphStore.getState().setGraph(createCompanionVisualGraphSnapshot());
     useAppStore.getState().setPhase("companion");
     return;

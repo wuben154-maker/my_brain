@@ -25,6 +25,12 @@ describe("SettingsOverlay (V5)", () => {
     });
   });
 
+  it("renders thin-line SVG gear icon instead of text glyph", () => {
+    render(createElement(SettingsOverlay, { companionCorner: true }));
+    expect(screen.getByTestId("settings-gear-icon")).toBeTruthy();
+    expect(screen.getByTestId("settings-corner").textContent).not.toContain("⚙");
+  });
+
   it("renders voice timbre and persona controls when open", () => {
     render(createElement(SettingsOverlay));
     fireEvent.click(screen.getByTestId("settings-corner"));

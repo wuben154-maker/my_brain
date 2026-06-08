@@ -1,6 +1,7 @@
 import { toResearchTempId } from "@/agent/jobs/topicResearchJob";
 import type { AgentTraceStep, ProposalEnvelope } from "@/agent/types";
 import type { BrainGraphSnapshot } from "@/domain/graph";
+import type { VisualRelationKind } from "@/lib/graphVisualTokens";
 import type { ResearchRunRecord } from "@/stores/researchRunStore";
 import type { SelfCheckItem } from "@/stores/appStore";
 
@@ -160,6 +161,22 @@ export const VISUAL_BOOT_LOGS = [
 
 export const VISUAL_BOOT_PROGRESS = 78;
 
+/** V2 companion-selfcheck snapshot: 4 passed + brain I/O syncing (§5.1). */
+export const VISUAL_COMPANION_SELFCHECK_CHECKS: SelfCheckItem[] = [
+  { id: "mic", label: "麦克风", status: "ok" },
+  { id: "speaker", label: "扬声器", status: "ok" },
+  { id: "network", label: "网络", status: "ok" },
+  { id: "news", label: "资讯源", status: "ok" },
+  {
+    id: "storage",
+    label: "大脑读写",
+    status: "syncing",
+    detail: "正在验证本地知识库",
+  },
+];
+
+export const VISUAL_COMPANION_SELFCHECK_PROGRESS = 80;
+
 /** Pending proposal for inbox visual smoke (`?visual=inbox`). */
 export const VISUAL_INBOX_ENVELOPE: ProposalEnvelope = {
   id: "visual-prop-create-1",
@@ -305,6 +322,8 @@ const COMPANION_EDGE_SEEDS: Array<{
   source: string;
   target: string;
   relation: BrainGraphSnapshot["edges"][number]["relationType"];
+  /** Fixture-only visual kind until domain gains temporal/emotional types. */
+  visualKind?: VisualRelationKind;
 }> = [
   { source: "vis-ai", target: "vis-ml", relation: "related" },
   { source: "vis-ai", target: "vis-cv", relation: "related" },
@@ -357,7 +376,30 @@ const COMPANION_EDGE_SEEDS: Array<{
   { source: "vis-rl", target: "vis-bandit", relation: "related" },
   { source: "vis-supervised", target: "vis-svm", relation: "depends_on" },
   { source: "vis-unsupervised", target: "vis-knn", relation: "depends_on" },
+  // related in domain; temporal/emotional colors for legend parity in captures
+  { source: "vis-qa", target: "vis-summ", relation: "related", visualKind: "temporal" },
+  { source: "vis-sent", target: "vis-chat", relation: "related", visualKind: "emotional" },
+  { source: "vis-fe", target: "vis-nn", relation: "depends_on" },
+  { source: "vis-imgcls", target: "vis-det", relation: "depends_on" },
+  { source: "vis-wordvec", target: "vis-ner", relation: "related" },
+  { source: "vis-ql", target: "vis-bandit", relation: "related" },
+  // Upper-left ML cluster mesh — stays inside ignore rect for companion-main captures
+  { source: "vis-supervised", target: "vis-dt", relation: "related" },
+  { source: "vis-unsupervised", target: "vis-fe", relation: "related" },
+  { source: "vis-nn", target: "vis-supervised", relation: "related" },
+  { source: "vis-fe", target: "vis-eval", relation: "related" },
 ];
+
+/** Companion capture: edge visual kinds keyed by sourceId:targetId. */
+export const COMPANION_EDGE_VISUAL_OVERRIDES: Readonly<
+  Record<string, VisualRelationKind>
+> = Object.fromEntries(
+  COMPANION_EDGE_SEEDS.filter(
+    (edge): edge is (typeof COMPANION_EDGE_SEEDS)[number] & {
+      visualKind: VisualRelationKind;
+    } => edge.visualKind !== undefined,
+  ).map((edge) => [`${edge.source}:${edge.target}`, edge.visualKind]),
+);
 
 /** Shorter hub subtitles for companion captures — avoids label/subtitle collisions. */
 export const COMPANION_HUB_INTRO_SHORT: Record<string, string> = {

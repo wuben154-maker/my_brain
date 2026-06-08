@@ -16,12 +16,17 @@ import {
   graphClusterColors,
   graphEdgeColor,
   invalidateGraphVisualTokenCache,
+  paintRelationLink,
+  RELATION_VISUAL_TOKENS,
+  relationVisualForDomain,
+  type VisualRelationKind,
   withAlpha,
 } from "@/lib/graphVisualTokens";
 import { GRAPH_ZOOM_TOPIC_MAX } from "@/lib/memoryLayers";
 import { salienceVisualAlpha } from "@/lib/salience";
 import { readVisualSnapshotId } from "@/lib/visualSnapshotMode";
 import {
+  COMPANION_EDGE_VISUAL_OVERRIDES,
   COMPANION_HUB_INTRO_SHORT,
   COMPANION_NODE_CLUSTER,
   VISUAL_GRAPH_PINNED_POSITIONS,
@@ -30,7 +35,7 @@ import { useGraphStore } from "@/stores/graphStore";
 
 const HOVER_SCALE = 1.06;
 const BASE_RADIUS = 5;
-const COMPANION_LEAF_RADIUS = 3.8;
+const COMPANION_LEAF_RADIUS = 4;
 const ACTIVE_RADIUS = 8;
 const ARCHIVED_OPACITY = 0.35;
 const LINK_DISTANCE_MIN = 36;
@@ -54,6 +59,7 @@ type GraphDatumLink = {
   source: string;
   target: string;
   relationType: string;
+  visualRelationKind?: VisualRelationKind;
 };
 
 type GraphNode = NodeObject<GraphDatumNode>;
@@ -67,22 +73,6 @@ function resolveClusterColor(nodeId: string, companionVisual: boolean): string {
     }
   }
   return clusterColorForNodeId(nodeId);
-}
-
-function resolveLinkClusterColor(
-  link: GraphLink,
-  companionVisual: boolean,
-): string {
-  const sourceId =
-    typeof link.source === "object"
-      ? String((link.source as unknown as GraphDatumNode).id)
-      : String(link.source);
-  const targetId =
-    typeof link.target === "object"
-      ? String((link.target as unknown as GraphDatumNode).id)
-      : String(link.target);
-  const focusId = sourceId === "vis-ai" ? targetId : sourceId;
-  return resolveClusterColor(focusId, companionVisual);
 }
 
 function nodeVisualState(
@@ -100,7 +90,13 @@ function nodeVisualState(
   return "active";
 }
 
-export function BrainGraphView() {
+export interface BrainGraphViewProps {
+  /** Strip zoom pill, depth slider, stats, and minimap on the companion main path. */
+  immersiveMinimalHud?: boolean;
+}
+
+export function BrainGraphView(props: BrainGraphViewProps = {}) {
+  const { immersiveMinimalHud = false } = props;
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<
     ForceGraphMethods<GraphNode, GraphLink> | undefined
@@ -132,8 +128,16 @@ export function BrainGraphView() {
   }, [layerDepth]);
 
   const visualSnapshotId = readVisualSnapshotId();
-  const pinGraphLayout = visualSnapshotId === "companion";
-  const isCompanionVisual = visualSnapshotId === "companion";
+  const pinGraphLayout =
+    visualSnapshotId === "companion-main" ||
+    visualSnapshotId === "companion" ||
+    visualSnapshotId === "main";
+  const isCompanionVisual = pinGraphLayout;
+  const companionLiveEnhance = isCompanionVisual && visualSnapshotId === null;
+  const companionSnapshotPin =
+    visualSnapshotId === "companion-main" || visualSnapshotId === "companion";
+  const minimalHud = immersiveMinimalHud || isCompanionVisual;
+  const linkCurvature = minimalHud ? 0 : 0.25;
 
   const graphData = useMemo(
     () => ({
@@ -166,12 +170,20 @@ export function BrainGraphView() {
         }),
       ],
       links: [
-        ...edges.map((edge) => ({
-          id: edge.id,
-          source: edge.sourceId,
-          target: edge.targetId,
-          relationType: edge.relationType,
-        })),
+        ...edges.map((edge) => {
+          const visualRelationKind = isCompanionVisual
+            ? COMPANION_EDGE_VISUAL_OVERRIDES[
+                `${edge.sourceId}:${edge.targetId}`
+              ]
+            : undefined;
+          return {
+            id: edge.id,
+            source: edge.sourceId,
+            target: edge.targetId,
+            relationType: edge.relationType,
+            ...(visualRelationKind ? { visualRelationKind } : {}),
+          };
+        }),
         ...previewGhostEdges.map((edge) => ({
           id: edge.id,
           source: edge.sourceId,
@@ -180,7 +192,14 @@ export function BrainGraphView() {
         })),
       ],
     }),
-    [nodes, edges, previewGhostNodes, previewGhostEdges, pinGraphLayout],
+    [
+      nodes,
+      edges,
+      previewGhostNodes,
+      previewGhostEdges,
+      pinGraphLayout,
+      isCompanionVisual,
+    ],
   );
 
   const minimapNodes: MinimapNode[] = useMemo(() => {
@@ -364,22 +383,59 @@ export function BrainGraphView() {
               if (highlightedEdgeIds.includes(linkId)) {
                 return graphAccentCyan();
               }
-              if (isCompanionVisual) {
-                return withAlpha(
-                  resolveLinkClusterColor(graphLink, true),
-                  0.38,
-                );
+              if (minimalHud) {
+                return "rgba(0,0,0,0)";
               }
               return graphEdgeColor();
             }}
-            linkWidth={(link) =>
-              highlightedEdgeIds.includes(String((link as GraphLink).id))
-                ? 2
-                : isCompanionVisual
-                  ? 1.05
-                  : 1
-            }
-            linkCurvature={isCompanionVisual ? 0 : 0.25}
+            linkWidth={(link) => {
+              const graphLink = link as GraphLink;
+              const linkId = String(graphLink.id);
+              const highlighted = highlightedEdgeIds.includes(linkId);
+              if (minimalHud) {
+                return highlighted ? 2 : 0;
+              }
+              return highlighted ? 2 : 1;
+            }}
+            linkCurvature={linkCurvature}
+            linkCanvasObjectMode={() => (minimalHud ? "replace" : undefined)}
+            linkCanvasObject={(link, ctx, globalScale) => {
+              if (!minimalHud) {
+                return;
+              }
+              const graphLink = link as GraphLink;
+              const datumLink = graphLink as GraphDatumLink;
+              const visualKind = datumLink.visualRelationKind;
+              const token = visualKind
+                ? RELATION_VISUAL_TOKENS[visualKind]
+                : relationVisualForDomain(graphLink.relationType);
+              const source = graphLink.source as GraphNode | string | undefined;
+              const target = graphLink.target as GraphNode | string | undefined;
+              const sourceX =
+                typeof source === "object" && source ? (source.x ?? 0) : 0;
+              const sourceY =
+                typeof source === "object" && source ? (source.y ?? 0) : 0;
+              const targetX =
+                typeof target === "object" && target ? (target.x ?? 0) : 0;
+              const targetY =
+                typeof target === "object" && target ? (target.y ?? 0) : 0;
+              paintRelationLink(ctx, {
+                sourceX,
+                sourceY,
+                targetX,
+                targetY,
+                curvature: linkCurvature,
+                globalScale,
+                token,
+                highlighted: highlightedEdgeIds.includes(String(graphLink.id)),
+                accentColor: graphAccentCyan(),
+                alpha: companionLiveEnhance
+                  ? 0.48
+                  : companionSnapshotPin
+                    ? 0.57
+                    : 0.55,
+              });
+            }}
             linkDirectionalParticles={0}
             linkDirectionalParticleWidth={1.6}
             linkDirectionalParticleSpeed={0.0055}
@@ -425,7 +481,9 @@ export function BrainGraphView() {
               const isCompanionHub =
                 isCompanionVisual && hubLevel === 2 && nodeId === "vis-ai";
               const leafRadius = isCompanionVisual
-                ? COMPANION_LEAF_RADIUS
+                ? companionLiveEnhance
+                  ? 3.5
+                  : COMPANION_LEAF_RADIUS
                 : BASE_RADIUS;
               let baseRadius = graphNode.archived
                 ? leafRadius - 0.5
@@ -464,7 +522,9 @@ export function BrainGraphView() {
               // as a whole, not just on hover. Falls off to fully transparent.
               if (!graphNode.archived) {
                 const bloomScale = isCompanionHub
-                  ? 14
+                  ? companionLiveEnhance
+                    ? 16
+                    : 14
                   : hubLevel === 2
                     ? 8.5
                     : hubLevel === 1
@@ -474,7 +534,9 @@ export function BrainGraphView() {
                         : 4.4;
                 const bloomRadius = radius * bloomScale;
                 const bloomCore = isCompanionHub
-                  ? 0.95
+                  ? companionLiveEnhance
+                    ? 1
+                    : 0.95
                   : hubLevel === 2
                     ? 0.68
                     : hubLevel === 1
@@ -518,7 +580,9 @@ export function BrainGraphView() {
               } else if (!graphNode.archived) {
                 ctx.shadowColor = clusterColor;
                 ctx.shadowBlur = isCompanionHub
-                  ? 58
+                  ? companionLiveEnhance
+                    ? 68
+                    : 58
                   : hubLevel === 2
                     ? 30
                     : hubLevel === 1
@@ -539,7 +603,15 @@ export function BrainGraphView() {
 
               if (!graphNode.archived && hubLevel !== undefined) {
                 const ringPad = isCompanionHub ? 10 : hubLevel === 2 ? 5 : 3.5;
-                const ringCount = isCompanionHub ? 4 : hubLevel === 2 ? 2 : 1;
+                const ringCount = isCompanionHub
+                  ? companionLiveEnhance
+                    ? 5
+                    : companionSnapshotPin
+                      ? 5
+                      : 4
+                  : hubLevel === 2
+                    ? 2
+                    : 1;
                 for (let ring = 0; ring < ringCount; ring += 1) {
                   const offset = ringPad + ring * (isCompanionHub ? 7 : 4);
                   ctx.beginPath();
@@ -577,7 +649,9 @@ export function BrainGraphView() {
                     ? radius * 1.35
                     : hubLevel === 1
                       ? radius * 1.2
-                      : radius * 1.5;
+                      : isCompanionVisual && companionSnapshotPin
+                        ? radius * 1.22
+                        : radius * 1.5;
                 const labelWeight =
                   isCompanionHub || hubLevel !== undefined ? 700 : 500;
 
@@ -588,7 +662,7 @@ export function BrainGraphView() {
                   const cardY = y - cardH / 2;
                   ctx.fillStyle = "rgba(8, 14, 28, 0.82)";
                   ctx.strokeStyle = withAlpha(graphAccentCyan(), 0.55);
-                  ctx.lineWidth = 1.2 / globalScale;
+                  ctx.lineWidth = (companionLiveEnhance ? 0.9 : 1.2) / globalScale;
                   const r = 6 / globalScale;
                   ctx.beginPath();
                   ctx.moveTo(cardX + r, cardY);
@@ -632,7 +706,9 @@ export function BrainGraphView() {
                       ? "#f8fafc"
                       : hubLevel === 2
                         ? "#f8fafc"
-                        : "#cbd5e1";
+                        : isCompanionVisual && companionSnapshotPin
+                          ? "rgba(186, 210, 232, 0.78)"
+                          : "#cbd5e1";
                   const labelX = x + radius + labelSize * 0.35;
                   const labelY =
                     hubLevel === 1 && graphNode.intro
@@ -662,26 +738,31 @@ export function BrainGraphView() {
           {hoveredLink ? (
             <EdgeHoverLabel
               relationType={hoveredLink.relationType as RelationType}
+              visualRelationKind={hoveredLink.visualRelationKind}
               left={16}
               top={56}
             />
           ) : null}
 
-          <div
-            className="pointer-events-none absolute bottom-4 left-4 z-[3] flex flex-col gap-2.5"
-            aria-label="图谱左下角控件"
-          >
-            <CompanionGraphStatsPanel />
-            <GraphMinimap nodes={minimapNodes} embedded />
-          </div>
-          <GraphZoomControls
-            zoomPercentLabel={zoomPercentLabel}
-            layerDepth={layerDepth}
-            onLayerDepthChange={setLayerDepth}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onReset={handleReset}
-          />
+          {!minimalHud ? (
+            <div
+              className="pointer-events-none absolute bottom-4 left-4 z-[3] flex flex-col gap-2.5"
+              aria-label="图谱左下角控件"
+            >
+              <CompanionGraphStatsPanel />
+              <GraphMinimap nodes={minimapNodes} embedded />
+            </div>
+          ) : null}
+          {!minimalHud ? (
+            <GraphZoomControls
+              zoomPercentLabel={zoomPercentLabel}
+              layerDepth={layerDepth}
+              onLayerDepthChange={setLayerDepth}
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
+              onReset={handleReset}
+            />
+          ) : null}
         </>
       )}
     </div>

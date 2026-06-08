@@ -1,6 +1,6 @@
 ﻿import { beforeEach, describe, expect, it } from "vitest";
 import type { GraphHistoryEntry } from "@/domain/graphHistory";
-import { createTempStorage } from "@/invariants/testStorage";
+import { createTempStorage, reopenStorage } from "@/invariants/testStorage";
 import { useGraphHistoryStore } from "@/stores/graphHistoryStore";
 
 const node = {
@@ -24,6 +24,9 @@ const entry: GraphHistoryEntry = {
   at: "2026-06-01T00:00:00.000Z",
   kind: "archive",
   summary: "auto archive",
+  reasonCode: "stale",
+  reasonDetail: "超过 90 天未更新",
+  affectedNodeIds: ["n1"],
   before: beforeSnapshot,
   after: afterSnapshot,
 };
@@ -48,6 +51,27 @@ describe("graphHistoryStore", () => {
     }
   });
 
+  it("round-trips provenance fields through storage", async () => {
+    const { storage, dbPath, kind, cleanup } = createTempStorage();
+    try {
+      await storage.init();
+      await storage.saveGraphHistoryEntry(entry);
+      await storage.close();
+
+      const reopened = reopenStorage(dbPath, kind);
+      await reopened.init();
+      const row = (await reopened.listGraphHistory()).find((r) => r.id === entry.id);
+      expect(row).toMatchObject({
+        reasonCode: "stale",
+        reasonDetail: "超过 90 天未更新",
+        affectedNodeIds: ["n1"],
+      });
+      await reopened.close();
+    } finally {
+      cleanup();
+    }
+  });
+
   it("undo removes nodes and edges added after the history entry", async () => {
     const { storage, cleanup } = createTempStorage();
     try {
@@ -66,6 +90,9 @@ describe("graphHistoryStore", () => {
         at: "2026-06-01T12:00:00.000Z",
         kind: "link",
         summary: "auto link",
+        reasonCode: "overlap_title",
+        reasonDetail: "标题重叠",
+        affectedNodeIds: ["n1", "n2"],
         before: beforeSnapshot,
         after: {
           nodes: [node],

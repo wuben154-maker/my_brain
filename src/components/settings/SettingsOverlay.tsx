@@ -24,8 +24,34 @@ const PERSONA_OPTIONS: { id: PersonaPreset; label: string }[] = [
   { id: "geek", label: "极客" },
 ];
 
+/** Thin cyan-outline gear — companion corner must not use the ⚙ text glyph. */
+function SettingsGearIcon() {
+  return (
+    <svg
+      data-testid="settings-gear-icon"
+      viewBox="0 0 24 24"
+      className="h-[1.05rem] w-[1.05rem]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.35"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="12" cy="12" r="3.25" />
+      <path d="M12 2.5v2.1M12 19.4v2.1M4.6 4.6l1.5 1.5M17.9 17.9l1.5 1.5M2.5 12h2.1M19.4 12h2.1M4.6 19.4l1.5-1.5M17.9 6.1l1.5-1.5" />
+      <path d="M12 5.8a6.2 6.2 0 0 1 4.4 10.6l-.9.9a6.2 6.2 0 0 1-8.8 0l-.9-.9A6.2 6.2 0 0 1 12 5.8Z" opacity="0.55" />
+    </svg>
+  );
+}
+
 /** Corner settings: voice timbre + persona preset (V5). API keys stay in .env only. */
-export function SettingsOverlay() {
+export function SettingsOverlay({
+  companionCorner = false,
+}: {
+  /** Companion main: icon-only gear at top-right (§4). */
+  companionCorner?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const providers = useAppStore((state) => state.providers);
   const storage = useAppStore((state) => state.storage);
@@ -81,9 +107,13 @@ export function SettingsOverlay() {
         aria-label="设置"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="flex h-10 w-10 items-center justify-center rounded-full border border-hud bg-bg-elevated/80 text-secondary backdrop-blur-md transition hover:border-accent-cyan/50 hover:text-primary"
+        className={
+          companionCorner
+            ? "flex h-7 w-7 items-center justify-center rounded-sm border border-accent-cyan/45 bg-bg-base/25 text-accent-cyan shadow-[0_0_14px_rgba(59,232,224,0.22)] backdrop-blur-sm transition hover:border-accent-cyan/70 hover:text-star hover:shadow-[0_0_18px_rgba(59,232,224,0.42)]"
+            : "flex h-6 w-6 items-center justify-center rounded-full border border-hud bg-bg-elevated/80 text-secondary backdrop-blur-md transition hover:border-accent-cyan/50 hover:text-primary"
+        }
       >
-        ⚙
+        <SettingsGearIcon />
       </button>
 
       {open ? (

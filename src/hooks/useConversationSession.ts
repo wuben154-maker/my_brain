@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { buildConversationContext } from "@/conversation/buildContext";
 import { ConversationConductor } from "@/conversation/ConversationConductor";
+import { resolveRecalledMemoriesForTurn } from "@/conversation/contextTiers";
 import { applyIngestDecision } from "@/conversation/ingestActions";
 import type { ConversationEvent } from "@/conversation/types";
 import type { FinalizeCompanionDisconnectParams } from "@/hooks/companionSessionTypes";
@@ -11,6 +12,7 @@ import {
 } from "@/hooks/useProfileDistillation";
 import { useWalkthroughHighlight } from "@/hooks/useWalkthroughHighlight";
 import { parseIngestCommand } from "@/lib/parseIngestCommand";
+import { isVisualSnapshotMode } from "@/lib/visualSnapshotMode";
 import type { TranscriptLineLike } from "@/lib/profileDistillation";
 import { finalizeVoiceSession } from "@/lib/voiceSessionFinalize";
 import { useAppStore } from "@/stores/appStore";
@@ -26,6 +28,8 @@ import { useProfileStore } from "@/stores/profileStore";
 export function useConversationSession(options?: {
   voiceConnected?: boolean;
 }) {
+  const voiceConnected = options?.voiceConnected ?? false;
+  const visualSnapshot = isVisualSnapshotMode();
   const { distillFromLines, rememberFromLines } = useProfileDistillation();
   const phase = useAppStore((s) => s.phase);
   const newsQueue = useAppStore((s) => s.newsQueue);
@@ -40,6 +44,7 @@ export function useConversationSession(options?: {
   const walkthrough = useWalkthroughHighlight([], 1000);
   const walkthroughRef = useRef(walkthrough);
   walkthroughRef.current = walkthrough;
+  const walkthroughPathRef = useRef<string[]>([]);
 
   const newsCursor = useConversationStore((s) => s.newsCursor);
   const onboarding = useConversationStore((s) => s.onboarding);
@@ -54,7 +59,6 @@ export function useConversationSession(options?: {
   const conductorRef = useRef<ConversationConductor | null>(null);
   const companionPrimedRef = useRef(false);
   const wasCompanionRef = useRef(false);
-  const pendingOpeningRef = useRef<string | null>(null);
   const lastUserFinalRef = useRef<string | null>(null);
   const getContextRef = useRef<ReturnType<typeof buildConversationContext> | null>(
     null,
@@ -63,32 +67,35 @@ export function useConversationSession(options?: {
   const voice = providers?.voice ?? null;
   const llm = providers?.llm ?? null;
   const isCompanion = phase === "companion";
-  const [voiceConnectedInternal, setVoiceConnectedInternal] = useState(false);
 
-  useEffect(() => {
-    if (!voice) {
-      setVoiceConnectedInternal(false);
-      return;
-    }
-    const sync = () => {
-      const state = voice.getState();
-      setVoiceConnectedInternal(state !== "idle" && state !== "error");
-    };
-    sync();
-    return voice.onStateChange(() => sync());
-  }, [voice]);
-
-  const voiceConnected = options?.voiceConnected ?? voiceConnectedInternal;
+  const currentState = useConversationStore((s) => s.currentState);
 
   const getContext = useCallback(() => {
+    const highlightNodeIds =
+      walkthroughPathRef.current.length > 0
+        ? walkthroughPathRef.current
+        : useGraphStore.getState().highlightedNodeIds;
+
     return buildConversationContext({
       newsQueue,
       newsCursor,
       graph: { nodes: graphNodes, edges: graphEdges },
       profile,
       onboarding,
+      conversationState: currentState,
+      packQuery: lastUserFinalRef.current ?? undefined,
+      highlightNodeIds:
+        highlightNodeIds.length > 0 ? highlightNodeIds : undefined,
     });
-  }, [graphEdges, graphNodes, newsCursor, newsQueue, onboarding, profile]);
+  }, [
+    currentState,
+    graphEdges,
+    graphNodes,
+    newsCursor,
+    newsQueue,
+    onboarding,
+    profile,
+  ]);
 
   getContextRef.current = getContext();
 
@@ -134,7 +141,6 @@ export function useConversationSession(options?: {
     if (!isCompanion || !llm || !voice) {
       conductorRef.current = null;
       companionPrimedRef.current = false;
-      pendingOpeningRef.current = null;
       return;
     }
 
@@ -143,6 +149,10 @@ export function useConversationSession(options?: {
         llm,
         voice,
         getContext: () => getContextRef.current ?? getContext(),
+        recallMemories: async ({ query, state }) => {
+          const memory = useAppStore.getState().providers?.memory;
+          return resolveRecalledMemoriesForTurn(memory, query, state);
+        },
         onTurn: (turn) => {
           if (turn.nextState) {
             setState(turn.nextState);
@@ -152,8 +162,10 @@ export function useConversationSession(options?: {
           }
           if (turn.highlightNodeIds && turn.highlightNodeIds.length > 0) {
             if (turn.nextState === "teaching") {
+              walkthroughPathRef.current = turn.highlightNodeIds;
               walkthroughRef.current.start(turn.highlightNodeIds);
             } else {
+              walkthroughPathRef.current = [];
               walkthroughRef.current.stop();
               setHighlights(turn.highlightNodeIds, []);
             }
@@ -213,13 +225,16 @@ export function useConversationSession(options?: {
     }
 
     companionPrimedRef.current = false;
-    pendingOpeningRef.current = null;
     resetConversation();
     conductorRef.current?.reset();
   }, [finalizeCompanionSession, isCompanion, resetConversation]);
 
   useEffect(() => {
-    if (!isCompanion) {
+    if (!isCompanion || visualSnapshot) {
+      return;
+    }
+
+    if (!llm || !voice) {
       return;
     }
 
@@ -227,23 +242,19 @@ export function useConversationSession(options?: {
       return;
     }
 
-    companionPrimedRef.current = true;
-    void (async () => {
-      const turn = await conductorRef.current?.start({ speak: false });
-      if (turn?.say.trim()) {
-        pendingOpeningRef.current = turn.say;
-      }
-    })();
-  }, [isCompanion]);
-
-  useEffect(() => {
-    if (!voiceConnected || !voice || !pendingOpeningRef.current) {
+    if (useConversationStore.getState().companionOpened) {
+      companionPrimedRef.current = true;
       return;
     }
-    const line = pendingOpeningRef.current;
-    pendingOpeningRef.current = null;
-    void voice.speak(line, { interruptible: true });
-  }, [voice, voiceConnected]);
+
+    if (!voiceConnected) {
+      return;
+    }
+
+    companionPrimedRef.current = true;
+    useConversationStore.getState().setCompanionOpened(true);
+    void conductorRef.current.start({ speak: true });
+  }, [isCompanion, llm, visualSnapshot, voice, voiceConnected]);
 
   const dispatch = useCallback(async (event: ConversationEvent) => {
     if (!conductorRef.current) {
@@ -290,7 +301,7 @@ export function useConversationSession(options?: {
           error instanceof Error ? error.message : "入库失败";
         ingest.setError(message);
         await conductorRef.current.dispatch(
-          { type: "ingestAnswer", command: "skip" },
+          { type: "ingestReprompt", reason: `入库没成功：${message}` },
           { speak: true },
         );
       }
@@ -321,6 +332,7 @@ export function useConversationSession(options?: {
   );
 
   const onUserInterrupt = useCallback(() => {
+    walkthroughPathRef.current = [];
     walkthroughRef.current.stop();
     clearHighlights();
     void dispatch({ type: "userInterrupt" });
@@ -328,7 +340,7 @@ export function useConversationSession(options?: {
 
   return {
     conductor: conductorRef.current,
-    currentState: useConversationStore((s) => s.currentState),
+    currentState,
     turns: useConversationStore((s) => s.turns),
     dispatch,
     onUserTranscript,
@@ -336,6 +348,5 @@ export function useConversationSession(options?: {
     finalizeCompanionDisconnect,
     finalizeCompanionSession,
     isActive: isCompanion && conductorRef.current !== null,
-    hasPendingOpening: pendingOpeningRef.current !== null,
   };
 }

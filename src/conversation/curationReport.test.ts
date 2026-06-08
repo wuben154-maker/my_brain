@@ -11,6 +11,9 @@ const entry: GraphHistoryEntry = {
   at: "2026-06-01T00:00:00.000Z",
   kind: "link",
   summary: "自动关联：A ↔ B",
+  reasonCode: "overlap_title",
+  reasonDetail: "标题重叠：「A」与「B」",
+  affectedNodeIds: ["a", "b"],
   before: { nodes: [], edges: [] },
   after: { nodes: [], edges: [] },
 };
@@ -28,8 +31,19 @@ describe("curationReport", () => {
     ).toBe(false);
   });
 
-  it("formatCurationReport returns the entry summary", () => {
-    expect(formatCurationReport(entry)).toBe(entry.summary);
+  it("formatCurationReport appends reasonDetail after summary when non-empty", () => {
+    expect(formatCurationReport(entry)).toBe(
+      `${entry.summary}：${entry.reasonDetail}`,
+    );
+  });
+
+  it("formatCurationReport returns summary only when reasonDetail is empty", () => {
+    expect(
+      formatCurationReport({
+        ...entry,
+        reasonDetail: "",
+      }),
+    ).toBe(entry.summary);
   });
 
   it("speaks at most once per interval across many entries", () => {

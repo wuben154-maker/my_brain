@@ -154,6 +154,8 @@ export function applyGraphMutation(
         throw new Error("merge 节点不存在");
       }
       source.archived = true;
+      source.archivedAt = timestamp;
+      source.supersedesNodeId = target.id;
       source.updatedAt = timestamp;
       target.intro = payload.mergedIntro.trim();
       target.updatedAt = timestamp;
@@ -190,6 +192,7 @@ export function applyGraphMutation(
         edges.push(...migrated);
       }
       node.archived = true;
+      node.archivedAt = timestamp;
       node.updatedAt = timestamp;
       break;
     }
@@ -264,6 +267,8 @@ export async function persistGraphSnapshot(
       prev.intro !== node.intro ||
       prev.sourceUrl !== node.sourceUrl ||
       prev.archived !== node.archived ||
+      prev.archivedAt !== node.archivedAt ||
+      prev.supersedesNodeId !== node.supersedesNodeId ||
       prev.updatedAt !== node.updatedAt ||
       prev.salience !== node.salience ||
       prev.lastTouchedAt !== node.lastTouchedAt

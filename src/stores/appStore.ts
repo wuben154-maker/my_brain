@@ -39,6 +39,8 @@ interface AppState {
   appendBootLog: (line: string) => void;
   setBootProgress: (progress: number) => void;
   resetBoot: () => void;
+  /** Atomic self-check launch — avoids empty checks / boot flash between store updates. */
+  beginSelfCheckLaunch: (items: SelfCheckItem[]) => void;
   setLoadingMessage: (message: string) => void;
   setNewsQueue: (items: NewsItem[]) => void;
   setError: (message: string) => void;
@@ -47,7 +49,7 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  phase: "boot",
+  phase: "self_check",
   selfChecks: [],
   bootProgress: 0,
   bootLogs: [],
@@ -69,10 +71,17 @@ export const useAppStore = create<AppState>((set) => ({
   setBootProgress: (bootProgress) => set({ bootProgress }),
   resetBoot: () =>
     set({
-      phase: "self_check",
       bootProgress: 0,
       bootLogs: [],
       selfChecks: [],
+      errorMessage: null,
+    }),
+  beginSelfCheckLaunch: (selfChecks) =>
+    set({
+      phase: "self_check",
+      bootProgress: 0,
+      bootLogs: [],
+      selfChecks,
       errorMessage: null,
     }),
   setLoadingMessage: (loadingMessage) => set({ loadingMessage }),

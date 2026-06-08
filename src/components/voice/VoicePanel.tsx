@@ -10,8 +10,8 @@ import {
 } from "@/lib/visualSnapshotFixtures";
 import { isGraphDemoMode } from "@/lib/graphDemoSeed";
 import {
+  isCompanionMainVisualSnapshot,
   isVisualSnapshotMode,
-  readVisualSnapshotId,
 } from "@/lib/visualSnapshotMode";
 import { useVoiceSession } from "@/hooks/useVoiceSession";
 import { MOCK_DEFAULT_UTTERANCE } from "@/providers/voice/mockVoiceProvider";
@@ -23,7 +23,7 @@ const visualWaveformHeights = [28, 44, 62, 48, 72, 40, 56, 32];
 
 export function VoicePanel() {
   const visualSnapshot = isVisualSnapshotMode();
-  const visualMain = readVisualSnapshotId() === "main";
+  const visualMain = isCompanionMainVisualSnapshot();
   const newsCount = useAppStore((state) => state.newsQueue.length);
   const profile = useProfileStore((state) => state.profile);
   const lastDistilledAt = useProfileStore((state) => state.lastDistilledAt);

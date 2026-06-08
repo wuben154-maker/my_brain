@@ -47,6 +47,37 @@ describe("visualSnapshotMode (H2-3c insight)", () => {
     expect(readVisualSnapshotId()).toBe("insight");
   });
 
+  it("reads v2 companion snapshot routes", () => {
+    window.location.search = "?visual=companion-boot";
+    expect(readVisualSnapshotId()).toBe("companion-boot");
+
+    window.location.search = "?visual=companion-selfcheck";
+    expect(readVisualSnapshotId()).toBe("companion-selfcheck");
+
+    window.location.search = "?visual=companion-main";
+    expect(readVisualSnapshotId()).toBe("companion-main");
+
+    window.location.search = "?visual=companion";
+    expect(readVisualSnapshotId()).toBe("companion-main");
+
+    window.location.search = "?visual=main";
+    expect(readVisualSnapshotId()).toBe("companion-main");
+  });
+
+  it("applyVisualSnapshot(companion-boot) aliases to self_check (boot intro removed)", () => {
+    applyVisualSnapshot("companion-boot");
+    expect(useAppStore.getState().phase).toBe("self_check");
+  });
+
+  it("applyVisualSnapshot(companion-selfcheck) seeds 4 ok + 1 syncing", () => {
+    applyVisualSnapshot("companion-selfcheck");
+    expect(useAppStore.getState().phase).toBe("self_check");
+    const checks = useAppStore.getState().selfChecks;
+    expect(checks).toHaveLength(5);
+    expect(checks.filter((c) => c.status === "ok")).toHaveLength(4);
+    expect(checks.find((c) => c.id === "storage")?.status).toBe("syncing");
+  });
+
   it("ignores ?visual= in non-dev builds (invariant #2)", async () => {
     vi.stubEnv("DEV", false);
     vi.stubEnv("PROD", true);

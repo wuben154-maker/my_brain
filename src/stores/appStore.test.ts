@@ -11,7 +11,7 @@ const LAUNCH_PHASE_LITERALS: LaunchPhase[] = [
 
 describe("appStore (V0 LaunchPhase)", () => {
   beforeEach(() => {
-    useAppStore.setState({ phase: "boot", errorMessage: null });
+    useAppStore.setState({ phase: "self_check", errorMessage: null });
   });
 
   it("exposes exactly five LaunchPhase literals", () => {
@@ -24,8 +24,8 @@ describe("appStore (V0 LaunchPhase)", () => {
     ]);
   });
 
-  it("defaults to boot before launch sequence advances", () => {
-    expect(useAppStore.getState().phase).toBe("boot");
+  it("defaults to self_check (boot intro screen removed)", () => {
+    expect(useAppStore.getState().phase).toBe("self_check");
   });
 
   it("setPhase(companion) enters companion shell", () => {

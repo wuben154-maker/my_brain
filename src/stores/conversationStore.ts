@@ -18,7 +18,10 @@ interface ConversationStoreState {
   currentNewsItem: NewsItem | null;
   newsCursor: number;
   onboarding: OnboardingProgress;
+  /** Survives StrictMode remounts — companion proactive sessionStart fired once per entry. */
+  companionOpened: boolean;
   setState: (currentState: ConversationState) => void;
+  setCompanionOpened: (companionOpened: boolean) => void;
   setNewsCursor: (newsCursor: number) => void;
   setOnboarding: (onboarding: OnboardingProgress) => void;
   setCurrentNewsItem: (item: NewsItem | null) => void;
@@ -32,7 +35,9 @@ export const useConversationStore = create<ConversationStoreState>((set) => ({
   currentNewsItem: null,
   newsCursor: 0,
   onboarding: DEFAULT_ONBOARDING,
+  companionOpened: false,
   setState: (currentState) => set({ currentState }),
+  setCompanionOpened: (companionOpened) => set({ companionOpened }),
   setNewsCursor: (newsCursor) => set({ newsCursor }),
   setOnboarding: (onboarding) => set({ onboarding }),
   setCurrentNewsItem: (currentNewsItem) => set({ currentNewsItem }),
@@ -50,5 +55,6 @@ export const useConversationStore = create<ConversationStoreState>((set) => ({
       currentNewsItem: null,
       newsCursor: 0,
       onboarding: DEFAULT_ONBOARDING,
+      companionOpened: false,
     }),
 }));

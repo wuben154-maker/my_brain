@@ -3,6 +3,7 @@ import {
   ConversationConductor,
   type ConversationConductorDeps,
 } from "@/conversation/ConversationConductor";
+import * as nextTurnModule from "@/conversation/nextTurn";
 import {
   createFixtureContext,
   createIdleCompanionContext,
@@ -66,6 +67,75 @@ describe("ConversationConductor", () => {
     expect(conductor.getState()).toBe("idle_chat");
   });
 
+  it("userInterrupt during in-flight userSpeak keeps working context shrunk", async () => {
+    const conductor = createConductor();
+    await conductor.start({ speak: false });
+
+    let releaseSpeak: (() => void) | undefined;
+    const speakBlocked = new Promise<void>((resolve) => {
+      releaseSpeak = resolve;
+    });
+    const realNextTurn = nextTurnModule.nextTurn;
+    vi.spyOn(nextTurnModule, "nextTurn").mockImplementation(
+      async (state, event, ctx, llm) => {
+        if (event.type === "userSpeak") {
+          await speakBlocked;
+          return {
+            say: "助手：这条回复不应在 interrupt 之后留在 transcriptTail",
+            nextState: state,
+            expect: "free",
+          };
+        }
+        return realNextTurn(state, event, ctx, llm);
+      },
+    );
+
+    const speakPromise = conductor.dispatch(
+      { type: "userSpeak", transcript: "讲讲 RAG" },
+      { speak: false },
+    );
+    await Promise.resolve();
+
+    const interruptPromise = conductor.dispatch(
+      { type: "userInterrupt" },
+      { speak: false },
+    );
+
+    releaseSpeak?.();
+    await Promise.all([speakPromise, interruptPromise]);
+
+    expect(conductor.getWorkingContext().transcriptTail).toBe("");
+    expect(conductor.getWorkingFootprint()).toBe(0);
+    vi.restoreAllMocks();
+  });
+
+  it("userInterrupt shrinks working context footprint", async () => {
+    const conductor = createConductor();
+    await conductor.start({ speak: false });
+
+    await conductor.dispatch(
+      { type: "userSpeak", transcript: "讲讲 RAG 检索增强生成" },
+      { speak: false },
+    );
+    const working = conductor.getWorkingContext();
+    working.transcriptTail = "x".repeat(300);
+    working.walkthroughNodeIds = [
+      "node-a",
+      "node-b",
+      "node-c",
+      "node-d",
+      "node-e",
+    ];
+    const before = conductor.getWorkingFootprint();
+    expect(before).toBeGreaterThan(320);
+
+    await conductor.dispatch({ type: "userInterrupt" }, { speak: false });
+
+    expect(conductor.getWorkingContext().transcriptTail).toBe("");
+    expect(conductor.getWorkingContext().walkthroughNodeIds).toEqual([]);
+    expect(conductor.getWorkingFootprint()).toBeLessThan(before);
+  });
+
   it("onboarding cold-start reaches ingest_decision on first_star briefing", async () => {
     ctx = createFixtureContext();
     const conductor = createConductor();
@@ -123,6 +193,68 @@ describe("ConversationConductor", () => {
       { speak: false },
     );
     expect(ctx.onboarding.step).toBe("done");
+  });
+
+  it("recallMemories injects recalledMemories into nextTurn context", async () => {
+    const recallMemories = vi.fn(async () => "用户偏好简洁解释");
+    const nextTurnSpy = vi.spyOn(nextTurnModule, "nextTurn");
+    const conductor = new ConversationConductor({
+      llm,
+      voice,
+      getContext: () => ctx,
+      recallMemories,
+    });
+
+    await conductor.start({ speak: false });
+
+    expect(recallMemories).toHaveBeenCalled();
+    const calls = nextTurnSpy.mock.calls;
+    const lastCtx = calls[calls.length - 1]?.[2];
+    expect(lastCtx?.recalledMemories).toBe("用户偏好简洁解释");
+    nextTurnSpy.mockRestore();
+  });
+
+  it("P0-7-R1: recallMemories on second userSpeak with transcriptTail growth", async () => {
+    const recallMemories = vi.fn(async () => "用户偏好简洁解释");
+    const conductor = new ConversationConductor({
+      llm,
+      voice,
+      getContext: () => ctx,
+      recallMemories,
+    });
+
+    await conductor.start({ speak: false });
+    recallMemories.mockClear();
+
+    await conductor.dispatch(
+      { type: "userSpeak", transcript: "你好" },
+      { speak: false },
+    );
+    const tailAfterFirst = conductor.getWorkingContext().transcriptTail;
+    expect(tailAfterFirst).toContain("你好");
+
+    await conductor.dispatch(
+      { type: "userSpeak", transcript: "讲讲 RAG" },
+      { speak: false },
+    );
+
+    expect(recallMemories).toHaveBeenCalledTimes(2);
+    expect(conductor.getWorkingContext().transcriptTail.length).toBeGreaterThan(
+      tailAfterFirst.length,
+    );
+    expect(recallMemories).toHaveBeenNthCalledWith(2, {
+      query: "讲讲 RAG",
+      state: expect.any(String),
+    });
+  });
+
+  it("start with speak:true calls voice.speak for opening line", async () => {
+    const speakSpy = vi.spyOn(voice, "speak");
+    const conductor = createConductor();
+    await conductor.start({ speak: true });
+    expect(speakSpy).toHaveBeenCalled();
+    expect(speakSpy.mock.calls[0]?.[0]?.length).toBeGreaterThan(0);
+    speakSpy.mockRestore();
   });
 
   it("multi-turn small_talk ↔ briefing without deadlock", async () => {

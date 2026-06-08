@@ -4,7 +4,6 @@
 import { createElement, forwardRef, useImperativeHandle } from "react";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { relationTypeLabel } from "@/lib/relationLabels";
 import { useGraphStore } from "@/stores/graphStore";
 
 type ForceGraph3DProps = {
@@ -164,7 +163,7 @@ describe("BrainGraph3DView (V6 hover parity)", () => {
     });
 
     const label = screen.getByTestId("edge-hover-label");
-    expect(label.textContent).toBe(relationTypeLabel("depends_on"));
+    expect(label.textContent).toBe("影响关系");
     expect(screen.queryByTestId("node-hover-card")).toBeNull();
   });
 

@@ -1,3 +1,8 @@
+import {
+  depthPercentToLayer,
+  layerToDepthPercent,
+} from "@/lib/graphLayerDepth";
+
 interface GraphZoomControlsProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -8,6 +13,8 @@ interface GraphZoomControlsProps {
 }
 
 const DEPTH_TICKS = [6, 5, 4, 3, 2, 1] as const;
+const DEPTH_LAYER_MIN = 1;
+const DEPTH_LAYER_MAX = 6;
 
 export function GraphZoomControls({
   onZoomIn,
@@ -17,6 +24,8 @@ export function GraphZoomControls({
   onLayerDepthChange,
   zoomPercentLabel = "100%",
 }: GraphZoomControlsProps) {
+  const currentLayer = depthPercentToLayer(layerDepth);
+
   return (
     <>
       <div
@@ -60,7 +69,16 @@ export function GraphZoomControls({
         <span className="font-hud text-caption uppercase tracking-hud text-muted">
           图谱深度
         </span>
-        <span className="font-hud text-caption text-accent-cyan">6层</span>
+        <span
+          className={[
+            "font-hud text-caption",
+            currentLayer === DEPTH_LAYER_MAX
+              ? "text-accent-cyan"
+              : "text-secondary",
+          ].join(" ")}
+        >
+          6层
+        </span>
         <div className="relative flex h-[10.5rem] flex-col items-center justify-center">
           <div
             className="pointer-events-none absolute inset-y-1 left-1/2 w-px -translate-x-1/2 bg-accent-cyan/25"
@@ -74,8 +92,10 @@ export function GraphZoomControls({
               <span
                 key={tick}
                 className={[
-                  "rounded-full border border-accent-cyan/40 bg-accent-cyan/45 shadow-[0_0_8px_rgba(34,211,238,0.4)]",
-                  tick === 4 ? "h-3 w-3 bg-accent-cyan/80" : "h-2 w-2",
+                  "rounded-full border border-accent-cyan/40",
+                  tick === currentLayer
+                    ? "h-3 w-3 bg-accent-cyan/80 shadow-[0_0_8px_rgba(34,211,238,0.4)]"
+                    : "h-2 w-2 bg-accent-cyan/45",
                 ].join(" ")}
               />
             ))}
@@ -85,12 +105,24 @@ export function GraphZoomControls({
             min={0}
             max={100}
             value={layerDepth}
-            onChange={(event) => onLayerDepthChange(Number(event.target.value))}
+            onChange={(event) => {
+              const raw = Number(event.target.value);
+              onLayerDepthChange(layerToDepthPercent(depthPercentToLayer(raw)));
+            }}
             className="graph-layer-range graph-layer-range-companion"
-            aria-valuetext={`${layerDepth}%`}
+            aria-valuetext={`${currentLayer}层`}
           />
         </div>
-        <span className="font-hud text-caption text-secondary">1层</span>
+        <span
+          className={[
+            "font-hud text-caption",
+            currentLayer === DEPTH_LAYER_MIN
+              ? "text-accent-cyan"
+              : "text-secondary",
+          ].join(" ")}
+        >
+          1层
+        </span>
       </div>
     </>
   );

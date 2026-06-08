@@ -130,7 +130,7 @@ export function useVoiceSession(options?: {
     };
   }, [voice]);
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (options?: { skipWelcomeUtterance?: boolean }) => {
     if (!voice || !canUseVoice) {
       return;
     }
@@ -146,6 +146,7 @@ export function useVoiceSession(options?: {
         apiKey: env.openAiApiKey,
         model: env.openAiRealtimeModel,
         instructions: DEFAULT_INSTRUCTIONS,
+        skipWelcomeUtterance: options?.skipWelcomeUtterance,
       });
     } catch (error) {
       setErrorMessage(

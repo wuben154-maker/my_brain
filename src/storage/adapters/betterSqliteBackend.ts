@@ -5,9 +5,14 @@ import type { BrainGraphSnapshot, ConceptNode, GraphEdge } from "../../domain/gr
 import { DEFAULT_USER_PROFILE, type UserProfile } from "../../domain/profile";
 import type { ProposalEnvelope, ProposalStatus } from "../../agent/types";
 import { INITIAL_MIGRATION_SQL } from "../migrations";
-import type { GraphHistoryEntry } from "../../domain/graphHistory";
+import type {
+  CurationReasonCode,
+  GraphHistoryEntry,
+} from "../../domain/graphHistory";
 import {
   migrateConceptSalienceColumnsSqlite,
+  migrateConceptTemporalColumnsSqlite,
+  migrateGraphHistoryProvenanceSqlite,
   migrateGraphHistoryTableSqlite,
 } from "../schemaMigrations";
 import { normalizeConceptSalience } from "../../lib/salience";
@@ -41,7 +46,9 @@ export class BetterSqliteBackend {
     this.db.pragma("journal_mode = WAL");
     this.db.exec(INITIAL_MIGRATION_SQL);
     migrateConceptSalienceColumnsSqlite(this.db);
+    migrateConceptTemporalColumnsSqlite(this.db);
     migrateGraphHistoryTableSqlite(this.db);
+    migrateGraphHistoryProvenanceSqlite(this.db);
   }
 
   close(): void {
@@ -63,7 +70,8 @@ export class BetterSqliteBackend {
       .prepare(
         `SELECT id, title, intro, source_url AS sourceUrl, archived,
                 created_at AS createdAt, updated_at AS updatedAt,
-                salience, last_touched_at AS lastTouchedAt
+                salience, last_touched_at AS lastTouchedAt,
+                archived_at AS archivedAt, supersedes_node_id AS supersedesNodeId
          FROM concepts`,
       )
       .all() as Array<
@@ -71,6 +79,8 @@ export class BetterSqliteBackend {
         archived: number;
         salience?: number | null;
         lastTouchedAt?: string | null;
+        archivedAt?: string | null;
+        supersedesNodeId?: string | null;
       }
     >;
 
@@ -95,6 +105,8 @@ export class BetterSqliteBackend {
           archived: row.archived === 1,
           salience: row.salience ?? undefined,
           lastTouchedAt: row.lastTouchedAt ?? undefined,
+          archivedAt: row.archivedAt ?? undefined,
+          supersedesNodeId: row.supersedesNodeId ?? undefined,
         }),
       ),
       edges: displayEdges,
@@ -131,9 +143,9 @@ export class BetterSqliteBackend {
     const db = this.requireDb();
     db.prepare(
       `INSERT INTO concepts (id, title, intro, source_url, archived, created_at, updated_at,
-                            salience, last_touched_at)
+                            salience, last_touched_at, archived_at, supersedes_node_id)
        VALUES (@id, @title, @intro, @sourceUrl, @archived, @createdAt, @updatedAt,
-               @salience, @lastTouchedAt)
+               @salience, @lastTouchedAt, @archivedAt, @supersedesNodeId)
        ON CONFLICT(id) DO UPDATE SET
          title = excluded.title,
          intro = excluded.intro,
@@ -141,12 +153,16 @@ export class BetterSqliteBackend {
          archived = excluded.archived,
          updated_at = excluded.updated_at,
          salience = excluded.salience,
-         last_touched_at = excluded.last_touched_at`,
+         last_touched_at = excluded.last_touched_at,
+         archived_at = excluded.archived_at,
+         supersedes_node_id = excluded.supersedes_node_id`,
     ).run({
       ...normalizeConceptSalience(node),
       archived: node.archived ? 1 : 0,
       salience: node.salience ?? 1,
       lastTouchedAt: node.lastTouchedAt ?? node.updatedAt,
+      archivedAt: node.archivedAt ?? null,
+      supersedesNodeId: node.supersedesNodeId ?? null,
     });
   }
 
@@ -294,7 +310,10 @@ export class BetterSqliteBackend {
     const db = this.requireDb();
     const rows = db
       .prepare(
-        "SELECT id, at, kind, summary, before_json AS beforeJson, after_json AS afterJson, undone FROM graph_history ORDER BY at DESC",
+        `SELECT id, at, kind, summary, before_json AS beforeJson, after_json AS afterJson, undone,
+                reason_code AS reasonCode, reason_detail AS reasonDetail,
+                affected_node_ids AS affectedNodeIdsJson
+         FROM graph_history ORDER BY at DESC`,
       )
       .all() as Array<{
       id: string;
@@ -304,6 +323,9 @@ export class BetterSqliteBackend {
       beforeJson: string;
       afterJson: string;
       undone: number;
+      reasonCode?: string | null;
+      reasonDetail?: string | null;
+      affectedNodeIdsJson?: string | null;
     }>;
     return rows.map((row) => ({
       id: row.id,
@@ -312,6 +334,9 @@ export class BetterSqliteBackend {
       summary: row.summary,
       before: JSON.parse(row.beforeJson) as BrainGraphSnapshot,
       after: JSON.parse(row.afterJson) as BrainGraphSnapshot,
+      reasonCode: (row.reasonCode ?? "manual") as CurationReasonCode,
+      reasonDetail: row.reasonDetail ?? "",
+      affectedNodeIds: JSON.parse(row.affectedNodeIdsJson ?? "[]") as string[],
       undone: row.undone === 1 ? true : undefined,
     }));
   }
@@ -319,15 +344,19 @@ export class BetterSqliteBackend {
   saveGraphHistoryEntry(entry: GraphHistoryEntry): void {
     const db = this.requireDb();
     db.prepare(
-      `INSERT INTO graph_history (id, at, kind, summary, before_json, after_json, undone)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO graph_history (id, at, kind, summary, before_json, after_json, undone,
+                                  reason_code, reason_detail, affected_node_ids)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET
          at = excluded.at,
          kind = excluded.kind,
          summary = excluded.summary,
          before_json = excluded.before_json,
          after_json = excluded.after_json,
-         undone = excluded.undone`,
+         undone = excluded.undone,
+         reason_code = excluded.reason_code,
+         reason_detail = excluded.reason_detail,
+         affected_node_ids = excluded.affected_node_ids`,
     ).run(
       entry.id,
       entry.at,
@@ -336,6 +365,9 @@ export class BetterSqliteBackend {
       JSON.stringify(entry.before),
       JSON.stringify(entry.after),
       entry.undone ? 1 : 0,
+      entry.reasonCode ?? "manual",
+      entry.reasonDetail ?? "",
+      JSON.stringify(entry.affectedNodeIds ?? []),
     );
   }
 

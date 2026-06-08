@@ -58,12 +58,20 @@ import {
   skipLaunchSelfCheckSpeech,
 } from "@/lib/runLaunchSequence";
 
+function stubNavigatorForBoot(): void {
+  vi.stubGlobal("navigator", {
+    mediaDevices: { getUserMedia: vi.fn() },
+    onLine: true,
+  });
+}
+
 describe("runLaunchSequence (V1)", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     resetLaunchSequenceGuard();
+    stubNavigatorForBoot();
     useAppStore.setState({
-      phase: "boot",
+      phase: "self_check",
       selfChecks: [],
       bootProgress: 0,
       bootLogs: [],
@@ -73,14 +81,6 @@ describe("runLaunchSequence (V1)", () => {
       providers: null,
       storage: null,
     });
-    Object.defineProperty(navigator, "mediaDevices", {
-      configurable: true,
-      value: { getUserMedia: vi.fn() },
-    });
-    Object.defineProperty(navigator, "onLine", {
-      configurable: true,
-      value: true,
-    });
   });
 
   afterEach(() => {
@@ -89,13 +89,14 @@ describe("runLaunchSequence (V1)", () => {
     resetLaunchSequenceGuard();
   });
 
-  it("migrates boot → self_check → loading → companion with newsQueue", async () => {
+  // newsQueue lives in appStore only (session-scoped); specs/README debt #4 — not persisted to SQLite.
+  it("migrates self_check → loading → companion with newsQueue", async () => {
     const { storage } = createTempStorage();
     storageRef.current = storage;
 
     const launchPromise = runLaunchSequence();
+    await Promise.resolve();
 
-    await vi.advanceTimersByTimeAsync(700);
     expect(useAppStore.getState().phase).toBe("self_check");
 
     await vi.runAllTimersAsync();
@@ -105,9 +106,10 @@ describe("runLaunchSequence (V1)", () => {
     expect(state.phase).toBe("companion");
     expect(state.newsQueue.length).toBeGreaterThan(0);
     expect(state.selfChecks.some((c) => c.id === "mic")).toBe(true);
+    expect(state.selfChecks.some((c) => c.id === "storage")).toBe(true);
   });
 
-  it("continues to companion when api_key check warns (degraded)", async () => {
+  it("continues to companion without OpenAI key (degraded)", async () => {
     vi.stubEnv("VITE_OPENAI_API_KEY", "");
     const { storage } = createTempStorage();
     storageRef.current = storage;
@@ -118,8 +120,8 @@ describe("runLaunchSequence (V1)", () => {
 
     const state = useAppStore.getState();
     expect(state.phase).toBe("companion");
-    const apiCheck = state.selfChecks.find((c) => c.id === "api_key");
-    expect(apiCheck?.status).toBe("warn");
+    const logs = state.bootLogs.join("\n");
+    expect(logs).toContain("OpenAI 密钥未配置");
     vi.unstubAllEnvs();
   });
 

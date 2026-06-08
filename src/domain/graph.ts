@@ -14,6 +14,10 @@ export interface ConceptNode {
   lastTouchedAt?: string;
   /** Visual snapshot only: 2 = central hub, 1 = sub-hub; omit for leaf nodes. */
   hubLevel?: 1 | 2;
+  /** W2: ISO timestamp when the node was archived (merge or standalone archive). */
+  archivedAt?: string;
+  /** W2: when merged away, id of the surviving concept node. */
+  supersedesNodeId?: string;
 }
 
 export interface GraphEdge {

@@ -28,6 +28,8 @@ export interface VoiceProviderConfig {
   apiKey: string;
   model?: string;
   instructions?: string;
+  /** Mock-only: skip scripted welcome on connect (companion proactive start owns first utterance). */
+  skipWelcomeUtterance?: boolean;
 }
 
 export interface VoiceProvider {

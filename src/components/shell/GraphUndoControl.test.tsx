@@ -14,6 +14,9 @@ const entry: GraphHistoryEntry = {
   at: "2026-06-01T00:00:00.000Z",
   kind: "link",
   summary: "test link",
+  reasonCode: "overlap_title",
+  reasonDetail: "标题重叠",
+  affectedNodeIds: ["n1", "n2"],
   before: { nodes: [], edges: [] },
   after: { nodes: [], edges: [] },
 };

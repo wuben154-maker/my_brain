@@ -223,8 +223,12 @@ export async function nextTurn(
   }
 
   if (event.type === "ingestReprompt") {
+    const reason = event.reason?.trim();
+    const say = reason
+      ? stylize(ctx, `${reason}。${ingestPrompt(ctx)}`)
+      : ingestPrompt(ctx);
     return {
-      say: ingestPrompt(ctx),
+      say,
       expect: "ingest",
       nextState: "ingest_decision",
     };

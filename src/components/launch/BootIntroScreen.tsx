@@ -1,20 +1,23 @@
-/** V1 boot intro — black field, logo reveal, orb pulse. */
+import { BootBrainSphere } from "@/components/launch/BootBrainSphere";
+
+/** V2屏 A · 开机 — neural constellation + wordmark, no chrome. */
 export function BootIntroScreen() {
   return (
     <section
       data-testid="boot-intro-screen"
-      className="boot-intro-screen flex h-full flex-col items-center justify-center bg-black"
+      className="companion-boot-screen relative h-full overflow-hidden"
       aria-label="启动"
     >
-      <div className="boot-intro-orb boot-orb-core flex h-20 w-20 items-center justify-center rounded-full shadow-glow-cyan">
-        <span className="h-10 w-10 rounded-full bg-accent-cyan/30" aria-hidden />
+      <div className="companion-boot-constellation" aria-hidden>
+        <BootBrainSphere />
       </div>
-      <p className="boot-intro-title mt-8 font-hud text-h1 uppercase tracking-hud text-primary">
-        my_brain
-      </p>
-      <p className="boot-intro-tagline mt-2 text-caption text-muted">
-        第二大脑 · 唤醒中
-      </p>
+
+      <div className="companion-boot-wordmark">
+        <p className="companion-boot-wordmark-text font-hud text-hud-label uppercase text-accent-cyan">
+          my_brain
+        </p>
+        <div className="companion-boot-wordmark-line" aria-hidden />
+      </div>
     </section>
   );
 }

@@ -66,7 +66,11 @@ export function BrainGraph3DView() {
     return LINK_DISTANCE_MIN + (LINK_DISTANCE_MAX - LINK_DISTANCE_MIN) * t;
   }, [layerDepth]);
 
-  const pinGraphLayout = readVisualSnapshotId() === "main";
+  const visualId = readVisualSnapshotId();
+  const pinGraphLayout =
+    visualId === "companion-main" ||
+    visualId === "companion" ||
+    visualId === "main";
 
   const graphData = useMemo(
     () => ({
