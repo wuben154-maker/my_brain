@@ -1,6 +1,6 @@
-/** Shared HUD atmosphere: nebula wash, scanlines, corner brackets (presentational). */
+/** Shared HUD atmosphere: nebula wash, scanlines, optional corner brackets (presentational). */
 
-export function SciFiAtmosphere() {
+export function SciFiAtmosphere({ showCorners = true }: { showCorners?: boolean }) {
   return (
     <>
       <div className="sci-fi-atmosphere-stack" aria-hidden>
@@ -9,12 +9,14 @@ export function SciFiAtmosphere() {
         <div className="sci-fi-scanlines" />
         <div className="sci-fi-vignette" />
       </div>
-      <div className="sci-fi-corners" data-testid="sci-fi-corners" aria-hidden>
-        <span className="sci-fi-corner sci-fi-corner-tl" />
-        <span className="sci-fi-corner sci-fi-corner-tr" />
-        <span className="sci-fi-corner sci-fi-corner-bl" />
-        <span className="sci-fi-corner sci-fi-corner-br" />
-      </div>
+      {showCorners ? (
+        <div className="sci-fi-corners" data-testid="sci-fi-corners" aria-hidden>
+          <span className="sci-fi-corner sci-fi-corner-tl" />
+          <span className="sci-fi-corner sci-fi-corner-tr" />
+          <span className="sci-fi-corner sci-fi-corner-bl" />
+          <span className="sci-fi-corner sci-fi-corner-br" />
+        </div>
+      ) : null}
     </>
   );
 }

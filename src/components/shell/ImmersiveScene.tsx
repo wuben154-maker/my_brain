@@ -13,7 +13,7 @@ export function ImmersiveScene() {
       data-testid="immersive-scene"
       className="companion-nebula relative h-full w-full overflow-hidden"
     >
-      <SciFiAtmosphere />
+      <SciFiAtmosphere showCorners={false} />
       <div className="pointer-events-auto absolute right-5 top-5 z-20">
         <SettingsOverlay companionCorner />
       </div>

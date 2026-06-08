@@ -22,10 +22,10 @@ describe("ImmersiveScene (V0)", () => {
     expect(screen.getByTestId("settings-corner")).toBeTruthy();
   });
 
-  it("renders four HUD corner brackets via SciFiAtmosphere", () => {
+  it("does not render HUD corner brackets on companion main", () => {
     render(createElement(ImmersiveScene));
-    expect(screen.getByTestId("sci-fi-corners")).toBeTruthy();
-    expect(document.querySelectorAll(".sci-fi-corner")).toHaveLength(4);
+    expect(screen.queryByTestId("sci-fi-corners")).toBeNull();
+    expect(document.querySelectorAll(".sci-fi-corner")).toHaveLength(0);
   });
 
   it("renders full-screen graph with floating voice orb overlay (no split voice pane)", () => {
