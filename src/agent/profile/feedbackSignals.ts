@@ -8,6 +8,7 @@ import {
   readUpdatePayload,
 } from "@/domain/graphMutationPayloads";
 import type { UserProfile } from "@/domain/profile";
+import { isFieldUserCorrected } from "@/domain/profile/userProfile";
 import type { ProposalSource } from "@/agent/types";
 
 export interface ProposalFeedback {
@@ -81,21 +82,82 @@ export function mergeUserProfileLayers(
   base: UserProfile,
   distilled: UserProfile,
 ): UserProfile {
+  const corrected = base.correctedFields ?? [];
+  const mergedInterests = isFieldUserCorrected(corrected, "interests")
+    ? base.interests
+    : dedupeStrings([...base.interests, ...distilled.interests]);
+  const mergedKnownTopics = isFieldUserCorrected(corrected, "knownTopics")
+    ? base.knownTopics
+    : dedupeStrings([...base.knownTopics, ...distilled.knownTopics]);
+  const mergedUnknownTopics = isFieldUserCorrected(corrected, "unknownTopics")
+    ? base.unknownTopics
+    : dedupeStrings([...base.unknownTopics, ...distilled.unknownTopics]);
+  const mergedHabits = isFieldUserCorrected(corrected, "habits")
+    ? base.habits
+    : dedupeStrings([...base.habits, ...distilled.habits]);
+  const mergedTopicWeights = isFieldUserCorrected(corrected, "topicWeights")
+    ? normalizeTopicWeights(base.topicWeights)
+    : {
+        ...normalizeTopicWeights(base.topicWeights),
+        ...normalizeTopicWeights(distilled.topicWeights),
+      };
+  const mergedExplanationStyle = isFieldUserCorrected(corrected, "explanationStyle")
+    ? base.explanationStyle
+    : (distilled.explanationStyle ?? base.explanationStyle ?? null);
+
+  const mergedInterestEntries = base.interestEntries?.map((entry) => {
+    if (isFieldUserCorrected(corrected, `interest.${entry.id}`)) {
+      return entry;
+    }
+    const distilledEntry = distilled.interestEntries?.find(
+      (candidate) => candidate.id === entry.id,
+    );
+    return distilledEntry ? { ...entry, ...distilledEntry } : entry;
+  }) ?? distilled.interestEntries;
+
+  const mergedUnderstanding = { ...base.understanding };
+  if (distilled.understanding) {
+    for (const [conceptId, level] of Object.entries(distilled.understanding)) {
+      if (isFieldUserCorrected(corrected, `understanding.${conceptId}`)) {
+        continue;
+      }
+      mergedUnderstanding[conceptId] = level;
+    }
+  }
+
+  const mergedExplainPrefs = isFieldUserCorrected(corrected, "explainPrefs")
+    ? base.explainPrefs
+    : {
+        preferMetaphor:
+          distilled.explainPrefs?.preferMetaphor ??
+          base.explainPrefs?.preferMetaphor ??
+          true,
+        preferSourceCode:
+          distilled.explainPrefs?.preferSourceCode ??
+          base.explainPrefs?.preferSourceCode ??
+          false,
+        preferArchitecture:
+          distilled.explainPrefs?.preferArchitecture ??
+          base.explainPrefs?.preferArchitecture ??
+          false,
+        preferInterview:
+          distilled.explainPrefs?.preferInterview ??
+          base.explainPrefs?.preferInterview ??
+          false,
+      };
+
   return {
     ...distilled,
-    interests: dedupeStrings([...base.interests, ...distilled.interests]),
-    knownTopics: dedupeStrings([...base.knownTopics, ...distilled.knownTopics]),
-    unknownTopics: dedupeStrings([
-      ...base.unknownTopics,
-      ...distilled.unknownTopics,
-    ]),
-    habits: dedupeStrings([...base.habits, ...distilled.habits]),
-    topicWeights: {
-      ...normalizeTopicWeights(base.topicWeights),
-      ...normalizeTopicWeights(distilled.topicWeights),
-    },
-    explanationStyle:
-      distilled.explanationStyle ?? base.explanationStyle ?? null,
+    interests: mergedInterests,
+    knownTopics: mergedKnownTopics,
+    unknownTopics: mergedUnknownTopics,
+    habits: mergedHabits,
+    topicWeights: mergedTopicWeights,
+    explanationStyle: mergedExplanationStyle,
+    interestEntries: mergedInterestEntries,
+    understanding: mergedUnderstanding,
+    explainPrefs: mergedExplainPrefs,
+    correctedFields: base.correctedFields,
     updatedAt: distilled.updatedAt,
   };
 }

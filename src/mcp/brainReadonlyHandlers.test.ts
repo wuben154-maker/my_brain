@@ -174,14 +174,39 @@ describe("brainReadonlyHandlers", () => {
     expect(outlineIds).not.toContain("n-archived");
   });
 
+  it("brainNeighborhood hides archived edges on active endpoints", async () => {
+    const graph: BrainGraphSnapshot = {
+      nodes: [
+        node({ id: "a", title: "A" }),
+        node({ id: "b", title: "B" }),
+      ],
+      edges: [
+        {
+          id: "e-live",
+          sourceId: "a",
+          targetId: "b",
+          relationType: "related",
+        },
+        {
+          id: "e-archived",
+          sourceId: "b",
+          targetId: "a",
+          relationType: "related",
+          archived: true,
+        },
+      ],
+    };
+    const neighborhood = await brainNeighborhood("a", 1, deps(graph));
+    expect(neighborhood.edges.map((edge) => edge.id)).toEqual(["e-live"]);
+  });
+
   it("listReadonlyTools has no write tools", () => {
     const tools = listReadonlyTools();
     expect(tools).toEqual([
-      "brain_search",
+      "brain_search_nodes",
       "brain_get_node",
-      "brain_neighborhood",
-      "brain_outline",
-      "brain_profile_digest",
+      "brain_graph_outline",
+      "brain_node_neighborhood",
     ]);
     for (const blocked of BRAIN_WRITE_TOOL_BLOCKLIST) {
       expect(tools).not.toContain(blocked);

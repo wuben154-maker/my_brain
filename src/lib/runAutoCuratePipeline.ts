@@ -1,7 +1,9 @@
-import { autoCurate, type AutoCurateProposal } from "@/agent/curation/autoCurate";
-import type { BrainGraphSnapshot } from "@/domain/graph";
+import { autoCurate } from "@/agent/curation/autoCurate";
+import { autoCurateForShowcase } from "@/showcase/showcaseFixtures";
+import { isShowcaseDemoMode } from "@/showcase/showcaseDemoMode";
 import type { GraphHistoryEntry } from "@/domain/graphHistory";
 import type { UserProfile } from "@/domain/profile";
+import { buildGraphHistoryEntry } from "@/lib/graphHistoryMeta";
 import {
   applyGraphMutation,
   persistGraphSnapshot,
@@ -19,43 +21,28 @@ export interface AutoCurateDeps {
   llm?: LlmProvider | null;
 }
 
-function historyEntryFromApply(
-  proposal: AutoCurateProposal,
-  before: BrainGraphSnapshot,
-  after: BrainGraphSnapshot,
-): GraphHistoryEntry {
-  return {
-    id: proposal.id,
-    at: new Date().toISOString(),
-    kind: proposal.kind,
-    summary: proposal.summary,
-    reasonCode: proposal.reasonCode,
-    reasonDetail: proposal.reasonDetail,
-    affectedNodeIds: proposal.affectedNodeIds,
-    before,
-    after,
-  };
-}
-
 /** V4: after a confirmed ingest, auto-apply curation mutations and record undoable history. */
 export async function runAutoCurateAfterIngest(
   newNodeId: string,
   deps: AutoCurateDeps,
 ): Promise<GraphHistoryEntry[]> {
-  const fullGraph = await deps.storage.loadGraph();
-  const newNode = fullGraph.nodes.find((node) => node.id === newNodeId);
+  const visible = await deps.storage.loadGraph();
+  const newNode = visible.nodes.find((node) => node.id === newNodeId);
   if (!newNode || newNode.archived) {
     return [];
   }
 
-  const proposals = await autoCurate(fullGraph, newNode, deps.profile);
+  const proposals = isShowcaseDemoMode()
+    ? autoCurateForShowcase(visible, newNode)
+    : await autoCurate(visible, newNode, deps.profile);
   if (proposals.length === 0) {
     return [];
   }
 
   const historyStore = useGraphHistoryStore.getState();
   const recorded: GraphHistoryEntry[] = [];
-  let working = fullGraph;
+  // Full snapshot (incl. archived) so undo never hard-deletes archived nodes.
+  let working = await deps.storage.loadGraphForDisplay();
 
   for (const proposal of proposals) {
     const before = working;
@@ -64,7 +51,7 @@ export async function runAutoCurateAfterIngest(
       continue;
     }
     await persistGraphSnapshot(deps.storage, before, after);
-    const entry = historyEntryFromApply(proposal, before, after);
+    const entry = buildGraphHistoryEntry(proposal, before, after);
     await historyStore.record(deps.storage, entry);
     recorded.push(entry);
     working = after;

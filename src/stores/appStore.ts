@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import type { NewsItem } from "@/domain/news";
+import type { WorldItem } from "@/domain/radar/worldItem";
+import type { WorldItemStore } from "@/domain/radar/worldItemStore";
 import type { AppProviders } from "@/providers";
 import type { StorageProvider } from "@/storage/types";
 
@@ -26,6 +28,8 @@ interface AppState {
   bootLogs: string[];
   loadingMessage: string;
   newsQueue: NewsItem[];
+  worldItemStore: WorldItemStore | null;
+  worldItems: WorldItem[];
   errorMessage: string | null;
   providers: AppProviders | null;
   storage: StorageProvider | null;
@@ -43,6 +47,7 @@ interface AppState {
   beginSelfCheckLaunch: (items: SelfCheckItem[]) => void;
   setLoadingMessage: (message: string) => void;
   setNewsQueue: (items: NewsItem[]) => void;
+  setWorldItemStore: (store: WorldItemStore) => void;
   setError: (message: string) => void;
   setProviders: (providers: AppProviders) => void;
   setStorage: (storage: StorageProvider) => void;
@@ -55,6 +60,8 @@ export const useAppStore = create<AppState>((set) => ({
   bootLogs: [],
   loadingMessage: "正在唤醒大脑…",
   newsQueue: [],
+  worldItemStore: null,
+  worldItems: [],
   errorMessage: null,
   providers: null,
   storage: null,
@@ -86,6 +93,8 @@ export const useAppStore = create<AppState>((set) => ({
     }),
   setLoadingMessage: (loadingMessage) => set({ loadingMessage }),
   setNewsQueue: (newsQueue) => set({ newsQueue }),
+  setWorldItemStore: (worldItemStore) =>
+    set({ worldItemStore, worldItems: worldItemStore.listAll() }),
   setError: (errorMessage) => set({ phase: "error", errorMessage }),
   setProviders: (providers) => set({ providers }),
   setStorage: (storage) => set({ storage }),

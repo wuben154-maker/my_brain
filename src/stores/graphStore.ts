@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import type { BrainGraphSnapshot, ConceptNode, GraphEdge } from "@/domain/graph";
 interface GraphState extends BrainGraphSnapshot {
+  /** KOS-A2 star-light: focused ingest node (pulse target). */
+  focusNodeId: string | null;
   highlightedNodeIds: string[];
   highlightedEdgeIds: string[];
   /** Ephemeral preview overlay — never persisted to storage (B3). */
@@ -10,6 +12,8 @@ interface GraphState extends BrainGraphSnapshot {
   setGraph: (snapshot: BrainGraphSnapshot) => void;
   upsertNode: (node: ConceptNode) => void;
   upsertEdge: (edge: GraphEdge) => void;
+  setIngestStarLight: (nodeId: string) => void;
+  clearIngestStarLight: () => void;
   setHighlights: (nodeIds: string[], edgeIds: string[]) => void;
   setProposalPreview: (
     nodeIds: string[],
@@ -25,6 +29,7 @@ interface GraphState extends BrainGraphSnapshot {
 export const useGraphStore = create<GraphState>((set) => ({
   nodes: [],
   edges: [],
+  focusNodeId: null,
   highlightedNodeIds: [],
   highlightedEdgeIds: [],
   previewGhostNodes: [],
@@ -54,6 +59,18 @@ export const useGraphStore = create<GraphState>((set) => ({
       const edges = [...state.edges];
       edges[index] = edge;
       return { edges };
+    }),
+  setIngestStarLight: (nodeId) =>
+    set({
+      focusNodeId: nodeId,
+      highlightedNodeIds: [nodeId],
+      highlightedEdgeIds: [],
+    }),
+  clearIngestStarLight: () =>
+    set({
+      focusNodeId: null,
+      highlightedNodeIds: [],
+      highlightedEdgeIds: [],
     }),
   setHighlights: (highlightedNodeIds, highlightedEdgeIds) =>
     set({ highlightedNodeIds, highlightedEdgeIds }),

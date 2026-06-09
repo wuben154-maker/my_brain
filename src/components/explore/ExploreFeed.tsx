@@ -3,8 +3,13 @@ import { SuggestConfirmDialog } from "@/components/brain/SuggestConfirmDialog";
 import { NewsCard } from "@/components/explore/NewsCard";
 import { newsItemStatus } from "@/components/explore/newsItemStatus";
 import { GlassCard } from "@/components/ui/GlassCard";
+import {
+  findBriefingItemByNewsId,
+  primaryBriefingSignal,
+} from "@/domain/radar/briefingItem";
 import { useNewsIngestSession } from "@/hooks/useNewsIngestSession";
 import { useAppStore } from "@/stores/appStore";
+import { useBriefingStore } from "@/stores/briefingStore";
 import { useIngestStore } from "@/stores/ingestStore";
 
 function focusNewsItem(itemId: string, queueLength: number): void {
@@ -21,6 +26,7 @@ function focusNewsItem(itemId: string, queueLength: number): void {
 /** Explore nav partition — full news queue with ingest actions (N1). */
 export function ExploreFeed() {
   const newsQueue = useAppStore((state) => state.newsQueue);
+  const briefingItems = useBriefingStore((state) => state.todayItems);
   const skippedIds = useIngestStore((state) => state.skippedIds);
   const ingestedIds = useIngestStore((state) => state.ingestedIds);
   const activeNewsId = useIngestStore((state) => state.activeNewsId);
@@ -93,11 +99,17 @@ export function ExploreFeed() {
       </header>
 
       <ul className="flex flex-col gap-3">
-        {newsQueue.map((item) => (
+        {newsQueue.map((item) => {
+          const briefingItem = findBriefingItemByNewsId(briefingItems, item.id);
+          const briefingSignal = briefingItem
+            ? primaryBriefingSignal(briefingItem)
+            : undefined;
+          return (
           <li key={item.id}>
             <NewsCard
               item={item}
               status={newsItemStatus(item, ingestedIds, skippedIds)}
+              briefingSignal={briefingSignal}
               explanation={
                 currentItem?.id === item.id ? explanation : undefined
               }
@@ -115,7 +127,8 @@ export function ExploreFeed() {
               }}
             />
           </li>
-        ))}
+          );
+        })}
       </ul>
 
       <SuggestConfirmDialog

@@ -1,88 +1,210 @@
 import { OpenAiRealtimeVoiceProvider } from "./voice/openaiRealtimeVoiceProvider";
+
 import { MockVoiceProvider } from "./voice/mockVoiceProvider";
-import { createOpenAiLlmProvider } from "./llm/openaiLlmProvider";
-import { createMockLlmProvider } from "./llm/mockLlmProvider";
+
 import { GitHubTrendingNewsSource } from "./news/githubTrendingSource";
+
 import { RssNewsSource } from "./news/rssNewsSource";
+
 import {
+
   createNewsSourceRegistry,
+
   type NewsSourceRegistry,
+
 } from "./news/types";
+
 import type { LlmProvider } from "./llm/types";
+
 import type { VoiceProvider } from "./voice/types";
+
 import { readVoiceProviderMode } from "@/lib/voiceProviderMode";
-import { readLlmProviderMode } from "@/lib/llmProviderMode";
+
 import {
+
   createMemoryProvider,
+
+  createMockMemoryProvider,
+
   type MemoryProvider,
+
 } from "./memory";
+
+import { resolveLlmProviderWithFallback } from "./providerConfigRecovery";
+
+import type { CreateAppProvidersOptions, ProviderEnv } from "./providerTypes";
+
+
+
+export type { ProviderEnv, CreateAppProvidersOptions } from "./providerTypes";
+
+
 
 export interface AppProviders {
+
   voice: VoiceProvider;
+
   llm: LlmProvider;
+
   news: NewsSourceRegistry;
+
   memory: MemoryProvider;
+
 }
 
-export interface ProviderEnv {
-  openAiApiKey: string;
-  openAiLlmModel?: string;
-  openAiRealtimeModel?: string;
-  everMemOsBaseUrl?: string;
-  everMemOsApiKey?: string;
-  everMemOsUserId?: string;
-}
 
-export function createVoiceProvider(): VoiceProvider {
-  return readVoiceProviderMode() === "openai-realtime"
+
+export function createVoiceProvider(options: CreateAppProvidersOptions = {}): VoiceProvider {
+
+  return !options.forceMock && readVoiceProviderMode() === "openai-realtime"
+
     ? new OpenAiRealtimeVoiceProvider()
+
     : new MockVoiceProvider();
+
 }
 
-export function createLlmProvider(env: ProviderEnv): LlmProvider {
-  if (readLlmProviderMode() !== "openai") {
-    return createMockLlmProvider();
-  }
-  if (!env.openAiApiKey.trim()) {
-    console.warn(
-      "[my-brain] VITE_LLM_PROVIDER=openai 但未配置 VITE_OPENAI_API_KEY，已降级为 mock LLM",
-    );
-    return createMockLlmProvider();
-  }
-  return createOpenAiLlmProvider({
-    apiKey: env.openAiApiKey,
-    model: env.openAiLlmModel,
-  });
+
+
+export function createLlmProvider(
+
+  env: ProviderEnv,
+
+  options: CreateAppProvidersOptions = {},
+
+): LlmProvider {
+
+  return resolveLlmProviderWithFallback(env, options);
+
 }
 
-export function createAppProviders(env: ProviderEnv): AppProviders {
+
+
+export function createAppProviders(
+
+  env: ProviderEnv,
+
+  options: CreateAppProvidersOptions = {},
+
+): AppProviders {
+
+  if (options.forceMock) {
+
+    return {
+
+      voice: createVoiceProvider(options),
+
+      llm: createLlmProvider(env, options),
+
+      news: createNewsSourceRegistry([]),
+
+      memory: createMockMemoryProvider(),
+
+    };
+
+  }
+
   return {
+
     voice: createVoiceProvider(),
+
     llm: createLlmProvider(env),
+
     news: createNewsSourceRegistry([
+
       new RssNewsSource(),
+
       new GitHubTrendingNewsSource(),
+
     ]),
+
     memory: createMemoryProvider({
+
       everMemOsBaseUrl: env.everMemOsBaseUrl,
+
       everMemOsApiKey: env.everMemOsApiKey,
+
       everMemOsUserId: env.everMemOsUserId,
+
     }),
+
   };
+
 }
+
+
 
 export { isMockVoiceProvider, MockVoiceProvider } from "./voice/mockVoiceProvider";
+
 export { MockLlmProvider, createMockLlmProvider } from "./llm/mockLlmProvider";
+
+export {
+
+  DomesticMockLlmProvider,
+
+  createDomesticLlmProvider,
+
+  domesticMockLlmProvider,
+
+} from "./llm/domesticMockLlmProvider";
+
+export {
+
+  ProviderConfigError,
+
+  isMissingApiKeyError,
+
+  isProviderConfigError,
+
+} from "./providerConfigError";
+
+export {
+
+  createConfiguredLlmProvider,
+
+  resolveLlmProviderWithFallback,
+
+  MISSING_API_KEY_FALLBACK_WARNING,
+
+} from "./providerConfigRecovery";
+
+export {
+
+  PROVIDER_PLUGIN_REGISTRY,
+
+  getProviderManifest,
+
+  listProviderManifests,
+
+  type ProviderPluginManifest,
+
+  type ProviderKind,
+
+} from "./providerManifest";
+
 export type {
+
   VoiceProvider,
+
   VoiceTimbre,
+
   VoiceSpeakProgressEvent,
+
 } from "./voice/types";
+
 export type { LlmProvider } from "./llm/types";
+
 export type { NewsSource, NewsSourceRegistry } from "./news/types";
+
 export type {
+
   MemoryProvider,
+
   MemoryItem,
+
   RecallQuery,
+
   RecalledMemory,
+
 } from "./memory";
+

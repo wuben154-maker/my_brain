@@ -35,6 +35,43 @@
 V0 → V1 → V2 → V3 → V4 →（V5、V6 可与 V3/V4 并行）→ V7
 ```
 
+## KOS 系列里程碑（个人知识操作系统 · planned）
+
+> KOS 系列来自 `docs/KNOWLEDGE_OS_VISION.md`，目标是把 v2 已实现的沉浸式语音伴侣继续收敛成“个人知识操作系统”。KOS-A 到 KOS-F 均 **mock-first**、**harness-first**，不得偏离本 README 不变量：新建长期知识只能经用户确认入库，入库后整理可自动但必须可解释/可撤销，Brain MCP 默认只读，行动层只产草稿不自动执行外部写操作。
+
+| Spec | 代号 | 依赖 | 状态 | 一句话 |
+|---|---|---|---|---|
+| [KOS-A1-demo-fixtures](./KOS-A1-demo-fixtures.md) | `demo-fixtures` | V0–V7 | ✅ 已实现 | Showcase 固定 graph、briefing、ingest 候选、auto-curate golden、voice script |
+| [KOS-A2-core-loop](./KOS-A2-core-loop.md) | `core-loop` | KOS-A1 | ✅ 已实现 | 启动 → 自检 → 简报 → 入库 → 星图点亮 → 自动整理 |
+| [KOS-A3-undo-report](./KOS-A3-undo-report.md) | `undo-report` | KOS-A1, KOS-A2 | ✅ 已实现 | 整理原因、graph history、撤销整理、口头汇报节流 |
+| [KOS-A4-github-surface](./KOS-A4-github-surface.md) | `github-surface` | KOS-A1–A3 | ✅ 已实现 | README/DEMO/ARCHITECTURE/mock-live/短视频脚本展示面 |
+| [KOS-B1-world-item-model](./KOS-B1-world-item-model.md) | `world-item-model` | KOS-A1–A4 | ✅ 已实现 | WorldItem/source/去重/过期策略，保持非永久知识 |
+| [KOS-B2-radar-signal](./KOS-B2-radar-signal.md) | `radar-signal` | KOS-B1 | ✅ 已实现 | RadarSignal 相关度解释与 golden ranking eval |
+| [KOS-B3-daily-briefing](./KOS-B3-daily-briefing.md) | `daily-briefing` | KOS-B1, KOS-B2 | ✅ 已实现 | Top 3 简报、反馈、失败降级、newsQueue 兼容投影 |
+| [KOS-C1-learning-trace](./KOS-C1-learning-trace.md) | `learning-trace` | KOS-B3, KOS-A2, KOS-A3 | ✅ 已实现 | 追问/跳过/入库/复习学习轨迹，不写图谱/画像 |
+| [KOS-C2-profile-correction](./KOS-C2-profile-correction.md) | `profile-correction` | KOS-C1, KOS-A1, KOS-B3 | ✅ 已实现 | 用户查看并修正画像，修正优先于蒸馏冲突 |
+| [KOS-C3-interview-mode](./KOS-C3-interview-mode.md) | `interview-mode` | KOS-C1, KOS-C2, KOS-D1 | ✅ 已实现 | 基于图谱/画像/决策生成面试追问与回答框架 |
+| [KOS-D1-provenance](./KOS-D1-provenance.md) | `provenance` | KOS-A1, KOS-A2 | ✅ 已实现 | SourceRef、updatedAt、legacy sourceUrl 迁移与来源 golden |
+| [KOS-D2-curation-reasons](./KOS-D2-curation-reasons.md) | `curation-reasons` | KOS-D1, KOS-A3 | ✅ 已实现 | merge/link/archive reason code、边迁移、undo golden |
+| [KOS-D3-weekly-brain-review](./KOS-D3-weekly-brain-review.md) | `weekly-brain-review` | KOS-D1, KOS-D2, KOS-C1 | ✅ 已实现 | 基于 graph history 的周回顾，不凭空总结 |
+| [KOS-E1-action-schema](./KOS-E1-action-schema.md) | `action-schema` | KOS-D3 | ✅ 已实现 | CognitiveAction 模型与 draft-only 权限边界 |
+| [KOS-E2-project-suggestions](./KOS-E2-project-suggestions.md) | `project-suggestions` | KOS-E1, KOS-B3 | ✅ 已实现 | 项目 issue/roadmap 草稿，引用图谱节点和外部来源 |
+| [KOS-E3-writing-and-research](./KOS-E3-writing-and-research.md) | `writing-and-research` | KOS-E1, KOS-D1 | ✅ 已实现 | 博客草稿、research follow-up、引用图谱路径 |
+| [KOS-F1-brain-mcp-boundary](./KOS-F1-brain-mcp-boundary.md) | `brain-mcp-boundary` | KOS-A2, KOS-E1 | ✅ 已实现 | Brain MCP 只读边界与写工具禁止测试 |
+| [KOS-F2-export-format](./KOS-F2-export-format.md) | `export-format` | KOS-D1, KOS-E3 | ✅ 已实现 | Markdown/JSON/graph snapshot 导出与 round-trip |
+| [KOS-F3-provider-plugin-contract](./KOS-F3-provider-plugin-contract.md) | `provider-plugin-contract` | V7, KOS-A1 | ✅ 已实现 | Provider 插件规范、mock parity、国内模型 adapter 骨架 |
+
+执行顺序速记（KOS 系列）：
+```
+KOS-A1 → KOS-A2 → KOS-A3 → KOS-A4
+  → KOS-B1 → KOS-B2 → KOS-B3
+  → KOS-C1 → KOS-C2
+  → KOS-D1 → KOS-D2
+  → KOS-C3 → KOS-D3
+  → KOS-E1 →（KOS-E2、KOS-E3）
+  →（KOS-F1、KOS-F2、KOS-F3）
+```
+
 ### 架构裁定索引（主控定稿，已写入对应 spec）
 
 | # | 裁定 | 落点 |

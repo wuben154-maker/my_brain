@@ -2,6 +2,13 @@ import type { ConversationContext } from "@/conversation/types";
 import { DEFAULT_ONBOARDING } from "@/conversation/types";
 import type { NewsItem } from "@/domain/news";
 import { DEFAULT_USER_PROFILE } from "@/domain/profile";
+import {
+  createShowcaseGraphSnapshot,
+  SHOWCASE_BRIEFING_ITEMS,
+  SHOWCASE_PROFILE,
+} from "@/showcase/showcaseFixtures";
+
+export { SHOWCASE_BRIEFING_ITEMS };
 
 export const FIXTURE_NEWS: NewsItem[] = [
   {
@@ -47,6 +54,22 @@ export function createIdleCompanionContext(
     graph: { nodes: [], edges: [] },
     profile: { ...DEFAULT_USER_PROFILE, persona: "geek" },
     personaId: "geek",
+    onboarding: DEFAULT_ONBOARDING,
+    ...overrides,
+  };
+}
+
+/** KOS-A2: showcase companion harness context — pre-seeded graph + three briefs, no onboarding. */
+export function createShowcaseCompanionContext(
+  overrides: Partial<ConversationContext> = {},
+): ConversationContext {
+  const snapshot = createShowcaseGraphSnapshot();
+  return {
+    newsQueue: SHOWCASE_BRIEFING_ITEMS,
+    newsCursor: 0,
+    graph: snapshot,
+    profile: SHOWCASE_PROFILE,
+    personaId: SHOWCASE_PROFILE.persona,
     onboarding: DEFAULT_ONBOARDING,
     ...overrides,
   };

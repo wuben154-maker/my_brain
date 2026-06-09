@@ -18,66 +18,14 @@ if (process.env.MY_BRAIN_MCP !== "1") {
   process.exit(1);
 }
 
-const {
-  brainGetNode,
-  brainNeighborhood,
-  brainOutline,
-  brainProfileDigest,
-  brainSearch,
-  listReadonlyTools,
-} = await import("../src/mcp/brainReadonlyHandlers.ts");
+const { createBrainMcpServer, invokeBrainMcpTool } = await import(
+  "../src/mcp/brainMcpServer.ts"
+);
+const { BrainMcpToolCatalog } = await import("../src/mcp/brainMcpTools.ts");
+const { loadGraphFromBrainDb } = await import("../src/mcp/brainMcpDbLoader.ts");
 
 function defaultWebDbPath() {
   return join(process.cwd(), ".data", "mybrain.db");
-}
-
-function normalizeConceptRow(row) {
-  return {
-    ...row,
-    archived: row.archived === 1,
-    salience: row.salience ?? undefined,
-    lastTouchedAt: row.lastTouchedAt ?? undefined,
-    archivedAt: row.archivedAt ?? undefined,
-    supersedesNodeId: row.supersedesNodeId ?? undefined,
-  };
-}
-
-function loadGraphFromDb(db) {
-  const nodes = db
-    .prepare(
-      `SELECT id, title, intro, source_url AS sourceUrl, archived,
-              created_at AS createdAt, updated_at AS updatedAt,
-              salience, last_touched_at AS lastTouchedAt,
-              archived_at AS archivedAt, supersedes_node_id AS supersedesNodeId
-       FROM concepts`,
-    )
-    .all();
-
-  const edges = db
-    .prepare(
-      `SELECT id, source_id AS sourceId, target_id AS targetId,
-              relation_type AS relationType
-       FROM edges`,
-    )
-    .all();
-
-  const conceptIds = new Set(nodes.map((node) => node.id));
-  const displayEdges = edges.filter(
-    (edge) => conceptIds.has(edge.sourceId) && conceptIds.has(edge.targetId),
-  );
-
-  const activeIds = new Set(
-    nodes.filter((node) => node.archived !== 1).map((node) => node.id),
-  );
-
-  return {
-    nodes: nodes
-      .filter((node) => node.archived !== 1)
-      .map((row) => normalizeConceptRow(row)),
-    edges: displayEdges.filter(
-      (edge) => activeIds.has(edge.sourceId) && activeIds.has(edge.targetId),
-    ),
-  };
 }
 
 function loadUserProfileFromDb(db) {
@@ -119,7 +67,7 @@ function createReadonlyDeps(dbPath) {
 
   return {
     deps: {
-      loadGraph: () => loadGraphFromDb(db),
+      loadGraph: () => loadGraphFromBrainDb(db),
       loadUserProfile: () => loadUserProfileFromDb(db),
     },
     close: () => db.close(),
@@ -127,7 +75,7 @@ function createReadonlyDeps(dbPath) {
 }
 
 const TOOL_SCHEMAS = {
-  brain_search: {
+  brain_search_nodes: {
     type: "object",
     properties: {
       query: { type: "string", description: "Search terms for concept title/intro" },
@@ -142,7 +90,7 @@ const TOOL_SCHEMAS = {
     },
     required: ["nodeId"],
   },
-  brain_neighborhood: {
+  brain_node_neighborhood: {
     type: "object",
     properties: {
       nodeId: { type: "string", description: "Center concept node id" },
@@ -150,29 +98,17 @@ const TOOL_SCHEMAS = {
     },
     required: ["nodeId"],
   },
-  brain_outline: {
-    type: "object",
-    properties: {},
-  },
-  brain_profile_digest: {
+  brain_graph_outline: {
     type: "object",
     properties: {},
   },
 };
 
 function toolDefinitions() {
-  const descriptions = {
-    brain_search: "Search active concept nodes by title and intro",
-    brain_get_node: "Fetch one active concept node by id",
-    brain_neighborhood: "Active subgraph around a node within hop limit",
-    brain_outline: "Hierarchical outline of the active brain graph",
-    brain_profile_digest: "Sanitized user profile digest (no secrets)",
-  };
-
-  return listReadonlyTools().map((name) => ({
-    name,
-    description: descriptions[name],
-    inputSchema: TOOL_SCHEMAS[name],
+  return BrainMcpToolCatalog.map((tool) => ({
+    name: tool.name,
+    description: tool.description,
+    inputSchema: TOOL_SCHEMAS[tool.name],
   }));
 }
 
@@ -187,41 +123,25 @@ function textResult(payload) {
   };
 }
 
-function errorResult(message) {
+function errorResult(message, code = "INTERNAL") {
   return {
-    content: [{ type: "text", text: message }],
+    content: [{ type: "text", text: JSON.stringify({ error: message, code }) }],
     isError: true,
   };
 }
 
-async function dispatchTool(name, args, deps) {
-  switch (name) {
-    case "brain_search":
-      return textResult(
-        await brainSearch(String(args?.query ?? ""), Number(args?.limit ?? 10), deps),
-      );
-    case "brain_get_node":
-      return textResult(await brainGetNode(String(args?.nodeId ?? ""), deps));
-    case "brain_neighborhood":
-      return textResult(
-        await brainNeighborhood(
-          String(args?.nodeId ?? ""),
-          Number(args?.hops ?? 1),
-          deps,
-        ),
-      );
-    case "brain_outline":
-      return textResult(brainOutline(await deps.loadGraph()));
-    case "brain_profile_digest":
-      return textResult({
-        digest: brainProfileDigest(await deps.loadUserProfile()),
-      });
-    default:
-      return errorResult(`Unknown tool: ${name}`);
+async function dispatchTool(name, args, server) {
+  try {
+    const payload = await invokeBrainMcpTool(server, name, args ?? {});
+    return textResult(payload);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const code = error?.code ?? "INTERNAL";
+    return errorResult(message, code);
   }
 }
 
-async function handleRequest(request, deps) {
+async function handleRequest(request, server) {
   const { id, method, params } = request;
 
   if (method === "initialize") {
@@ -253,13 +173,8 @@ async function handleRequest(request, deps) {
   if (method === "tools/call") {
     const name = params?.name;
     const args = params?.arguments ?? {};
-    try {
-      const result = await dispatchTool(name, args, deps);
-      send({ jsonrpc: "2.0", id, result });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      send({ jsonrpc: "2.0", id, result: errorResult(message) });
-    }
+    const result = await dispatchTool(name, args, server);
+    send({ jsonrpc: "2.0", id, result });
     return;
   }
 
@@ -275,6 +190,7 @@ async function handleRequest(request, deps) {
 async function main() {
   const dbPath = process.env.MY_BRAIN_DB_PATH ?? defaultWebDbPath();
   const { deps, close } = createReadonlyDeps(dbPath);
+  const server = createBrainMcpServer({ mode: "read_only", deps });
 
   const rl = createInterface({ input: process.stdin, terminal: false });
   rl.on("line", (line) => {
@@ -293,7 +209,7 @@ async function main() {
       });
       return;
     }
-    void handleRequest(request, deps);
+    void handleRequest(request, server);
   });
 
   rl.on("close", () => {

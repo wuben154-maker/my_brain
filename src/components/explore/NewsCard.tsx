@@ -1,4 +1,6 @@
 import type { NewsItem } from "@/domain/news";
+import type { RadarSignal } from "@/domain/radar/radarSignal";
+import { BriefingSignalChip } from "@/components/briefing/BriefingSignalChip";
 import { GlassCard } from "@/components/ui/GlassCard";
 import {
   NEWS_ITEM_STATUS_LABELS,
@@ -9,6 +11,7 @@ interface NewsCardProps {
   item: NewsItem;
   status: NewsItemStatus;
   explanation?: string;
+  briefingSignal?: RadarSignal;
   busy: boolean;
   confirming: boolean;
   onExplain: () => void;
@@ -20,6 +23,7 @@ export function NewsCard({
   item,
   status,
   explanation,
+  briefingSignal,
   busy,
   confirming,
   onExplain,
@@ -52,6 +56,8 @@ export function NewsCard({
       </header>
 
       <p className="line-clamp-3 text-body text-secondary">{item.summary}</p>
+
+      {briefingSignal ? <BriefingSignalChip signal={briefingSignal} /> : null}
 
       {explanation ? (
         <p className="rounded-sm border border-hud/60 bg-bg-elevated/40 p-3 text-caption text-primary">

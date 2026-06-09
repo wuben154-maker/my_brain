@@ -53,6 +53,47 @@ describe("SettingsOverlay (V5)", () => {
     expect(providers.voice.getVoice()).toBe("nova");
   });
 
+  it("opens profile panel from settings overlay and saves correction", async () => {
+    const saveUserProfile = vi.fn(async () => undefined);
+    useAppStore.setState({
+      providers: createAppProviders({ openAiApiKey: "" }),
+      storage: { saveUserProfile } as never,
+    });
+    useProfileStore.getState().reset();
+
+    render(createElement(SettingsOverlay, { companionCorner: true }));
+    fireEvent.click(screen.getByTestId("settings-corner"));
+    fireEvent.click(screen.getByTestId("settings-open-profile"));
+
+    expect(screen.getByTestId("profile-panel")).toBeTruthy();
+
+    fireEvent.change(screen.getByTestId("profile-understanding-demo-rag"), {
+      target: { value: "can_explain" },
+    });
+    fireEvent.click(screen.getByTestId("profile-save-correction"));
+
+    await vi.waitFor(() => {
+      expect(useProfileStore.getState().profile.understanding?.["demo-rag"]).toBe(
+        "can_explain",
+      );
+      expect(useProfileStore.getState().lastCorrection).not.toBeNull();
+    });
+    expect(saveUserProfile).toHaveBeenCalled();
+
+    const undoButton = screen.getByTestId(
+      "profile-undo-correction",
+    ) as HTMLButtonElement;
+    await vi.waitFor(() => {
+      expect(undoButton.disabled).toBe(false);
+    });
+    fireEvent.click(undoButton);
+    await vi.waitFor(() => {
+      expect(useProfileStore.getState().profile.understanding?.["demo-rag"]).toBe(
+        "heard",
+      );
+    });
+  });
+
   it("updates profile persona on preset click", () => {
     const saveUserProfile = vi.fn(async () => undefined);
     const storage = {

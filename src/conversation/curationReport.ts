@@ -10,10 +10,7 @@ export function shouldSpeakCurationReport(
   return lastSpokenAt <= 0 || nowMs - lastSpokenAt >= CURATION_REPORT_MIN_INTERVAL_MS;
 }
 
+/** Spoken line only — UI overlay shows reasonDetail separately (KOS-A3). */
 export function formatCurationReport(entry: GraphHistoryEntry): string {
-  const detail = entry.reasonDetail.trim();
-  if (detail) {
-    return `${entry.summary}：${detail}`;
-  }
   return entry.summary;
 }

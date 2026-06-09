@@ -1,109 +1,17 @@
 import type { BrainGraphSnapshot } from "@/domain/graph";
-import { shouldEnableDemoModes } from "@/lib/devOnlyGuards";
+import { isGraphDemoMode } from "@/lib/devOnlyGuards";
+import {
+  createShowcaseGraphSnapshot,
+  SHOWCASE_GRAPH_SNAPSHOT,
+  SHOWCASE_NOW,
+} from "@/showcase/showcaseFixtures";
 
-const NOW = "2026-06-01T00:00:00.000Z";
+export { isGraphDemoMode, SHOWCASE_GRAPH_SNAPSHOT };
+const NOW = SHOWCASE_NOW;
 
-/** Dev-only snapshot for visual QA (`?graphDemo=1`). */
+/** Dev-only snapshot for visual QA (`?graphDemo=1`). Aligned with showcase graph. */
 export function createGraphDemoSnapshot(): BrainGraphSnapshot {
-  return {
-    nodes: [
-      {
-        id: "demo-transformer",
-        title: "Transformer",
-        intro: "自注意力序列建模架构",
-        sourceUrl: "https://arxiv.org/abs/1706.03762",
-        archived: false,
-        createdAt: NOW,
-        updatedAt: NOW,
-      },
-      {
-        id: "demo-attention",
-        title: "Self-Attention",
-        intro: "Query/Key/Value 注意力机制",
-        sourceUrl: null,
-        archived: false,
-        createdAt: NOW,
-        updatedAt: NOW,
-      },
-      {
-        id: "demo-rag",
-        title: "RAG",
-        intro: "检索增强生成",
-        sourceUrl: null,
-        archived: false,
-        createdAt: NOW,
-        updatedAt: NOW,
-      },
-      {
-        id: "demo-agent",
-        title: "AI Agent",
-        intro: "工具调用与任务编排",
-        sourceUrl: null,
-        archived: false,
-        createdAt: NOW,
-        updatedAt: NOW,
-      },
-      {
-        id: "demo-llm",
-        title: "LLM",
-        intro: "大语言模型",
-        sourceUrl: null,
-        archived: false,
-        createdAt: NOW,
-        updatedAt: NOW,
-      },
-      {
-        id: "demo-mcp",
-        title: "MCP",
-        intro: "Model Context Protocol",
-        sourceUrl: null,
-        archived: false,
-        createdAt: NOW,
-        updatedAt: NOW,
-      },
-      {
-        id: "demo-bert",
-        title: "BERT",
-        intro: "双向编码器（已归档示例）",
-        sourceUrl: null,
-        archived: true,
-        createdAt: NOW,
-        updatedAt: NOW,
-      },
-    ],
-    edges: [
-      {
-        id: "e1",
-        sourceId: "demo-attention",
-        targetId: "demo-transformer",
-        relationType: "is_a",
-      },
-      {
-        id: "e2",
-        sourceId: "demo-rag",
-        targetId: "demo-llm",
-        relationType: "depends_on",
-      },
-      {
-        id: "e3",
-        sourceId: "demo-agent",
-        targetId: "demo-llm",
-        relationType: "depends_on",
-      },
-      {
-        id: "e4",
-        sourceId: "demo-agent",
-        targetId: "demo-mcp",
-        relationType: "related",
-      },
-      {
-        id: "e5",
-        sourceId: "demo-bert",
-        targetId: "demo-transformer",
-        relationType: "replaces",
-      },
-    ],
-  };
+  return createShowcaseGraphSnapshot();
 }
 
 interface DemoNodeSeed {
@@ -187,6 +95,7 @@ export function createRichGraphDemoSnapshot(): BrainGraphSnapshot {
       title: node.title,
       intro: node.intro,
       sourceUrl: node.sourceUrl ?? null,
+      sourceRefs: [],
       archived: node.archived ?? false,
       createdAt: NOW,
       updatedAt: NOW,
@@ -200,12 +109,3 @@ export function createRichGraphDemoSnapshot(): BrainGraphSnapshot {
   };
 }
 
-export function isGraphDemoMode(): boolean {
-  if (!shouldEnableDemoModes()) {
-    return false;
-  }
-  if (typeof window === "undefined") {
-    return false;
-  }
-  return new URLSearchParams(window.location.search).has("graphDemo");
-}

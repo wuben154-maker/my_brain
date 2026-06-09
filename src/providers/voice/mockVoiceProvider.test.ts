@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MockVoiceProvider } from "./mockVoiceProvider";
+import { SHOWCASE_VOICE_SCRIPT } from "@/showcase/showcaseFixtures";
 
 describe("MockVoiceProvider", () => {
   beforeEach(() => {
@@ -121,5 +122,29 @@ describe("MockVoiceProvider", () => {
     await vi.runAllTimersAsync();
 
     expect(finals).toContain("打断");
+  });
+
+  it("replays the full showcase voice script in order", async () => {
+    const voice = new MockVoiceProvider();
+    const finals: string[] = [];
+    voice.onTranscript((event) => {
+      if (event.final && event.role === "user") {
+        finals.push(event.text);
+      }
+    });
+
+    const connectPromise = voice.connect({
+      apiKey: "",
+      skipWelcomeUtterance: true,
+    });
+    await vi.advanceTimersByTimeAsync(600);
+    await connectPromise;
+
+    const replayPromise = voice.injectShowcaseVoiceScript();
+    await vi.runAllTimersAsync();
+    await replayPromise;
+
+    expect(finals).toEqual(SHOWCASE_VOICE_SCRIPT.map((step) => step.transcript));
+    expect(voice.getState()).toBe("listening");
   });
 });

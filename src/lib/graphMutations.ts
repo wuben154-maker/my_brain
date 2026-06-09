@@ -5,6 +5,13 @@ import type {
   GraphMutationProposal,
 } from "@/domain/graph";
 import {
+  migrateLegacySourceUrlToSourceRefs,
+  normalizeConceptProvenance,
+  sourceRefFromLegacySourceUrl,
+  sourceRefsEqual,
+  syncLegacySourceUrl,
+} from "@/domain/graph/sourceRef";
+import {
   readArchivePayload,
   readAttachPayload,
   readCreatePayload,
@@ -18,6 +25,14 @@ import {
 } from "@/lib/salience";
 import type { StorageProvider } from "@/storage/types";
 
+let graphMutationClock: (() => string) | null = null;
+
+/** Test hook — freeze `updatedAt` / ingest timestamps in graph mutations. */
+export function setGraphMutationClockForTests(
+  clock: (() => string) | null,
+): void {
+  graphMutationClock = clock;
+}
 const CLUSTER_COLORS = [
   "var(--node-cyan)",
   "var(--node-blue)",
@@ -36,15 +51,33 @@ export function visibleGraph(snapshot: BrainGraphSnapshot): BrainGraphSnapshot {
   return {
     nodes: snapshot.nodes.filter((node) => !node.archived),
     edges: snapshot.edges.filter(
-      (edge) => activeIds.has(edge.sourceId) && activeIds.has(edge.targetId),
+      (edge) =>
+        !edge.archived &&
+        activeIds.has(edge.sourceId) &&
+        activeIds.has(edge.targetId),
     ),
   };
 }
 
 function nowIso(): string {
-  return new Date().toISOString();
+  return graphMutationClock?.() ?? new Date().toISOString();
 }
 
+function resolveCreateSourceRefs(
+  payload: ReturnType<typeof readCreatePayload>,
+  timestamp: string,
+): ConceptNode["sourceRefs"] {
+  if (payload.sourceRefs && payload.sourceRefs.length > 0) {
+    return payload.sourceRefs;
+  }
+  const legacy = sourceRefFromLegacySourceUrl({
+    title: payload.title,
+    sourceUrl: payload.sourceUrl,
+    updatedAt: timestamp,
+    createdAt: timestamp,
+  });
+  return legacy ? [legacy] : [];
+}
 function newConceptId(title: string): string {
   const slug = title
     .toLowerCase()
@@ -119,18 +152,23 @@ export function applyGraphMutation(
       if (!payload.intro.trim()) {
         throw new Error("概念简介不能为空");
       }
-      nodes.push({
-        id: newConceptId(payload.title),
-        title: payload.title.trim(),
-        intro: payload.intro.trim(),
-        sourceUrl: payload.sourceUrl,
-        archived: false,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        salience: DEFAULT_SALIENCE,
-        lastTouchedAt: timestamp,
-      });
-      break;
+      {
+        const sourceRefs = resolveCreateSourceRefs(payload, timestamp);
+        nodes.push(
+          normalizeConceptProvenance({
+            id: payload.id?.trim() || newConceptId(payload.title),
+            title: payload.title.trim(),
+            intro: payload.intro.trim(),
+            sourceUrl: syncLegacySourceUrl(sourceRefs ?? [], payload.sourceUrl),
+            sourceRefs: sourceRefs ?? [],
+            archived: false,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+            salience: DEFAULT_SALIENCE,
+            lastTouchedAt: timestamp,
+          }),
+        );
+      }      break;
     }
     case "attach": {
       const payload = readAttachPayload(proposal.payload);
@@ -141,9 +179,17 @@ export function applyGraphMutation(
       node.intro = `${node.intro}\n\n${payload.introAppend}`.trim();
       if (payload.sourceUrl !== undefined) {
         node.sourceUrl = payload.sourceUrl;
+        const legacy = sourceRefFromLegacySourceUrl({
+          title: node.title,
+          sourceUrl: payload.sourceUrl,
+          updatedAt: timestamp,
+          createdAt: node.createdAt,
+        });
+        if (legacy && (node.sourceRefs?.length ?? 0) === 0) {
+          node.sourceRefs = [legacy];
+        }
       }
-      node.updatedAt = timestamp;
-      touchNode(node, timestamp);
+      node.updatedAt = timestamp;      touchNode(node, timestamp);
       break;
     }
     case "merge": {
@@ -208,12 +254,15 @@ export function applyGraphMutation(
       node.title = payload.title.trim();
       node.intro = payload.intro.trim();
       node.sourceUrl = payload.sourceUrl;
+      node.sourceRefs = migrateLegacySourceUrlToSourceRefs({
+        ...node,
+        sourceUrl: payload.sourceUrl,
+      });
       node.updatedAt = timestamp;
       touchNode(node, timestamp);
       break;
     }
-    case "link": {
-      const payload = readLinkPayload(proposal.payload);
+    case "link": {      const payload = readLinkPayload(proposal.payload);
       const source = findNode({ nodes, edges }, payload.sourceId);
       const target = findNode({ nodes, edges }, payload.targetId);
       if (!source || !target) {
@@ -266,8 +315,8 @@ export async function persistGraphSnapshot(
       prev.title !== node.title ||
       prev.intro !== node.intro ||
       prev.sourceUrl !== node.sourceUrl ||
-      prev.archived !== node.archived ||
-      prev.archivedAt !== node.archivedAt ||
+      !sourceRefsEqual(prev.sourceRefs ?? [], node.sourceRefs ?? []) ||
+      prev.archived !== node.archived ||      prev.archivedAt !== node.archivedAt ||
       prev.supersedesNodeId !== node.supersedesNodeId ||
       prev.updatedAt !== node.updatedAt ||
       prev.salience !== node.salience ||
@@ -288,13 +337,62 @@ export async function persistGraphSnapshot(
   }
 }
 
+/** Persist graph-history undo without hard-deleting concepts created after the entry. */
+export async function persistGraphHistoryUndoSnapshot(
+  storage: StorageProvider,
+  current: BrainGraphSnapshot,
+  before: BrainGraphSnapshot,
+  after: BrainGraphSnapshot,
+): Promise<void> {
+  const beforeEdgeIds = new Set(before.edges.map((edge) => edge.id));
+  const afterOnlyEdgeIds = new Set(
+    after.edges
+      .filter((edge) => !beforeEdgeIds.has(edge.id))
+      .map((edge) => edge.id),
+  );
+
+  const targetEdgesById = new Map<string, GraphEdge>();
+  for (const edge of current.edges) {
+    if (!afterOnlyEdgeIds.has(edge.id)) {
+      targetEdgesById.set(edge.id, edge);
+    }
+  }
+  for (const edge of before.edges) {
+    targetEdgesById.set(edge.id, edge);
+  }
+  await storage.syncEdgesSnapshot([...targetEdgesById.values()]);
+
+  for (const node of before.nodes) {
+    const currentNode = current.nodes.find((item) => item.id === node.id);
+    if (
+      !currentNode ||
+      currentNode.title !== node.title ||
+      currentNode.intro !== node.intro ||
+      currentNode.sourceUrl !== node.sourceUrl ||
+      currentNode.archived !== node.archived ||
+      currentNode.archivedAt !== node.archivedAt ||
+      currentNode.supersedesNodeId !== node.supersedesNodeId ||
+      currentNode.updatedAt !== node.updatedAt ||
+      currentNode.salience !== node.salience ||
+      currentNode.lastTouchedAt !== node.lastTouchedAt
+    ) {
+      await storage.saveConcept(node);
+    }
+  }
+
+}
+
 export function primaryNodeIdFromProposal(
   proposal: GraphMutationProposal,
   after: BrainGraphSnapshot,
 ): string | null {
   switch (proposal.kind) {
     case "create": {
-      const title = readCreatePayload(proposal.payload).title;
+      const payload = readCreatePayload(proposal.payload);
+      if (payload.id) {
+        return payload.id;
+      }
+      const title = payload.title;
       return (
         after.nodes.find((node) => node.title === title && !node.archived)?.id ??
         after.nodes[after.nodes.length - 1]?.id ??

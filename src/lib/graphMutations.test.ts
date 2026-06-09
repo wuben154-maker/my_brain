@@ -1,7 +1,15 @@
-import { describe, expect, it } from "vitest";
-import type { BrainGraphSnapshot, GraphMutationProposal } from "@/domain/graph";
+import { describe, expect, it, vi } from "vitest";
+import type { BrainGraphSnapshot, GraphEdge, GraphMutationProposal } from "@/domain/graph";
+import { readRepoSource } from "@/invariants/readRepoSource";
 import { createTempStorage } from "@/invariants/testStorage";
-import { applyGraphMutation, persistGraphSnapshot, visibleGraph } from "./graphMutations";
+import type { StorageProvider } from "@/storage/types";
+import {
+  applyGraphMutation,
+  persistGraphHistoryUndoSnapshot,
+  persistGraphSnapshot,
+  setGraphMutationClockForTests,
+  visibleGraph,
+} from "./graphMutations";
 
 const baseSnapshot = (): BrainGraphSnapshot => ({
   nodes: [
@@ -62,6 +70,43 @@ describe("graphMutations", () => {
       true,
     );
     expect(visibleGraph(after).nodes).toHaveLength(1);
+  });
+
+  it("visibleGraph hides archived edges even when endpoints stay active", () => {
+    const snapshot: BrainGraphSnapshot = {
+      nodes: [
+        {
+          id: "a",
+          title: "A",
+          intro: "",
+          sourceUrl: null,
+          archived: false,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+        {
+          id: "b",
+          title: "B",
+          intro: "",
+          sourceUrl: null,
+          archived: false,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      edges: [
+        { id: "e-live", sourceId: "a", targetId: "b", relationType: "related" },
+        {
+          id: "e-hidden",
+          sourceId: "b",
+          targetId: "a",
+          relationType: "related",
+          archived: true,
+        },
+      ],
+    };
+    const visible = visibleGraph(snapshot);
+    expect(visible.edges.map((edge) => edge.id)).toEqual(["e-live"]);
   });
 
   it("updates node fields manually", () => {
@@ -204,6 +249,135 @@ describe("graphMutations", () => {
         },
       }),
     ).toThrow("概念标题不能为空");
+  });
+
+  it("update mutation bumps updatedAt via mock clock", () => {
+    setGraphMutationClockForTests(() => "2026-06-02T12:00:00.000Z");
+    try {
+      const after = applyGraphMutation(baseSnapshot(), {
+        id: "p-update-intro",
+        kind: "update",
+        summary: "编辑简介",
+        payload: {
+          nodeId: "a",
+          title: "大模型上下文窗口",
+          intro: "新简介",
+          sourceUrl: null,
+        },
+      });
+      const node = after.nodes.find((item) => item.id === "a");
+      expect(node?.intro).toBe("新简介");
+      expect(node?.updatedAt).toBe("2026-06-02T12:00:00.000Z");
+    } finally {
+      setGraphMutationClockForTests(null);
+    }
+  });
+
+  it("archive preserves sourceRefs on the archived node", () => {
+    const snapshot: BrainGraphSnapshot = {
+      nodes: [
+        {
+          id: "with-ref",
+          title: "Graphiti",
+          intro: "intro",
+          sourceUrl: "https://example.com/graphiti",
+          sourceRefs: [
+            {
+              url: "https://example.com/graphiti",
+              title: "Graphiti 时序知识图谱",
+              kind: "briefing",
+              worldItemId: "radar-wi-showcase-3",
+              ingestedAt: "2026-06-01T00:00:00.000Z",
+            },
+          ],
+          archived: false,
+          createdAt: "2026-06-01T00:00:00.000Z",
+          updatedAt: "2026-06-01T00:00:00.000Z",
+        },
+      ],
+      edges: [],
+    };
+    const after = applyGraphMutation(snapshot, {
+      id: "p-archive",
+      kind: "archive",
+      summary: "归档",
+      payload: { nodeId: "with-ref" },
+    });
+    const archived = after.nodes.find((item) => item.id === "with-ref");
+    expect(archived?.archived).toBe(true);
+    expect(archived?.sourceRefs).toHaveLength(1);
+    expect(archived?.sourceRefs?.[0]?.worldItemId).toBe("radar-wi-showcase-3");
+  });
+
+  it("persistGraphHistoryUndoSnapshot never calls deleteEdge", () => {
+    const source = readRepoSource("src/lib/graphMutations.ts");
+    const start = source.indexOf("export async function persistGraphHistoryUndoSnapshot");
+    expect(start).toBeGreaterThan(-1);
+    const tail = source.slice(start);
+    const end = tail.search(/\nexport (async )?function /);
+    const fnSource = end === -1 ? tail : tail.slice(0, end);
+    expect(fnSource).not.toContain("deleteEdge");
+    expect(fnSource).toContain("syncEdgesSnapshot");
+  });
+
+  it("persistGraphHistoryUndoSnapshot reconciles via syncEdgesSnapshot", async () => {
+    const nodeA = {
+      id: "n1",
+      title: "A",
+      intro: "a",
+      sourceUrl: null,
+      archived: false,
+      createdAt: "2026-06-01T00:00:00.000Z",
+      updatedAt: "2026-06-01T00:00:00.000Z",
+    };
+    const nodeB = {
+      id: "n2",
+      title: "B",
+      intro: "b",
+      sourceUrl: null,
+      archived: false,
+      createdAt: "2026-06-02T00:00:00.000Z",
+      updatedAt: "2026-06-02T00:00:00.000Z",
+    };
+    const before: BrainGraphSnapshot = { nodes: [nodeA], edges: [] };
+    const curationEdge = {
+      id: "e-curate",
+      sourceId: "n1",
+      targetId: "n2",
+      relationType: "related" as const,
+    };
+    const after: BrainGraphSnapshot = {
+      nodes: [nodeA],
+      edges: [curationEdge],
+    };
+    const laterEdge = {
+      id: "e-later",
+      sourceId: "n1",
+      targetId: "n2",
+      relationType: "related" as const,
+    };
+    const current: BrainGraphSnapshot = {
+      nodes: [nodeA, nodeB],
+      edges: [curationEdge, laterEdge],
+    };
+
+    const deleteEdge = vi.fn<StorageProvider["deleteEdge"]>(async () => undefined);
+    const syncEdgesSnapshot = vi.fn<StorageProvider["syncEdgesSnapshot"]>(
+      async () => undefined,
+    );
+    const saveConcept = vi.fn<StorageProvider["saveConcept"]>(async () => undefined);
+    const storage = {
+      deleteEdge,
+      syncEdgesSnapshot,
+      saveConcept,
+    } as unknown as StorageProvider;
+
+    await persistGraphHistoryUndoSnapshot(storage, current, before, after);
+
+    expect(deleteEdge).not.toHaveBeenCalled();
+    expect(syncEdgesSnapshot).toHaveBeenCalledTimes(1);
+    const synced = syncEdgesSnapshot.mock.calls[0]![0] as GraphEdge[];
+    expect(synced.map((edge: GraphEdge) => edge.id).sort()).toEqual(["e-later"]);
   });
 
   it("persistGraphSnapshot deletes nodes and edges absent from target snapshot", async () => {

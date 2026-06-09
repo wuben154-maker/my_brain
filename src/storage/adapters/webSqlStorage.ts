@@ -2,6 +2,8 @@ import type { BrainGraphSnapshot, ConceptNode, GraphEdge } from "@/domain/graph"
 import type { GraphHistoryEntry } from "@/domain/graphHistory";
 import type { UserProfile } from "@/domain/profile";
 import type { ProposalEnvelope, ProposalStatus } from "@/agent/types";
+import type { CognitiveAction } from "@/domain/actions/cognitiveAction";
+import type { LearningTrace } from "@/domain/learning/learningTrace";
 import type { StorageProvider } from "../types";
 
 const STORAGE_BASE = "/__my_brain/storage";
@@ -29,7 +31,10 @@ async function storageFetch<T>(
   return (await response.json()) as T;
 }
 
-/** Web-dev storage client — talks to Vite middleware backed by better-sqlite3. */
+/**
+ * Web-dev storage client — talks to Vite middleware backed by better-sqlite3.
+ * Dev-only bridge; not Brain MCP, not Tauri production, not an external write surface.
+ */
 export class WebSqlStorageProvider implements StorageProvider {
   async init(): Promise<void> {
     await storageFetch("/init", { method: "POST" });
@@ -64,6 +69,10 @@ export class WebSqlStorageProvider implements StorageProvider {
 
   deleteEdge(edgeId: string): Promise<void> {
     return storageFetch("/edge/delete", { method: "POST", body: { id: edgeId } });
+  }
+
+  syncEdgesSnapshot(edges: GraphEdge[]): Promise<void> {
+    return storageFetch("/edges/sync", { body: { edges } });
   }
 
   loadUserProfile(): Promise<UserProfile> {
@@ -112,5 +121,21 @@ export class WebSqlStorageProvider implements StorageProvider {
 
   setGraphHistoryUndone(id: string): Promise<void> {
     return storageFetch("/graph-history/undone", { body: { id } });
+  }
+
+  listLearningTraces(): Promise<LearningTrace[]> {
+    return storageFetch("/learning-traces");
+  }
+
+  saveLearningTrace(trace: LearningTrace): Promise<void> {
+    return storageFetch("/learning-traces/save", { body: trace });
+  }
+
+  listCognitiveActions(): Promise<CognitiveAction[]> {
+    return storageFetch("/cognitive-actions");
+  }
+
+  saveCognitiveAction(action: CognitiveAction): Promise<void> {
+    return storageFetch("/cognitive-actions/save", { body: action });
   }
 }

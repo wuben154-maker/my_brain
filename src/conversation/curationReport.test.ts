@@ -5,6 +5,8 @@ import {
   formatCurationReport,
   shouldSpeakCurationReport,
 } from "@/conversation/curationReport";
+import { parseIngestCommand } from "@/lib/parseIngestCommand";
+import { SHOWCASE_AUTO_CURATE_GOLDEN } from "@/showcase/showcaseFixtures";
 
 const entry: GraphHistoryEntry = {
   id: "h1",
@@ -31,19 +33,20 @@ describe("curationReport", () => {
     ).toBe(false);
   });
 
-  it("formatCurationReport appends reasonDetail after summary when non-empty", () => {
-    expect(formatCurationReport(entry)).toBe(
-      `${entry.summary}：${entry.reasonDetail}`,
-    );
+  it("formatCurationReport returns summary for spoken line (reasonDetail is UI-only)", () => {
+    expect(formatCurationReport(entry)).toBe(entry.summary);
   });
 
-  it("formatCurationReport returns summary only when reasonDetail is empty", () => {
-    expect(
-      formatCurationReport({
-        ...entry,
-        reasonDetail: "",
-      }),
-    ).toBe(entry.summary);
+  it("formatCurationReport matches showcase golden spoken text", () => {
+    const showcaseEntry: GraphHistoryEntry = {
+      ...entry,
+      summary: SHOWCASE_AUTO_CURATE_GOLDEN.summary,
+      reasonCode: SHOWCASE_AUTO_CURATE_GOLDEN.reasonCode,
+      reasonDetail: SHOWCASE_AUTO_CURATE_GOLDEN.reasonDetail,
+    };
+    expect(formatCurationReport(showcaseEntry)).toBe(
+      "已把 Graphiti 连到 AI Agent",
+    );
   });
 
   it("speaks at most once per interval across many entries", () => {
@@ -57,5 +60,13 @@ describe("curationReport", () => {
       }
     }
     expect(spoken).toBe(1);
+  });
+
+  it("voice 撤销 is not parsed as ingest undo (UI/harness only)", () => {
+    expect(parseIngestCommand("撤销", 1)).toEqual({ kind: "reprompt" });
+    expect(parseIngestCommand("撤销", 2)).toEqual({
+      kind: "command",
+      command: "skip",
+    });
   });
 });

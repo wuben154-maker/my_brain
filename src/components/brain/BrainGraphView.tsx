@@ -115,6 +115,7 @@ export function BrainGraphView(props: BrainGraphViewProps = {}) {
   const edges = useGraphStore((state) => state.edges);
   const previewGhostNodes = useGraphStore((state) => state.previewGhostNodes);
   const previewGhostEdges = useGraphStore((state) => state.previewGhostEdges);
+  const focusNodeId = useGraphStore((state) => state.focusNodeId);
   const highlightedNodeIds = useGraphStore((state) => state.highlightedNodeIds);
   const highlightedEdgeIds = useGraphStore(
     (state) => state.highlightedEdgeIds,
@@ -242,6 +243,9 @@ export function BrainGraphView(props: BrainGraphViewProps = {}) {
   }, []);
 
   useEffect(() => {
+    if (focusNodeId) {
+      return;
+    }
     if (highlightedNodeIds.length === 0) {
       return;
     }
@@ -252,7 +256,7 @@ export function BrainGraphView(props: BrainGraphViewProps = {}) {
       useGraphStore.getState().clearHighlights();
     }, 4000);
     return () => window.clearTimeout(timer);
-  }, [highlightedNodeIds, previewGhostNodes.length]);
+  }, [focusNodeId, highlightedNodeIds, previewGhostNodes.length]);
 
   useEffect(() => {
     if (graphData.nodes.length === 0) {
@@ -451,6 +455,7 @@ export function BrainGraphView(props: BrainGraphViewProps = {}) {
             nodePointerAreaPaint={(node, color, ctx) => {
               const graphNode = node as GraphNode;
               const emphasis =
+                focusNodeId === String(node.id) ||
                 highlightedNodeIds.includes(String(node.id)) ||
                 selectedNodeId === String(node.id) ||
                 hoveredNodeId === String(node.id);
@@ -471,7 +476,9 @@ export function BrainGraphView(props: BrainGraphViewProps = {}) {
               const isGhost = graphNode.previewGhost === true;
               const visual = nodeVisualState(
                 graphNode.archived,
-                highlightedNodeIds.includes(nodeId) || isGhost,
+                focusNodeId === nodeId ||
+                  highlightedNodeIds.includes(nodeId) ||
+                  isGhost,
                 selectedNodeId === nodeId,
                 hoveredNodeId === nodeId,
               );

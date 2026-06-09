@@ -35,6 +35,12 @@ describe("SettingsPanel (N4)", () => {
     expect(screen.getByTestId("settings-voice-mode").textContent).toBe("mock");
   });
 
+  it("renders profile panel for interest and understanding corrections (KOS-C2)", () => {
+    render(createElement(SettingsPanel));
+    expect(screen.getByTestId("profile-panel")).toBeTruthy();
+    expect(screen.getByTestId("profile-save-correction")).toBeTruthy();
+  });
+
   it("toggles scheduler via runtime API", async () => {
     const updateSettings = vi.fn(async (partial: { enabled?: boolean }) => ({
       ...DEFAULT_SCHEDULER_SETTINGS,

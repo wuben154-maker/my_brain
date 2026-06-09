@@ -12,6 +12,10 @@ import type {
   ConversationState,
   Turn,
 } from "@/conversation/types";
+import { generateInterviewPack } from "@/cognitive/generateInterviewPack";
+import type { InterviewQuestion } from "@/domain/actions/interviewQuestion";
+import { isShowcaseDemoMode } from "@/showcase/showcaseDemoMode";
+import { SHOWCASE_INGEST_NODE_ID } from "@/showcase/showcaseFixtures";
 
 function stylize(
   ctx: ConversationContext,
@@ -48,6 +52,78 @@ function isGreeting(transcript: string): boolean {
   return /你好|嗨|哈喽|在吗|早上好|晚上好/i.test(transcript);
 }
 
+function wantsInterview(transcript: string): boolean {
+  return /面试模式|考考我/i.test(transcript);
+}
+
+function wantsInterviewSkip(transcript: string): boolean {
+  return /^(跳过|不要|skip)$/i.test(transcript.trim());
+}
+
+function wantsInterviewNext(transcript: string): boolean {
+  return /下一题|继续|next/i.test(transcript);
+}
+
+function formatInterviewQuestionPrompt(question: InterviewQuestion): string {
+  const scaffold = question.scaffold ? `\n${question.scaffold}` : "";
+  return `第 ${question.id} 题：${question.prompt}${scaffold}`;
+}
+
+function interviewStartTurn(ctx: ConversationContext): Turn {
+  const pack = generateInterviewPack(ctx.graph, ctx.profile, {
+    project: "my_brain",
+  });
+  const first = pack.questions[0];
+  if (!first) {
+    return {
+      say: stylize(ctx, "图谱里概念还不够，先入库几条再考你。"),
+      expect: "free",
+      nextState: ctx.onboarding.active ? "idle_chat" : "idle_chat",
+    };
+  }
+  return {
+    say: stylize(
+      ctx,
+      `好，面试模式。共 ${pack.questions.length} 题，先说思路不用打分。${formatInterviewQuestionPrompt(first)}`,
+      "面试",
+    ),
+    expect: "free",
+    nextState: "interview",
+    highlightNodeIds: first.linkedNodeIds,
+    interviewAction: "start",
+    interviewQuestions: pack.questions,
+  };
+}
+
+function interviewAdvanceTurn(
+  ctx: ConversationContext,
+  questions: InterviewQuestion[],
+  nextIndex: number,
+  action: "skip" | "next",
+): Turn {
+  if (nextIndex >= questions.length) {
+    return {
+      say: stylize(ctx, "这轮面试题答完了。想再来一轮可以说「考考我」。"),
+      expect: "free",
+      nextState: "idle_chat",
+      interviewAction: action,
+    };
+  }
+  const question = questions[nextIndex];
+  const prefix = action === "skip" ? "好，这题跳过。" : "好，下一题。";
+  return {
+    say: stylize(
+      ctx,
+      `${prefix}${formatInterviewQuestionPrompt(question)}`,
+      "面试",
+    ),
+    expect: "free",
+    nextState: "interview",
+    highlightNodeIds: question.linkedNodeIds,
+    interviewAction: action,
+  };
+}
+
 async function explainBriefing(
   ctx: ConversationContext,
   llm: LlmProvider,
@@ -57,6 +133,15 @@ async function explainBriefing(
   if (!item) {
     return stylize(ctx, "暂时没有新资讯，我们可以先聊聊你的兴趣。");
   }
+  return explainBriefingItem(ctx, llm, item, depth);
+}
+
+async function explainBriefingItem(
+  ctx: ConversationContext,
+  llm: LlmProvider,
+  item: NonNullable<ReturnType<typeof currentNewsItem>>,
+  depth: "normal" | "elaborate",
+): Promise<string> {
   let core = await llm.summarizeNews(item, ctx.profile);
   if (depth === "elaborate") {
     const extra = await llm.explainConcept(item.title, ctx.profile);
@@ -248,6 +333,16 @@ export async function nextTurn(
     if (event.command === "skip") {
       const hasMore = ctx.newsCursor + 1 < ctx.newsQueue.length;
       if (hasMore) {
+        if (isShowcaseDemoMode()) {
+          const nextItem = ctx.newsQueue[ctx.newsCursor + 1];
+          if (nextItem) {
+            return {
+              say: await explainBriefingItem(ctx, llm, nextItem, "normal"),
+              expect: "ingest",
+              nextState: "ingest_decision",
+            };
+          }
+        }
         return {
           say: stylize(ctx, "好，这条跳过。下一条要听吗？"),
           expect: "free",
@@ -262,18 +357,25 @@ export async function nextTurn(
     }
     if (event.command === "ingest") {
       const highlights = selectTeachingHighlights(ctx.graph, "第一颗星");
-      const celebration = celebrating
-        ? stylize(
-            ctx,
-            "好，记下了！你的第一颗星会在确认后亮起——欢迎开始点亮大脑。",
-          )
-        : stylize(ctx, "好，这条按你的确认入库（落库由语音入库流程处理）。");
+      const showcaseIngest = isShowcaseDemoMode();
+      const celebration = showcaseIngest
+        ? stylize(ctx, "好，Graphiti 这颗星亮了。")
+        : celebrating
+          ? stylize(
+              ctx,
+              "好，记下了！你的第一颗星会在确认后亮起——欢迎开始点亮大脑。",
+            )
+          : stylize(ctx, "好，这条按你的确认入库（落库由语音入库流程处理）。");
       const hasMore =
-        !celebrating && ctx.newsCursor + 1 < ctx.newsQueue.length;
+        !celebrating && !showcaseIngest && ctx.newsCursor + 1 < ctx.newsQueue.length;
       return {
         say: celebration,
         expect: "free",
-        highlightNodeIds: celebrating ? highlights : undefined,
+        highlightNodeIds: showcaseIngest
+          ? [SHOWCASE_INGEST_NODE_ID]
+          : celebrating
+            ? highlights
+            : undefined,
         nextState: hasMore ? "briefing" : "idle_chat",
       };
     }
@@ -290,6 +392,25 @@ export async function nextTurn(
     };
   }
 
+  if (event.type === "interviewStart") {
+    return interviewStartTurn(ctx);
+  }
+
+  if (event.type === "interviewSkip" || event.type === "interviewNext") {
+    const questions =
+      ctx.interviewSession?.questions ??
+      generateInterviewPack(ctx.graph, ctx.profile, { project: "my_brain" })
+        .questions;
+    const action = event.type === "interviewSkip" ? "skip" : "next";
+    const currentIndex = ctx.interviewSession?.cursor ?? 0;
+    return interviewAdvanceTurn(
+      ctx,
+      questions,
+      currentIndex + 1,
+      action,
+    );
+  }
+
   if (event.type === "userSpeak") {
     const transcript = event.transcript.trim();
     if (!transcript) {
@@ -298,6 +419,10 @@ export async function nextTurn(
 
     if (ctx.onboarding.active && ctx.onboarding.step !== "done") {
       return handleOnboardingUserSpeak(state, ctx, transcript, llm);
+    }
+
+    if (wantsInterview(transcript)) {
+      return interviewStartTurn(ctx);
     }
 
     const topic = wantsTopic(transcript);
@@ -342,6 +467,38 @@ export async function nextTurn(
         say: stylize(ctx, core, transcript),
         expect: "free",
         nextState: "teaching",
+      };
+    }
+
+    if (state === "interview") {
+      const questions =
+        ctx.interviewSession?.questions ??
+        generateInterviewPack(ctx.graph, ctx.profile, { project: "my_brain" })
+          .questions;
+      const currentIndex = ctx.interviewSession?.cursor ?? 0;
+      if (wantsInterviewSkip(transcript)) {
+        return interviewAdvanceTurn(
+          ctx,
+          questions,
+          currentIndex + 1,
+          "skip",
+        );
+      }
+      if (wantsInterviewNext(transcript)) {
+        return interviewAdvanceTurn(
+          ctx,
+          questions,
+          currentIndex + 1,
+          "next",
+        );
+      }
+      return {
+        say: stylize(
+          ctx,
+          "我在听你的思路。说「下一题」继续，或「跳过」换题。",
+        ),
+        expect: "free",
+        nextState: "interview",
       };
     }
 

@@ -1,5 +1,12 @@
 import { readAppEnv } from "@/lib/env";
 import {
+  bootstrapShowcaseGraph,
+  getShowcaseNewsQueue,
+  isShowcaseDemoMode,
+} from "@/showcase/showcaseDemoMode";
+import { createShowcaseGraphSnapshot } from "@/showcase/showcaseFixtures";
+import type { BrainGraphSnapshot } from "@/domain/graph";
+import {
   BOOT_CHECK_VISIBLE_MS,
   BOOT_MIN_TOTAL_MS,
   BOOT_STAGGER_MS,
@@ -12,8 +19,10 @@ import {
 import { speakSelfCheck } from "@/lib/speakSelfCheck";
 import { flattenNewsItems } from "@/providers/news/types";
 import { createAppProviders } from "@/providers";
+import { runRadarBriefing } from "@/radar/runRadarBriefing";
 import { createStorageProvider } from "@/storage/createStorageProvider";
 import { useAppStore } from "@/stores/appStore";
+import { useBriefingStore } from "@/stores/briefingStore";
 import { useGraphStore } from "@/stores/graphStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useProposalStore } from "@/stores/proposalStore";
@@ -49,6 +58,8 @@ export async function runLaunchSequence(): Promise<void> {
   const bootStartedAt = Date.now();
   const store = useAppStore.getState();
   const env = readAppEnv();
+  const showcaseMode = isShowcaseDemoMode();
+  const radarMode = isRadarLaunchMode();
 
   const storage = createStorageProvider();
   store.setStorage(storage);
@@ -58,14 +69,19 @@ export async function runLaunchSequence(): Promise<void> {
   store.beginSelfCheckLaunch(toPendingChecks(defs));
   store.appendBootLog("[BOOT] VOICE SYSTEM CHECK…");
 
-  const providers = createAppProviders({
-    openAiApiKey: env.openAiApiKey,
-    openAiLlmModel: env.openAiLlmModel,
-    openAiRealtimeModel: env.openAiRealtimeModel,
-    everMemOsBaseUrl: env.everMemOsBaseUrl,
-    everMemOsApiKey: env.everMemOsApiKey,
-    everMemOsUserId: env.everMemOsUserId,
-  });
+  const providers = createAppProviders(
+    {
+      openAiApiKey: env.openAiApiKey,
+      openAiLlmModel: env.openAiLlmModel,
+      openAiRealtimeModel: env.openAiRealtimeModel,
+      everMemOsBaseUrl: env.everMemOsBaseUrl,
+      everMemOsApiKey: env.everMemOsApiKey,
+      everMemOsUserId: env.everMemOsUserId,
+      domesticLlmApiKey: env.domesticLlmApiKey,
+      domesticLlmBaseUrl: env.domesticLlmBaseUrl,
+    },
+    { forceMock: showcaseMode },
+  );
   store.setProviders(providers);
 
   const apiLog = bootApiKeyLogLine(env);
@@ -104,6 +120,10 @@ export async function runLaunchSequence(): Promise<void> {
 
     if (def.id === "storage" && finished) {
       try {
+        if (showcaseMode) {
+          await bootstrapShowcaseGraph(storage);
+          useGraphStore.getState().setGraph(createShowcaseGraphSnapshot());
+        }
         const graph = await storage.loadGraphForDisplay();
         useGraphStore.getState().setGraph(graph);
         await useProfileStore.getState().loadFromStorage(storage);
@@ -154,15 +174,59 @@ export async function runLaunchSequence(): Promise<void> {
   launchSpeechAbort = null;
   store.setPhase("loading");
 
-  store.setLoadingMessage("正在抓取今日 AI 资讯与 GitHub 趋势…");
-  store.appendBootLog("> 抓取 RSS / GitHub 趋势…");
-  const newsResults = await providers.news.fetchAll();
-  const newsQueue = flattenNewsItems(newsResults);
+  let newsQueue;
+  if (showcaseMode) {
+    store.setLoadingMessage("Showcase 模式：加载固定演示资讯…");
+    store.appendBootLog("> Showcase 固定 briefing（无网络）…");
+    newsQueue = getShowcaseNewsQueue();
+  } else if (radarMode) {
+    store.setLoadingMessage("Radar 模式：生成今日三条 briefing…");
+    store.appendBootLog("> Radar briefing（live 失败则 fixture 兜底）…");
+    const graph = resolveRadarRankingGraph();
+    const profile = useProfileStore.getState().profile;
+    const briefingState = useBriefingStore.getState();
+    const result = await runRadarBriefing({
+      providers,
+      graph,
+      profile,
+      feedbackByItemId: briefingState.feedbackByItemId,
+      warn: (message) => store.appendBootLog(`  WARN: ${message}`),
+    });
+    store.setWorldItemStore(result.store);
+    briefingState.setTodayItems(result.briefingItems);
+    newsQueue = result.newsQueue;
+    store.appendBootLog(
+      `  今日 briefing ${result.briefingItems.length} 条 · active WorldItem ${result.store.listActive().length} 条`,
+    );
+  } else {
+    store.setLoadingMessage("正在抓取今日 AI 资讯与 GitHub 趋势…");
+    store.appendBootLog("> 抓取 RSS / GitHub 趋势…");
+    const newsResults = await providers.news.fetchAll();
+    newsQueue = flattenNewsItems(newsResults);
+  }
   store.setNewsQueue(newsQueue);
   store.appendBootLog(`  候选资讯 ${newsQueue.length} 条`);
 
   await sleep(800);
   store.setPhase("companion");
+}
+
+function isRadarLaunchMode(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  const value = new URLSearchParams(window.location.search).get("radar");
+  return value === "1" || value === "true";
+}
+
+function resolveRadarRankingGraph(): BrainGraphSnapshot {
+  const graphState = useGraphStore.getState();
+  if (graphState.nodes.length > 0) {
+    return { nodes: graphState.nodes, edges: graphState.edges };
+  }
+  const snapshot = createShowcaseGraphSnapshot();
+  useGraphStore.getState().setGraph(snapshot);
+  return snapshot;
 }
 
 async function runSingleBootCheck(

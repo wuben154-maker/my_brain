@@ -15,3 +15,14 @@ export function shouldEnableDemoModes(): boolean {
 export function canUseLegacyNonVoiceGraphCreate(): boolean {
   return isDevBuild();
 }
+
+/** Dev-only `?graphDemo=1` snapshot bootstrap — guarded even when query param is present. */
+export function isGraphDemoMode(): boolean {
+  if (!shouldEnableDemoModes()) {
+    return false;
+  }
+  if (typeof window === "undefined") {
+    return false;
+  }
+  return new URLSearchParams(window.location.search).has("graphDemo");
+}

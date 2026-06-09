@@ -15,6 +15,7 @@
     "coverage": "vitest run --coverage",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
     "brain:mcp": "node --experimental-strip-types --import ./scripts/register-ts-alias.mjs scripts/brain-mcp-server.mjs",
+    "export:graph": "node scripts/export-graph.mjs",
     "visual:capture": "node scripts/visual-feedback/capture.mjs",
     "visual:compare": "node scripts/visual-feedback/compare.mjs",
     "visual:report": "node scripts/visual-feedback/report-html.mjs",

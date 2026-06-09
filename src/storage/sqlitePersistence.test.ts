@@ -8,10 +8,13 @@ import {
   STORAGE_BACKEND_KINDS,
   type StorageBackendKind,
 } from "@/invariants/testStorage";
+import { readRepoSource } from "@/invariants/readRepoSource";
 import {
   applyGraphMutation,
   persistGraphSnapshot,
 } from "@/lib/graphMutations";
+import { useGraphHistoryStore } from "@/stores/graphHistoryStore";
+import type { GraphHistoryEntry } from "@/domain/graphHistory";
 import { distillAndPersistUserProfile } from "@/lib/profileDistillation";
 import { createMockLlmProvider } from "@/providers/llm/mockLlmProvider";
 import type { ProposalEnvelope } from "@/agent/types";
@@ -45,6 +48,27 @@ function countArchivedConcepts(dbPath: string): number {
   } finally {
     db.close();
   }
+}
+
+function countArchivedEdges(dbPath: string): number {
+  const db = new Database(dbPath, { readonly: true });
+  try {
+    const row = db
+      .prepare("SELECT COUNT(*) AS count FROM edges WHERE archived = 1")
+      .get() as { count: number };
+    return row.count;
+  } finally {
+    db.close();
+  }
+}
+
+function readSyncEdgesSnapshotSource(relativePath: string): string {
+  const source = readRepoSource(relativePath);
+  const start = source.indexOf("syncEdgesSnapshot");
+  expect(start).toBeGreaterThan(-1);
+  const tail = source.slice(start);
+  const end = tail.search(/\n {2}(async )?[a-zA-Z]+\(/);
+  return end === -1 ? tail : tail.slice(0, end);
 }
 
 describe("SQLite persistence (better-sqlite3)", () => {
@@ -433,6 +457,165 @@ describe.each(STORAGE_BACKEND_KINDS)(
   });
   },
 );
+
+describe("syncEdgesSnapshot soft-archive (KOS-A3)", () => {
+  it("storage adapters never SQL-delete edges in syncEdgesSnapshot", () => {
+    for (const relativePath of [
+      "src/storage/adapters/betterSqliteBackend.ts",
+      "src/storage/adapters/tauriSqlStorage.ts",
+    ]) {
+      const fnSource = readSyncEdgesSnapshotSource(relativePath);
+      expect(fnSource).not.toMatch(/DELETE FROM edges/i);
+      expect(fnSource).toMatch(/archived\s*=\s*1/i);
+    }
+  });
+
+  it.each(STORAGE_BACKEND_KINDS)(
+    "syncEdgesSnapshot hides removed edges without deleting rows (%s)",
+    async (kind: StorageBackendKind) => {
+      const { storage, dbPath, cleanup } = createTempStorage(kind);
+      try {
+        await storage.init();
+        const nodeA = {
+          id: "n-a",
+          title: "A",
+          intro: "a",
+          sourceUrl: null,
+          archived: false,
+          createdAt: "2026-06-01T00:00:00.000Z",
+          updatedAt: "2026-06-01T00:00:00.000Z",
+        };
+        const nodeB = {
+          id: "n-b",
+          title: "B",
+          intro: "b",
+          sourceUrl: null,
+          archived: false,
+          createdAt: "2026-06-01T00:00:00.000Z",
+          updatedAt: "2026-06-01T00:00:00.000Z",
+        };
+        await storage.saveConcept(nodeA);
+        await storage.saveConcept(nodeB);
+        await storage.saveEdge({
+          id: "e-curate",
+          sourceId: "n-a",
+          targetId: "n-b",
+          relationType: "related",
+        });
+        await storage.saveEdge({
+          id: "e-keep",
+          sourceId: "n-b",
+          targetId: "n-a",
+          relationType: "related",
+        });
+
+        await storage.syncEdgesSnapshot([
+          {
+            id: "e-keep",
+            sourceId: "n-b",
+            targetId: "n-a",
+            relationType: "related",
+          },
+        ]);
+
+        const graph = await storage.loadGraph();
+        expect(graph.edges.map((edge) => edge.id)).toEqual(["e-keep"]);
+        expect(countArchivedEdges(dbPath)).toBe(1);
+
+        await storage.close();
+        const reopened = reopenStorage(dbPath, kind);
+        await reopened.init();
+        const reloaded = await reopened.loadGraph();
+        expect(reloaded.edges.map((edge) => edge.id)).toEqual(["e-keep"]);
+        expect(countArchivedEdges(dbPath)).toBe(1);
+        await reopened.close();
+      } finally {
+        cleanup();
+      }
+    },
+  );
+
+  it.each(STORAGE_BACKEND_KINDS)(
+    "graphHistory undo archives curation edge and keeps later edge (%s)",
+    async (kind: StorageBackendKind) => {
+      const { storage, dbPath, cleanup } = createTempStorage(kind);
+      try {
+        await storage.init();
+        useGraphHistoryStore.getState().clear();
+
+        const node = {
+          id: "n1",
+          title: "RAG",
+          intro: "intro",
+          sourceUrl: null,
+          archived: false,
+          createdAt: "2026-06-01T00:00:00.000Z",
+          updatedAt: "2026-06-01T00:00:00.000Z",
+        };
+        const n2 = {
+          id: "n2",
+          title: "Later concept",
+          intro: "added after history",
+          sourceUrl: null,
+          archived: false,
+          createdAt: "2026-06-02T00:00:00.000Z",
+          updatedAt: "2026-06-02T00:00:00.000Z",
+        };
+        const linkEntry: GraphHistoryEntry = {
+          id: "hist-link",
+          at: "2026-06-01T12:00:00.000Z",
+          kind: "link",
+          summary: "auto link",
+          reasonCode: "overlap_title",
+          reasonDetail: "标题重叠",
+          affectedNodeIds: ["n1", "n2"],
+          before: { nodes: [node], edges: [] },
+          after: {
+            nodes: [node],
+            edges: [
+              {
+                id: "e-curate",
+                sourceId: "n1",
+                targetId: "n2",
+                relationType: "related",
+              },
+            ],
+          },
+        };
+
+        await storage.saveConcept(node);
+        await useGraphHistoryStore.getState().record(storage, linkEntry);
+        await storage.saveConcept(n2);
+        await storage.saveEdge({
+          id: "e-curate",
+          sourceId: "n1",
+          targetId: "n2",
+          relationType: "related",
+        });
+        await storage.saveEdge({
+          id: "e-after-history",
+          sourceId: "n1",
+          targetId: "n2",
+          relationType: "related",
+        });
+
+        const restored = await useGraphHistoryStore
+          .getState()
+          .undo(storage, linkEntry.id);
+
+        expect(restored?.edges.map((edge) => edge.id)).toEqual(["e-after-history"]);
+        expect(restored?.nodes.map((node) => node.id).sort()).toEqual(["n1", "n2"]);
+        expect(countArchivedEdges(dbPath)).toBe(1);
+        expect(
+          (await storage.loadGraph()).edges.map((edge) => edge.id),
+        ).toEqual(["e-after-history"]);
+      } finally {
+        useGraphHistoryStore.getState().clear();
+        cleanup();
+      }
+    },
+  );
+});
 
 describe("SQLite persistence (better-sqlite3)", () => {
   it("persists distilled user profile across close/reopen", async () => {

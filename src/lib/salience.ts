@@ -77,6 +77,7 @@ export function applySalienceEvent(
 export function normalizeConceptSalience(node: ConceptNode): ConceptNode {
   return {
     ...node,
+    sourceRefs: node.sourceRefs ?? [],
     salience: node.salience ?? DEFAULT_SALIENCE,
     lastTouchedAt: node.lastTouchedAt ?? node.updatedAt,
   };

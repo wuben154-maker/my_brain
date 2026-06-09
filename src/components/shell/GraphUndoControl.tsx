@@ -1,12 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
+import { isShowcaseDemoMode } from "@/showcase/showcaseDemoMode";
 import { useAppStore } from "@/stores/appStore";
 import { useGraphHistoryStore } from "@/stores/graphHistoryStore";
 
+export interface GraphUndoControlProps {
+  /** When true, only show in showcase after the report overlay is dismissed. */
+  fallback?: boolean;
+}
+
 /** Minimal undo control for auto-curation graph history (invariant #3). */
-export function GraphUndoControl() {
+export function GraphUndoControl({ fallback = false }: GraphUndoControlProps) {
   const storage = useAppStore((state) => state.storage);
   const entries = useGraphHistoryStore((state) => state.entries);
   const loaded = useGraphHistoryStore((state) => state.loaded);
+  const reportEntryId = useGraphHistoryStore((state) => state.reportEntryId);
   const load = useGraphHistoryStore((state) => state.load);
   const undo = useGraphHistoryStore((state) => state.undo);
   const [busy, setBusy] = useState(false);
@@ -34,6 +41,12 @@ export function GraphUndoControl() {
 
   if (!undoable) {
     return null;
+  }
+
+  if (fallback) {
+    if (!isShowcaseDemoMode() || reportEntryId) {
+      return null;
+    }
   }
 
   return (

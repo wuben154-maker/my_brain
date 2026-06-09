@@ -12,14 +12,26 @@ import {
   nextOnboardingAfterEvent,
   nextTurn,
 } from "@/conversation/nextTurn";
+import {
+  briefingStepFromCursor,
+  type ShowcaseBriefingStep,
+} from "@/showcase/showcaseCompanionScript";
+import { isShowcaseDemoMode } from "@/showcase/showcaseDemoMode";
+import { formatPendingConceptRef } from "@/domain/learning/learningTrace";
+import type { ConceptNode } from "@/domain/graph";
 import type {
   ConversationContext,
   ConversationEvent,
   ConversationState,
   Turn,
 } from "@/conversation/types";
+import {
+  recordNodeReviewTrace,
+  recordTeachingFollowupTrace,
+} from "@/learning/recordLearningTrace";
 import type { LlmProvider } from "@/providers/llm/types";
 import type { VoiceProvider } from "@/providers/voice/types";
+import type { StorageProvider } from "@/storage/types";
 
 export interface ConversationConductorDeps {
   llm: LlmProvider;
@@ -34,11 +46,14 @@ export interface ConversationConductorDeps {
     newsCursor?: number;
     onboarding?: ConversationContext["onboarding"];
   }) => void;
+  /** KOS-C1: optional storage for learning trace persistence. */
+  storage?: StorageProvider | null;
 }
 
 export class ConversationConductor {
   private state: ConversationState = "idle_chat";
   private started = false;
+  private showcaseBriefingStep: ShowcaseBriefingStep = 0;
   private readonly working: WorkingContext = createEmptyWorking();
   /** Serializes dispatch so in-flight userSpeak cannot overwrite interrupt shrink. */
   private dispatchChain: Promise<unknown> = Promise.resolve();
@@ -58,9 +73,15 @@ export class ConversationConductor {
     return workingContextFootprint(this.working);
   }
 
+  /** KOS-A2: explicit showcase briefing step for harness assertions. */
+  getShowcaseBriefingStep(): ShowcaseBriefingStep {
+    return this.showcaseBriefingStep;
+  }
+
   reset(): void {
     this.state = "idle_chat";
     this.started = false;
+    this.showcaseBriefingStep = 0;
     this.dispatchChain = Promise.resolve();
     this.working.state = "idle_chat";
     this.working.transcriptTail = "";
@@ -94,6 +115,7 @@ export class ConversationConductor {
       recalledMemories,
       conversationState: this.state,
       working: this.working,
+      interviewSession: base.interviewSession,
     });
   }
 
@@ -103,6 +125,19 @@ export class ConversationConductor {
     }
     this.started = true;
     return this.dispatch({ type: "sessionStart" }, options);
+  }
+
+  /**
+   * KOS-A2: enter the first showcase briefing item directly (no onboarding sub-state).
+   */
+  async enterShowcaseBriefing(options?: { speak?: boolean }): Promise<Turn> {
+    this.started = true;
+    this.showcaseBriefingStep = 0;
+    const ctx = this.deps.getContext();
+    return this.dispatch(
+      { type: "newsAvailable", queueLength: ctx.newsQueue.length },
+      options,
+    );
   }
 
   async dispatch(
@@ -167,6 +202,12 @@ export class ConversationConductor {
       this.deps.onContextPatch?.({ onboarding, newsCursor });
     }
 
+    if (isShowcaseDemoMode()) {
+      this.syncShowcaseBriefingStep(event, { ...ctx, onboarding, newsCursor });
+    }
+
+    await this.recordLearningTraceHooks(prevState, event, ctx);
+
     this.deps.onTurn?.(turn);
 
     const shouldSpeak = options?.speak !== false;
@@ -176,12 +217,74 @@ export class ConversationConductor {
 
     return turn;
   }
+
+  private async recordLearningTraceHooks(
+    prevState: ConversationState,
+    event: ConversationEvent,
+    ctx: ConversationContext,
+  ): Promise<void> {
+    const storage = this.deps.storage ?? null;
+    if (event.type === "userSpeak") {
+      const transcript = event.transcript.trim();
+      if (!transcript) {
+        return;
+      }
+      if (prevState === "teaching") {
+        const topic = transcript.slice(0, 120);
+        const walkthroughId = this.working.walkthroughNodeIds[0];
+        const conceptRef =
+          walkthroughId ?? formatPendingConceptRef(topic.slice(0, 80));
+        await recordTeachingFollowupTrace(topic, conceptRef, storage);
+        return;
+      }
+      const reviewMatch = transcript.match(/复习\s*(.+)?/i);
+      if (reviewMatch) {
+        const hint = reviewMatch[1]?.trim() ?? "";
+        const node = resolveReviewNode(ctx.graph.nodes, hint);
+        if (node) {
+          await recordNodeReviewTrace(node.id, storage);
+        }
+      }
+    }
+  }
+
+  private syncShowcaseBriefingStep(
+    event: ConversationEvent,
+    ctx: ConversationContext,
+  ): void {
+    if (event.type === "newsAvailable") {
+      this.showcaseBriefingStep = briefingStepFromCursor(ctx.newsCursor);
+      return;
+    }
+    if (event.type === "ingestAnswer") {
+      if (event.command === "elaborate") {
+        return;
+      }
+      this.showcaseBriefingStep = briefingStepFromCursor(ctx.newsCursor);
+    }
+  }
 }
 
 export function createConversationConductor(
   deps: ConversationConductorDeps,
 ): ConversationConductor {
   return new ConversationConductor(deps);
+}
+
+function resolveReviewNode(
+  nodes: ConceptNode[],
+  hint: string,
+): ConceptNode | undefined {
+  const active = nodes.filter((node) => !node.archived);
+  if (!hint) {
+    return active[0];
+  }
+  const lower = hint.toLowerCase();
+  return active.find(
+    (node) =>
+      node.title.toLowerCase().includes(lower) ||
+      node.id.toLowerCase().includes(lower),
+  );
 }
 
 export { buildConversationContext, nextTurn };

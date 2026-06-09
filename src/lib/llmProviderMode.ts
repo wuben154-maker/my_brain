@@ -1,6 +1,12 @@
-export type LlmProviderMode = "mock" | "openai";
+export type LlmProviderMode = "mock" | "openai" | "domestic-mock";
 
 export function readLlmProviderMode(): LlmProviderMode {
   const raw = import.meta.env.VITE_LLM_PROVIDER;
-  return raw === "openai" ? "openai" : "mock";
+  if (raw === "openai") {
+    return "openai";
+  }
+  if (raw === "domestic-mock") {
+    return "domestic-mock";
+  }
+  return "mock";
 }

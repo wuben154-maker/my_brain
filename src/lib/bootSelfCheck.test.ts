@@ -27,6 +27,8 @@ describe("bootSelfCheck", () => {
           everMemOsBaseUrl: "http://127.0.0.1:1995",
           everMemOsApiKey: "",
           everMemOsUserId: "my_brain_local",
+          domesticLlmApiKey: "",
+          domesticLlmBaseUrl: "",
         },
         storage,
       );

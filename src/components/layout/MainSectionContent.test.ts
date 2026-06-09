@@ -41,6 +41,7 @@ describe("MainSectionContent (N0 AppShell routing)", () => {
     render(createElement(MainSectionContent));
     expect(screen.getByTestId("section-settings")).toBeTruthy();
     expect(screen.getByTestId("settings-scheduler")).toBeTruthy();
+    expect(screen.getByTestId("profile-panel")).toBeTruthy();
   });
 
   it("renders docs library when activeSection is docs (N2)", () => {

@@ -22,6 +22,30 @@
 
 **my_brain** 是一款**语音优先**的 AI 知识伴侣：通过可中断的实时语音会话，将 AI 资讯与 GitHub 趋势转化为**概念节点**（concept + intro + relations + source link），沉淀为可演化的 force-directed 知识图谱。新建节点经**语音确认门控**；入库后的 merge / link / archive / edge-migration 由 **auto-curation 管线**自动执行，并写入可撤销的 **graph history**。桌面（Tauri 2）与 Web 共用单一代码库。
 
+它的定位是**个人知识操作系统**，不是 RSS 阅读器，也不是普通 RAG 聊天框：外部信息先被讲解和筛选，只有用户确认后才进入长期图谱，之后的结构整理才由系统自动执行并保留撤销记录。
+
+### Showcase 3 分钟体验
+
+无需 API key 即可跑通作品级闭环：
+
+```bash
+pnpm install
+pnpm dev
+```
+
+打开 [`http://localhost:1420/?showcase=1`](http://localhost:1420/?showcase=1)。
+
+体验步骤摘要：
+
+1. 启动自检进入沉浸式星图。
+2. 伴侣依次讲 3 条固定 AI/GitHub 趋势：`showcase-brief-1`、`showcase-brief-2`、`showcase-brief-3`。
+3. 对第 1 条说「不要」；对第 2 条说「讲细点」再说「不要」。
+4. 对第 3 条 Graphiti 说「入」，新概念节点 `showcase-ingest-graphiti` 点亮。
+5. 查看整理报告：系统把 Graphiti 连到 AI Agent，原因码为 `ingest_link`。
+6. 点击「撤销这次整理」：自动连边消失，用户确认入库的 Graphiti 节点保留。
+
+信任边界摘要：新建永久知识节点只走用户确认入库；入库后的 link / merge / archive 可自动整理但必须有 reason、history、undo；Brain MCP 默认只读；`MemoryProvider` 不写图谱、不写画像。完整复现步骤见 [`docs/DEMO.md`](./docs/DEMO.md)，系统边界见 [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)，长期愿景见 [`docs/KNOWLEDGE_OS_VISION.md`](./docs/KNOWLEDGE_OS_VISION.md)，mock/live 分界见 [`docs/SHOWCASE_MOCK_LIVE.md`](./docs/SHOWCASE_MOCK_LIVE.md)。
+
 ### 核心优势
 
 | 维度 | 能力 | 价值 |
@@ -92,6 +116,10 @@ MY_BRAIN_MCP=1 pnpm brain:mcp   # 只读 MCP → docs/BRAIN_MCP.md
 |------|------|
 | [`PRODUCT.md`](./PRODUCT.md) | 产品 PRD v2 |
 | [`AGENTS.md`](./AGENTS.md) | 架构 RFC · 七条不变量 |
+| [`docs/DEMO.md`](./docs/DEMO.md) | Showcase 3 分钟复现指南 |
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | 知识 OS 架构与信任边界 |
+| [`docs/SHOWCASE_MOCK_LIVE.md`](./docs/SHOWCASE_MOCK_LIVE.md) | Mock vs Live Provider 边界 |
+| [`docs/KNOWLEDGE_OS_VISION.md`](./docs/KNOWLEDGE_OS_VISION.md) | 长期产品蓝图 |
 | [`docs/PROJECT_STATUS.md`](./docs/PROJECT_STATUS.md) | 实现现状与差距 |
 | [`specs/README.md`](./specs/README.md) | V0–V7 / A·B·C·M·H 里程碑 spec |
 
@@ -106,6 +134,10 @@ MY_BRAIN_MCP=1 pnpm brain:mcp   # 只读 MCP → docs/BRAIN_MCP.md
 ### Definition
 
 **my_brain** is a **voice-first** AI knowledge companion. Through **interruptible** real-time speech (OpenAI Realtime), it transforms AI news and GitHub trends into a **concept-level knowledge graph** (concept + intro + relations + source links). **New nodes** require explicit **voice ingest gating** (V3); post-ingest **merge / link / archive / edge migration** runs via an **auto-curation pipeline** (V4) with **undoable graph history**. One codebase ships to **Tauri 2 desktop** and **Vite web**.
+
+### Showcase In 3 Minutes
+
+Run `pnpm install && pnpm dev`, then open [`http://localhost:1420/?showcase=1`](http://localhost:1420/?showcase=1). The showcase path is mock-first and does not require API keys: the companion briefs three fixed AI/GitHub items, the user confirms ingest for Graphiti, the graph lights up `showcase-ingest-graphiti`, auto-curation links it to AI Agent with an explainable reason, and undo removes only that curation link. See [`docs/DEMO.md`](./docs/DEMO.md), [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md), [`docs/SHOWCASE_MOCK_LIVE.md`](./docs/SHOWCASE_MOCK_LIVE.md), and [`docs/KNOWLEDGE_OS_VISION.md`](./docs/KNOWLEDGE_OS_VISION.md).
 
 ### Key advantages
 
@@ -177,6 +209,10 @@ Env: copy `.env.example` to `.env`. Mock-first path and live API checklist: [`do
 |-----|----------|
 | [`PRODUCT.md`](./PRODUCT.md) | Product spec v2 |
 | [`AGENTS.md`](./AGENTS.md) | Architecture RFC · seven invariants |
+| [`docs/DEMO.md`](./docs/DEMO.md) | 3-minute Showcase walkthrough |
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | Knowledge OS architecture and trust model |
+| [`docs/SHOWCASE_MOCK_LIVE.md`](./docs/SHOWCASE_MOCK_LIVE.md) | Mock vs live provider boundary |
+| [`docs/KNOWLEDGE_OS_VISION.md`](./docs/KNOWLEDGE_OS_VISION.md) | Long-term product vision |
 | [`docs/PROJECT_STATUS.md`](./docs/PROJECT_STATUS.md) | Status & gaps |
 | [`specs/README.md`](./specs/README.md) | V0–V7 / A·B·C·M·H milestone specs |
 

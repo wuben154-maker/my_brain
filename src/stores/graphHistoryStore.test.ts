@@ -1,7 +1,22 @@
 ﻿import { beforeEach, describe, expect, it } from "vitest";
 import type { GraphHistoryEntry } from "@/domain/graphHistory";
+import { applyGraphMutation, persistGraphSnapshot } from "@/lib/graphMutations";
+import { runAutoCurateAfterIngest } from "@/lib/runAutoCuratePipeline";
 import { createTempStorage, reopenStorage } from "@/invariants/testStorage";
+import { bootstrapShowcaseGraph } from "@/showcase/showcaseDemoMode";
+import {
+  buildShowcaseIngestCreateProposal,
+  SHOWCASE_AUTO_CURATE_GOLDEN,
+  SHOWCASE_PROFILE,
+} from "@/showcase/showcaseFixtures";
 import { useGraphHistoryStore } from "@/stores/graphHistoryStore";
+
+const showcaseEnv = () => {
+  process.env.VITE_SHOWCASE_DEMO = "1";
+};
+const clearShowcaseEnv = () => {
+  delete process.env.VITE_SHOWCASE_DEMO;
+};
 
 const node = {
   id: "n1",
@@ -72,7 +87,7 @@ describe("graphHistoryStore", () => {
     }
   });
 
-  it("undo removes nodes and edges added after the history entry", async () => {
+  it("undo removes later edges but preserves concepts created after the history entry", async () => {
     const { storage, cleanup } = createTempStorage();
     try {
       await storage.init();
@@ -110,19 +125,99 @@ describe("graphHistoryStore", () => {
       await storage.saveConcept(node);
       await useGraphHistoryStore.getState().record(storage, linkEntry);
       await storage.saveConcept(n2);
+      await storage.saveEdge({
+        id: "e-after-history",
+        sourceId: "n1",
+        targetId: "n2",
+        relationType: "related",
+      });
 
       const restored = await useGraphHistoryStore
         .getState()
         .undo(storage, linkEntry.id);
 
-      expect(restored.nodes.map((row) => row.id)).toEqual(["n1"]);
+      expect(restored).toBeTruthy();
+      expect(restored!.nodes.map((row) => row.id).sort()).toEqual(["n1", "n2"]);
+      expect(restored!.edges.map((row) => row.id)).toEqual(["e-after-history"]);
       const graph = await storage.loadGraph();
-      expect(graph.nodes.map((row) => row.id)).toEqual(["n1"]);
-      expect(graph.edges).toHaveLength(0);
+      expect(graph.nodes.map((row) => row.id).sort()).toEqual(["n1", "n2"]);
+      expect(graph.edges.map((row) => row.id)).toEqual(["e-after-history"]);
       const display = await storage.loadGraphForDisplay();
-      expect(display.nodes.map((row) => row.id).sort()).toEqual(["n1"]);
-      expect(display.edges).toHaveLength(0);
+      expect(display.nodes.map((row) => row.id).sort()).toEqual(["n1", "n2"]);
+      expect(display.edges.map((row) => row.id)).toEqual(["e-after-history"]);
     } finally {
+      cleanup();
+    }
+  });
+
+  it("record opens report overlay entry id", async () => {
+    const { storage, cleanup } = createTempStorage();
+    try {
+      await storage.init();
+      await useGraphHistoryStore.getState().record(storage, entry);
+      expect(useGraphHistoryStore.getState().reportEntryId).toBe(entry.id);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("undo returns null and sets error when entry is missing", async () => {
+    const { storage, cleanup } = createTempStorage();
+    try {
+      await storage.init();
+      const result = await useGraphHistoryStore
+        .getState()
+        .undo(storage, "missing-id");
+      expect(result).toBeNull();
+      expect(useGraphHistoryStore.getState().lastUndoError).toBe("记录不存在");
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("showcase golden link undo removes edge but keeps ingest node", async () => {
+    showcaseEnv();
+    const { storage, cleanup } = createTempStorage();
+    try {
+      await storage.init();
+      await bootstrapShowcaseGraph(storage);
+      const ingestProposal = buildShowcaseIngestCreateProposal();
+      const beforeIngest = await storage.loadGraphForDisplay();
+      const afterIngest = applyGraphMutation(beforeIngest, ingestProposal);
+      await persistGraphSnapshot(storage, beforeIngest, afterIngest);
+
+      const recorded = await runAutoCurateAfterIngest(
+        SHOWCASE_AUTO_CURATE_GOLDEN.sourceId,
+        { storage, profile: SHOWCASE_PROFILE },
+      );
+      expect(recorded).toHaveLength(1);
+      const linkEntry = recorded[0]!;
+
+      const restored = await useGraphHistoryStore
+        .getState()
+        .undo(storage, linkEntry.id);
+
+      expect(restored).toBeTruthy();
+      const graphAfter = await storage.loadGraph();
+      expect(
+        graphAfter.edges.some(
+          (edge) =>
+            edge.sourceId === SHOWCASE_AUTO_CURATE_GOLDEN.sourceId &&
+            edge.targetId === SHOWCASE_AUTO_CURATE_GOLDEN.targetId,
+        ),
+      ).toBe(false);
+      expect(
+        graphAfter.nodes.some(
+          (node) => node.id === SHOWCASE_AUTO_CURATE_GOLDEN.sourceId,
+        ),
+      ).toBe(true);
+      expect(
+        useGraphHistoryStore
+          .getState()
+          .entries.find((row) => row.id === linkEntry.id)?.undone,
+      ).toBe(true);
+    } finally {
+      clearShowcaseEnv();
       cleanup();
     }
   });
@@ -136,7 +231,8 @@ describe("graphHistoryStore", () => {
       const restored = await useGraphHistoryStore
         .getState()
         .undo(storage, entry.id);
-      expect(restored).toEqual(beforeSnapshot);
+      expect(restored?.nodes[0]?.archived).toBe(false);
+      expect(restored?.edges).toEqual([]);
       expect((await storage.loadGraph()).nodes[0]?.archived).toBe(false);
       const rows = await storage.listGraphHistory();
       const row = rows.find((r) => r.id === entry.id);

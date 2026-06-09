@@ -9,7 +9,8 @@ export type ContextPackMode =
   | "briefing"
   | "ingest_decision"
   | "teaching"
-  | "topic_single";
+  | "topic_single"
+  | "interview";
 
 export interface GraphContextPack {
   mode: ContextPackMode;
@@ -37,6 +38,8 @@ export function conversationStateToPackMode(
       return "ingest_decision";
     case "teaching":
       return "teaching";
+    case "interview":
+      return "interview";
     case "idle_chat":
     case "small_talk":
     default:

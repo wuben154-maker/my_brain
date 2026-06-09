@@ -38,6 +38,7 @@ export function recallTopKForState(state: ConversationState): number {
     case "briefing":
     case "ingest_decision":
     case "teaching":
+    case "interview":
       return 5;
     default:
       return 3;

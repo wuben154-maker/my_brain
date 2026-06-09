@@ -5,6 +5,8 @@ import {
   isGraphDemoMode,
 } from "@/lib/graphDemoSeed";
 import { runLaunchSequence } from "@/lib/runLaunchSequence";
+import { isShowcaseDemoMode } from "@/showcase/showcaseDemoMode";
+import { runShowcaseLaunchSequence } from "@/showcase/runShowcaseLaunchSequence";
 import {
   applyVisualSnapshot,
   bootstrapVisualInboxStorage,
@@ -39,7 +41,7 @@ export default function App() {
       return;
     }
 
-    void runLaunchSequence();
+    void (isShowcaseDemoMode() ? runShowcaseLaunchSequence() : runLaunchSequence());
   }, []);
 
   return (

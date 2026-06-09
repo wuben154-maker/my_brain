@@ -31,6 +31,9 @@ function wrapBetterSqliteBackend(backend: BetterSqliteBackend): StorageProvider 
     deleteEdge: async (edgeId) => {
       backend.deleteEdge(edgeId);
     },
+    syncEdgesSnapshot: async (edges) => {
+      backend.syncEdgesSnapshot(edges);
+    },
     loadUserProfile: async () => backend.loadUserProfile(),
     saveUserProfile: async (profile) => {
       backend.saveUserProfile(profile);
@@ -56,6 +59,14 @@ function wrapBetterSqliteBackend(backend: BetterSqliteBackend): StorageProvider 
     },
     setGraphHistoryUndone: async (id) => {
       backend.setGraphHistoryUndone(id);
+    },
+    listLearningTraces: async () => backend.listLearningTraces(),
+    saveLearningTrace: async (trace) => {
+      backend.saveLearningTrace(trace);
+    },
+    listCognitiveActions: async () => backend.listCognitiveActions(),
+    saveCognitiveAction: async (action) => {
+      backend.saveCognitiveAction(action);
     },
   };
 }

@@ -13,6 +13,8 @@ import {
 import { useWalkthroughHighlight } from "@/hooks/useWalkthroughHighlight";
 import { parseIngestCommand } from "@/lib/parseIngestCommand";
 import { isVisualSnapshotMode } from "@/lib/visualSnapshotMode";
+import { isShowcaseDemoMode } from "@/showcase/showcaseDemoMode";
+import { DEFAULT_ONBOARDING } from "@/conversation/types";
 import type { TranscriptLineLike } from "@/lib/profileDistillation";
 import { finalizeVoiceSession } from "@/lib/voiceSessionFinalize";
 import { useAppStore } from "@/stores/appStore";
@@ -20,6 +22,7 @@ import { useConversationStore } from "@/stores/conversationStore";
 import { useGraphStore } from "@/stores/graphStore";
 import { useIngestStore } from "@/stores/ingestStore";
 import { useProfileStore } from "@/stores/profileStore";
+import { useInterviewStore } from "@/stores/interviewStore";
 
 /**
  * Binds ConversationConductor to voice: userSpeak → dispatch; speaking + interrupt → barge-in.
@@ -69,12 +72,19 @@ export function useConversationSession(options?: {
   const isCompanion = phase === "companion";
 
   const currentState = useConversationStore((s) => s.currentState);
+  const interviewQuestions = useInterviewStore((s) => s.questions);
+  const interviewCursor = useInterviewStore((s) => s.cursor);
 
   const getContext = useCallback(() => {
     const highlightNodeIds =
       walkthroughPathRef.current.length > 0
         ? walkthroughPathRef.current
         : useGraphStore.getState().highlightedNodeIds;
+
+    const interviewSession =
+      interviewQuestions.length > 0
+        ? { questions: interviewQuestions, cursor: interviewCursor }
+        : undefined;
 
     return buildConversationContext({
       newsQueue,
@@ -86,11 +96,14 @@ export function useConversationSession(options?: {
       packQuery: lastUserFinalRef.current ?? undefined,
       highlightNodeIds:
         highlightNodeIds.length > 0 ? highlightNodeIds : undefined,
+      interviewSession,
     });
   }, [
     currentState,
     graphEdges,
     graphNodes,
+    interviewCursor,
+    interviewQuestions,
     newsCursor,
     newsQueue,
     onboarding,
@@ -148,12 +161,24 @@ export function useConversationSession(options?: {
       conductorRef.current = new ConversationConductor({
         llm,
         voice,
+        storage: useAppStore.getState().storage,
         getContext: () => getContextRef.current ?? getContext(),
         recallMemories: async ({ query, state }) => {
           const memory = useAppStore.getState().providers?.memory;
           return resolveRecalledMemoriesForTurn(memory, query, state);
         },
         onTurn: (turn) => {
+          if (turn.interviewAction === "start" && turn.interviewQuestions) {
+            useInterviewStore.getState().start(turn.interviewQuestions);
+          } else if (turn.nextState === "interview") {
+            if (turn.interviewAction === "skip") {
+              useInterviewStore.getState().skip();
+            } else if (turn.interviewAction === "next") {
+              useInterviewStore.getState().next();
+            }
+          } else if (useInterviewStore.getState().active) {
+            useInterviewStore.getState().finish();
+          }
           if (turn.nextState) {
             setState(turn.nextState);
           }
@@ -226,6 +251,7 @@ export function useConversationSession(options?: {
 
     companionPrimedRef.current = false;
     resetConversation();
+    useInterviewStore.getState().reset();
     conductorRef.current?.reset();
   }, [finalizeCompanionSession, isCompanion, resetConversation]);
 
@@ -253,8 +279,20 @@ export function useConversationSession(options?: {
 
     companionPrimedRef.current = true;
     useConversationStore.getState().setCompanionOpened(true);
-    void conductorRef.current.start({ speak: true });
-  }, [isCompanion, llm, visualSnapshot, voice, voiceConnected]);
+    if (isShowcaseDemoMode()) {
+      setOnboarding(DEFAULT_ONBOARDING);
+      void conductorRef.current.enterShowcaseBriefing({ speak: true });
+    } else {
+      void conductorRef.current.start({ speak: true });
+    }
+  }, [
+    isCompanion,
+    llm,
+    setOnboarding,
+    visualSnapshot,
+    voice,
+    voiceConnected,
+  ]);
 
   const dispatch = useCallback(async (event: ConversationEvent) => {
     if (!conductorRef.current) {

@@ -1,28 +1,39 @@
 import type { GraphMutationProposal } from "@/domain/graph";
+import { buildSourceRefFromNewsItem } from "@/domain/graph/sourceRef";
 import { readCreatePayload } from "@/domain/graphMutationPayloads";
-import type { NewsItem } from "@/domain/news";
-import type { UserProfile } from "@/domain/profile";
+import type { NewsItem } from "@/domain/news";import type { UserProfile } from "@/domain/profile";
 import {
   applyGraphMutation,
   persistGraphSnapshot,
   primaryNodeIdFromProposal,
   visibleGraph,
 } from "@/lib/graphMutations";
+import { pulseIngestStarLight } from "@/lib/ingestStarLight";
 import {
   prependGrounding,
   recallGroundingContext,
 } from "@/lib/memoryGrounding";
 import { runAutoCurateAfterIngest } from "@/lib/runAutoCuratePipeline";
 import { syncDisplayGraph } from "@/lib/syncDisplayGraph";
-import type { GraphHistoryEntry } from "@/domain/graphHistory";
+import { isShowcaseDemoMode } from "@/showcase/showcaseDemoMode";
+import {
+  buildShowcaseIngestCreateProposal,
+  SHOWCASE_DESIGNATED_INGEST_BRIEF_ID,
+  SHOWCASE_NOW,
+  SHOWCASE_WORLD_ITEMS,
+} from "@/showcase/showcaseFixtures";import type { GraphHistoryEntry } from "@/domain/graphHistory";
 import {
   formatCurationReport,
   shouldSpeakCurationReport,
 } from "@/conversation/curationReport";
 import type { LlmProvider } from "@/providers/llm/types";
 import type { MemoryProvider } from "@/providers/memory/types";
+import {
+  recordBriefingElaborateTrace,
+  recordBriefingIngestTrace,
+  recordBriefingSkipTrace,
+} from "@/learning/recordLearningTrace";
 import type { StorageProvider } from "@/storage/types";
-import { useGraphStore } from "@/stores/graphStore";
 import { useIngestStore } from "@/stores/ingestStore";
 import type {
   ConversationEvent,
@@ -34,6 +45,17 @@ export interface IngestDecisionDeps {
   llm: LlmProvider;
   profile: UserProfile;
   memory?: MemoryProvider | null;
+}
+
+function resolveIngestedAt(): string {
+  return isShowcaseDemoMode() ? SHOWCASE_NOW : new Date().toISOString();
+}
+
+function resolveWorldItemIdForNews(item: NewsItem): string | undefined {
+  if (isShowcaseDemoMode()) {
+    return SHOWCASE_WORLD_ITEMS.find((world) => world.sourceItemId === item.id)?.id;
+  }
+  return `radar-wi-${item.id}`;
 }
 
 export function buildCreateProposalFromNews(
@@ -49,16 +71,21 @@ export function buildCreateProposalFromNews(
     explanation.trim().length > 0
       ? explanation.trim().slice(0, 2000)
       : payload.intro;
+  const sourceRef = buildSourceRefFromNewsItem(item, {
+    ingestedAt: resolveIngestedAt(),
+    worldItemId: resolveWorldItemIdForNews(item),
+    kind: "briefing",
+  });
   return {
     ...proposal,
     payload: {
       ...payload,
       intro,
       sourceUrl: item.sourceUrl ?? payload.sourceUrl,
+      sourceRefs: [sourceRef],
     },
   };
 }
-
 export async function persistProposalToGraph(
   storage: StorageProvider,
   proposal: GraphMutationProposal,
@@ -74,6 +101,14 @@ async function resolveCreateProposal(
   item: NewsItem,
   deps: IngestDecisionDeps,
 ): Promise<GraphMutationProposal | null> {
+  if (
+    isShowcaseDemoMode() &&
+    item.id === SHOWCASE_DESIGNATED_INGEST_BRIEF_ID
+  ) {
+    const explanation = useIngestStore.getState().explanation;
+    return buildShowcaseIngestCreateProposal(explanation);
+  }
+
   const graph = visibleGraph(await deps.storage.loadGraph());
   const query = `${item.title} ${item.summary}`.trim();
   const grounding = deps.memory
@@ -115,7 +150,7 @@ export async function applyIngestCreate(
   const proposal = buildCreateProposalFromNews(item, explanation, raw);
   const nodeId = await persistProposalToGraph(deps.storage, proposal);
   if (nodeId) {
-    useGraphStore.getState().setHighlights([nodeId], []);
+    pulseIngestStarLight(nodeId);
   }
   const curationEntries =
     nodeId != null
@@ -160,6 +195,7 @@ export async function applyIngestDecision(
   if (command === "elaborate") {
     store.bumpElaborationDepth();
     const depth = useIngestStore.getState().elaborationDepth;
+    await recordBriefingElaborateTrace(item, depth, deps.storage);
     const query = `${item.title} ${item.summary}`.trim();
     const grounding = deps.memory
       ? await recallGroundingContext(deps.memory, query)
@@ -178,6 +214,7 @@ export async function applyIngestDecision(
   }
 
   if (command === "skip") {
+    await recordBriefingSkipTrace(item, deps.storage);
     store.markSkipped(item.id);
     store.setExplanation("");
     store.resetElaborationDepth();
@@ -189,7 +226,10 @@ export async function applyIngestDecision(
     };
   }
 
-  const { curationEntries } = await applyIngestCreate(item, deps);
+  const { nodeId, curationEntries } = await applyIngestCreate(item, deps);
+  if (nodeId) {
+    await recordBriefingIngestTrace(item, nodeId, deps.storage);
+  }
   store.markIngested(item.id);
   store.setExplanation("");
   store.resetElaborationDepth();

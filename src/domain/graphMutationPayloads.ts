@@ -1,11 +1,14 @@
 import type { RelationType } from "./graph";
+import type { SourceRef } from "@/domain/graph/sourceRef";
 
 export interface CreateNodePayload {
   title: string;
   intro: string;
   sourceUrl: string | null;
+  sourceRefs?: SourceRef[];
+  /** Optional explicit id for deterministic showcase / harness fixtures. */
+  id?: string;
 }
-
 export interface AttachNodePayload {
   nodeId: string;
   introAppend: string;
@@ -40,6 +43,13 @@ export interface LinkNodesPayload {
 export function readCreatePayload(
   payload: Record<string, unknown>,
 ): CreateNodePayload {
+  const explicitId =
+    typeof payload.id === "string" && payload.id.trim().length > 0
+      ? payload.id.trim()
+      : undefined;
+  const sourceRefs = Array.isArray(payload.sourceRefs)
+    ? (payload.sourceRefs as CreateNodePayload["sourceRefs"])
+    : undefined;
   return {
     title: String(payload.title ?? ""),
     intro: String(payload.intro ?? ""),
@@ -47,6 +57,8 @@ export function readCreatePayload(
       payload.sourceUrl === null || payload.sourceUrl === undefined
         ? null
         : String(payload.sourceUrl),
+    ...(sourceRefs ? { sourceRefs } : {}),
+    ...(explicitId ? { id: explicitId } : {}),
   };
 }
 

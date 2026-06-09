@@ -1,6 +1,6 @@
 # AGENTS.md — my_brain
 
-> Guidance for AI coding agents working in this repo. Keep it loaded. Read `PRODUCT.md` for full product spec.
+> Guidance for AI coding agents working in this repo. Keep it loaded. **New session / new window:** read `docs/handbook/PROJECT_HANDBOOK.md` first, then `PRODUCT.md` for full product spec.
 
 ## What we're building
 A **voice-first, locally-stored AI companion** that helps the user follow AI news + GitHub trends and hand-builds a **self-updating "brain" knowledge graph**. The longer it's used, the better it knows the user. Sci-fi knowledge-graph UI + real-time voice.
@@ -70,4 +70,5 @@ These encode the product's soul. Breaking them breaks the product. **v2 改写�
 - `pnpm check` — lint + test (also runs on pre-commit / pre-push via Husky)
 
 ## Pointers
+- `docs/handbook/PROJECT_HANDBOOK.md` — **project handbook** (architecture map, key files, data flow, legacy vs v2, commands); start here when context is cold.
 - `PRODUCT.md` — full agreed spec (mechanics, data flow, UI, cold start, memory model).

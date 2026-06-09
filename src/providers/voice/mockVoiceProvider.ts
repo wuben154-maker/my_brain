@@ -1,3 +1,7 @@
+import {
+  SHOWCASE_VOICE_SCRIPT,
+  type ShowcaseVoiceScriptStep,
+} from "@/showcase/showcaseFixtures";
 import type {
   VoiceConnectionState,
   VoiceProvider,
@@ -6,6 +10,8 @@ import type {
   VoiceTimbre,
   VoiceTranscriptEvent,
 } from "./types";
+
+export { SHOWCASE_VOICE_SCRIPT };
 
 const CONNECT_MS = 550;
 const USER_STREAM_MS = 45;
@@ -152,6 +158,31 @@ export class MockVoiceProvider implements VoiceProvider {
 
   setReplyContext(context: MockReplyContext): void {
     this.replyContext = context;
+  }
+
+  /** Mock-only: inject a user transcript without generating an assistant reply. */
+  async injectTranscript(text: string): Promise<void> {
+    const trimmed = text.trim();
+    if (!trimmed || this.state === "idle" || this.state === "connecting") {
+      return;
+    }
+    if (this.state === "speaking") {
+      await this.interrupt();
+    }
+    const turn = ++this.generation;
+    await this.streamUser(trimmed, turn);
+    if (turn === this.generation) {
+      this.setState("listening");
+    }
+  }
+
+  /** Replay showcase voice script steps in order for deterministic harnesses. */
+  async injectShowcaseVoiceScript(
+    steps: ShowcaseVoiceScriptStep[] = SHOWCASE_VOICE_SCRIPT,
+  ): Promise<void> {
+    for (const step of steps) {
+      await this.injectTranscript(step.transcript);
+    }
   }
 
   /** Mock-only: simulate a user utterance (supports barge-in while assistant speaks). */

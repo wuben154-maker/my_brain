@@ -1,33 +1,70 @@
 import type { Plugin } from "vite";
 
 const PREFIX = "/__my_brain/storage";
+const BACKEND_MODULE = "/src/storage/adapters/betterSqliteBackend.ts";
 
-type StorageBackendModule = typeof import("./src/storage/adapters/betterSqliteBackend");
-type BetterSqliteBackend = StorageBackendModule["BetterSqliteBackend"];
+interface StorageBackendModule {
+  BetterSqliteBackend: new (options: { dbPath: string }) => StorageBackend;
+  defaultWebDbPath: () => string;
+}
 
-/** Exposes better-sqlite3 to the browser build during `pnpm dev`. */
+/** Minimal surface used by dev middleware; avoids config-time module graph pulls. */
+interface StorageBackend {
+  init(): void;
+  close(): void;
+  loadGraph(): unknown;
+  listGraphHistory(): unknown;
+  listLearningTraces(): unknown;
+  listCognitiveActions(): unknown;
+  loadGraphForDisplay(): unknown;
+  loadUserProfile(): unknown;
+  listPendingProposals(): unknown;
+  getAppMeta(key: string): unknown;
+  loadAgentUsage(usageDate: string): unknown;
+  saveConcept(body: unknown): void;
+  deleteConcept(id: string): void;
+  saveEdge(body: unknown): void;
+  deleteEdge(id: string): void;
+  syncEdgesSnapshot(body: unknown): void;
+  saveUserProfile(body: unknown): void;
+  saveProposal(body: unknown): void;
+  setProposalStatus(id: string, status: unknown): void;
+  setAppMeta(key: string, value: string): void;
+  saveGraphHistoryEntry(body: unknown): void;
+  setGraphHistoryUndone(id: string): void;
+  saveLearningTrace(body: unknown): void;
+  saveCognitiveAction(body: unknown): void;
+  addAgentUsage(usageDate: string, tokens: number): void;
+}
+
+/**
+ * Web-dev-only storage bridge: exposes better-sqlite3 to the browser during `pnpm dev`.
+ * Not used by Brain MCP, production Tauri builds, or any external write surface.
+ */
 export function myBrainStoragePlugin(): Plugin {
-  let backend: InstanceType<BetterSqliteBackend> | null = null;
-  let backendReady: Promise<void> | null = null;
-
-  const ensureBackend = async (): Promise<void> => {
-    if (backend) {
-      return;
-    }
-    if (!backendReady) {
-      backendReady = (async () => {
-        const mod: StorageBackendModule = await import(
-          "./src/storage/adapters/betterSqliteBackend"
-        );
-        backend = new mod.BetterSqliteBackend({ dbPath: mod.defaultWebDbPath() });
-      })();
-    }
-    await backendReady;
-  };
-
   return {
     name: "my-brain-storage",
     configureServer(server) {
+      let backend: StorageBackend | null = null;
+      let backendReady: Promise<void> | null = null;
+
+      const ensureBackend = async (): Promise<void> => {
+        if (backend) {
+          return;
+        }
+        if (!backendReady) {
+          backendReady = (async () => {
+            const mod = (await server.ssrLoadModule(
+              BACKEND_MODULE,
+            )) as StorageBackendModule;
+            backend = new mod.BetterSqliteBackend({
+              dbPath: mod.defaultWebDbPath(),
+            });
+          })();
+        }
+        await backendReady;
+      };
+
       server.middlewares.use(async (req, res, next) => {
         if (!req.url?.startsWith(PREFIX)) {
           next();
@@ -72,6 +109,16 @@ export function myBrainStoragePlugin(): Plugin {
 
           if (path === "/graph-history" && req.method === "GET") {
             res.end(JSON.stringify(backend!.listGraphHistory()));
+            return;
+          }
+
+          if (path === "/learning-traces" && req.method === "GET") {
+            res.end(JSON.stringify(backend!.listLearningTraces()));
+            return;
+          }
+
+          if (path === "/cognitive-actions" && req.method === "GET") {
+            res.end(JSON.stringify(backend!.listCognitiveActions()));
             return;
           }
 
@@ -135,6 +182,12 @@ export function myBrainStoragePlugin(): Plugin {
               return;
             }
 
+            if (path === "/edges/sync") {
+              backend!.syncEdgesSnapshot(body.edges);
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
             if (path === "/profile") {
               backend!.saveUserProfile(body);
               res.end(JSON.stringify({ ok: true }));
@@ -167,6 +220,18 @@ export function myBrainStoragePlugin(): Plugin {
 
             if (path === "/graph-history/undone") {
               backend!.setGraphHistoryUndone(String(body.id));
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
+            if (path === "/learning-traces/save") {
+              backend!.saveLearningTrace(body);
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
+            if (path === "/cognitive-actions/save") {
+              backend!.saveCognitiveAction(body);
               res.end(JSON.stringify({ ok: true }));
               return;
             }

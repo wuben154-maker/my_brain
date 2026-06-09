@@ -23,11 +23,9 @@ describe("devOnlyGuards", () => {
     vi.stubEnv("DEV", false);
     vi.stubEnv("PROD", true);
     vi.resetModules();
-    const { isGraphDemoMode } = await import("@/lib/graphDemoSeed");
+    const { isGraphDemoMode } = await import("@/lib/devOnlyGuards");
     window.location.search = "?graphDemo=1";
     expect(isGraphDemoMode()).toBe(false);
-    vi.unstubAllEnvs();
-    vi.resetModules();
   });
 
   it("shouldEnableDemoModes is true in dev build", async () => {

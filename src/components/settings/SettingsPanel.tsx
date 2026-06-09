@@ -10,6 +10,7 @@ import {
 } from "@/agent/schedulerSettings";
 import { readLlmProviderMode } from "@/lib/llmProviderMode";
 import { readVoiceProviderMode } from "@/lib/voiceProviderMode";
+import { ProfilePanel } from "@/components/profile/ProfilePanel";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { useAppStore } from "@/stores/appStore";
 import { useProfileStore } from "@/stores/profileStore";
@@ -193,6 +194,8 @@ export function SettingsPanel() {
           本地优先：知识图谱与用户画像存于本机 SQLite；对话与资讯原文不会持久化。清除本地数据入口将在后续版本提供。
         </p>
       </GlassCard>
+
+      <ProfilePanel />
     </section>
   );
 }

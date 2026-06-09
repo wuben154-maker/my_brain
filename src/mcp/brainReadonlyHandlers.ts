@@ -1,5 +1,11 @@
 import type { BrainGraphSnapshot, ConceptNode, GraphEdge } from "@/domain/graph";
 import type { UserProfile } from "@/domain/profile";
+import {
+  BRAIN_MCP_READ_TOOL_NAMES,
+  listBrainMcpReadTools,
+  MCP_FORBIDDEN_TOOLS,
+  type BrainMcpReadToolName,
+} from "@/mcp/brainMcpTools";
 import { buildGraphOutline, type OutlineTreeNode } from "@/lib/graphOutline";
 import { visibleGraph } from "@/lib/graphMutations";
 
@@ -9,13 +15,11 @@ export interface BrainReadonlyDeps {
   loadUserProfile(): UserProfile | Promise<UserProfile>;
 }
 
-export const BRAIN_READONLY_TOOL_NAMES = [
-  "brain_search",
-  "brain_get_node",
-  "brain_neighborhood",
-  "brain_outline",
-  "brain_profile_digest",
-] as const;
+/** F1 read catalog tool names (alias for backward-compatible imports). */
+export const BRAIN_READONLY_TOOL_NAMES = BRAIN_MCP_READ_TOOL_NAMES;
+
+/** Re-export F1 forbidden freeze list for boundary tests. */
+export { MCP_FORBIDDEN_TOOLS };
 
 /** Known write-capable tool names — must never appear in listReadonlyTools(). */
 export const BRAIN_WRITE_TOOL_BLOCKLIST = [
@@ -29,9 +33,17 @@ export const BRAIN_WRITE_TOOL_BLOCKLIST = [
   "apply_graph_mutation",
   "save_user_profile",
   "delete_concept",
+  "record_learning_trace",
+  "save_learning_trace",
+  "learning_trace_write",
+  "create_cognitive_action",
+  "confirm_cognitive_action",
+  "save_cognitive_action",
+  "cognitive_action_write",
+  "dismiss_cognitive_action",
 ] as const;
 
-export type BrainReadonlyToolName = (typeof BRAIN_READONLY_TOOL_NAMES)[number];
+export type BrainReadonlyToolName = BrainMcpReadToolName;
 
 export interface BrainSearchResult {
   nodes: ConceptNode[];
@@ -104,7 +116,7 @@ async function resolveGraph(deps: BrainReadonlyDeps): Promise<BrainGraphSnapshot
 }
 
 export function listReadonlyTools(): BrainReadonlyToolName[] {
-  return [...BRAIN_READONLY_TOOL_NAMES];
+  return listBrainMcpReadTools();
 }
 
 export async function brainSearch(
@@ -241,6 +253,11 @@ export function assertReadonlyToolList(): void {
   for (const blocked of BRAIN_WRITE_TOOL_BLOCKLIST) {
     if (names.has(blocked as BrainReadonlyToolName)) {
       throw new Error(`Readonly tool list must not include write tool: ${blocked}`);
+    }
+  }
+  for (const forbidden of MCP_FORBIDDEN_TOOLS) {
+    if (names.has(forbidden as BrainReadonlyToolName)) {
+      throw new Error(`Readonly tool list must not include forbidden MCP tool: ${forbidden}`);
     }
   }
 }

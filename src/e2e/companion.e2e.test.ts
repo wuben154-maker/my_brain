@@ -26,6 +26,7 @@ import {
   hasUserSpeech,
 } from "@/lib/profileDistillation";
 import { visibleGraph } from "@/lib/graphMutations";
+import { INGEST_STAR_LIGHT_DURATION_MS } from "@/lib/ingestStarLight";
 import { finalizeVoiceSession } from "@/lib/voiceSessionFinalize";
 import { createAppProviders } from "@/providers";
 import { createMockLlmProvider } from "@/providers/llm/mockLlmProvider";
@@ -36,6 +37,20 @@ import {
   runLaunchSequence,
   skipLaunchSelfCheckSpeech,
 } from "@/lib/runLaunchSequence";
+import { createShowcaseCompanionContext } from "@/conversation/mockConversationFixtures";
+import {
+  resetShowcaseLaunchGuard,
+  runShowcaseLaunchSequence,
+} from "@/showcase/runShowcaseLaunchSequence";
+import {
+  runShowcaseCompanionScript,
+  SHOWCASE_INGEST_NODE_ID,
+} from "@/showcase/showcaseCompanionScript";
+import {
+  SHOWCASE_AUTO_CURATE_GOLDEN,
+  SHOWCASE_BRIEFING_ITEMS,
+} from "@/showcase/showcaseFixtures";
+import { useGraphStore } from "@/stores/graphStore";
 import { INITIAL_MIGRATION_SQL } from "@/storage/migrations";
 import type { StorageProvider } from "@/storage/types";
 import { useAppStore } from "@/stores/appStore";
@@ -46,6 +61,8 @@ import { useProfileStore } from "@/stores/profileStore";
 const storageRef = vi.hoisted(() => ({
   current: null as StorageProvider | null,
 }));
+
+const newsFetchSpy = vi.hoisted(() => ({ count: 0 }));
 
 const mockNewsItems: NewsItem[] = [
   {
@@ -72,19 +89,25 @@ vi.mock("@/providers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/providers")>();
   return {
     ...actual,
-    createAppProviders: (env: { openAiApiKey: string }) => {
-      const providers = actual.createAppProviders(env);
+    createAppProviders: (
+      env: { openAiApiKey: string },
+      options?: Parameters<typeof actual.createAppProviders>[1],
+    ) => {
+      const providers = actual.createAppProviders(env, options);
       return {
         ...providers,
         news: {
           list: () => providers.news.list(),
-          fetchAll: async () => [
-            {
-              sourceId: "mock",
-              sourceLabel: "Mock",
-              items: mockNewsItems,
-            },
-          ],
+          fetchAll: async () => {
+            newsFetchSpy.count += 1;
+            return [
+              {
+                sourceId: "mock",
+                sourceLabel: "Mock",
+                items: mockNewsItems,
+              },
+            ];
+          },
         },
       };
     },
@@ -792,6 +815,95 @@ describe("companion e2e (V7 mock smoke)", () => {
     const graphAfter = await fixture.storage.loadGraph();
     expect(graphAfter.nodes).toEqual(graphBefore.nodes);
     expect(graphAfter.edges).toEqual(graphBefore.edges);
+
+    fixture.cleanup();
+  });
+});
+
+describe("companion e2e showcase core loop", () => {
+  beforeEach(() => {
+    resetCompanionStores();
+    newsFetchSpy.count = 0;
+    resetShowcaseLaunchGuard();
+    process.env.VITE_SHOWCASE_DEMO = "1";
+  });
+
+  afterEach(() => {
+    delete process.env.VITE_SHOWCASE_DEMO;
+    resetShowcaseLaunchGuard();
+  });
+
+  it("showcase core loop: launch fixtures → skip/elaborate/ingest → star-light + golden link", async () => {
+    vi.useFakeTimers();
+    stubNavigatorForBoot();
+
+    const fixture = createTempStorage();
+    storageRef.current = fixture.storage;
+
+    const launchPromise = runShowcaseLaunchSequence();
+    await vi.runAllTimersAsync();
+    await launchPromise;
+    expect(useAppStore.getState().phase).toBe("companion");
+    expect(useAppStore.getState().newsQueue).toHaveLength(3);
+    expect(useAppStore.getState().newsQueue.map((n) => n.id)).toEqual(
+      SHOWCASE_BRIEFING_ITEMS.map((n) => n.id),
+    );
+    expect(newsFetchSpy.count).toBe(0);
+
+    const storage = useAppStore.getState().storage!;
+    const providers = useAppStore.getState().providers!;
+
+    let ctx = createShowcaseCompanionContext({
+      newsQueue: useAppStore.getState().newsQueue,
+      graph: {
+        nodes: useGraphStore.getState().nodes,
+        edges: useGraphStore.getState().edges,
+      },
+    });
+
+    const { conductor } = createConductorHarness(ctx, (patch) => {
+      if (patch.newsCursor !== undefined) {
+        ctx = { ...ctx, newsCursor: patch.newsCursor };
+      }
+    });
+
+    const scriptResult = await runShowcaseCompanionScript({
+      conductor,
+      getContext: () => ctx,
+      ingestDeps: {
+        storage,
+        llm: providers.llm,
+        profile: ctx.profile,
+      },
+      speak: false,
+    });
+
+    expect(scriptResult.skippedIds).toEqual(
+      expect.arrayContaining(["showcase-brief-1", "showcase-brief-2"]),
+    );
+    expect(scriptResult.ingestedIds).toContain("showcase-brief-3");
+    expect(scriptResult.peakElaborationDepth).toBeGreaterThanOrEqual(1);
+    expect(conductor.getShowcaseBriefingStep()).toBe("done");
+
+    expect(useGraphStore.getState().focusNodeId).toBe(SHOWCASE_INGEST_NODE_ID);
+    await vi.advanceTimersByTimeAsync(INGEST_STAR_LIGHT_DURATION_MS);
+    expect(useGraphStore.getState().focusNodeId).toBeNull();
+
+    const fullGraph = await storage.loadGraphForDisplay();
+    const ingested = fullGraph.nodes.find(
+      (node) => node.id === SHOWCASE_INGEST_NODE_ID,
+    );
+    expect(ingested?.sourceUrl).toBe("https://example.com/graphiti");
+
+    const goldenEdge = fullGraph.edges.find(
+      (edge) =>
+        edge.sourceId === SHOWCASE_AUTO_CURATE_GOLDEN.sourceId &&
+        edge.targetId === SHOWCASE_AUTO_CURATE_GOLDEN.targetId,
+    );
+    expect(goldenEdge).toBeDefined();
+
+    const history = await storage.listGraphHistory();
+    expect(history.some((entry) => entry.kind === "link")).toBe(true);
 
     fixture.cleanup();
   });

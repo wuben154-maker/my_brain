@@ -9,6 +9,7 @@ import { conversationStateToPackMode } from "@/lib/graphContextPack";
 import type {
   ConversationContext,
   ConversationState,
+  InterviewSessionContext,
   OnboardingProgress,
 } from "@/conversation/types";
 import { DEFAULT_ONBOARDING } from "@/conversation/types";
@@ -59,6 +60,7 @@ export function buildConversationContext(input: {
   packQuery?: string;
   highlightNodeIds?: string[];
   working?: WorkingContext;
+  interviewSession?: InterviewSessionContext;
 }): ConversationContext {
   const onboarding = resolveOnboarding(
     input.graph,
@@ -114,6 +116,7 @@ export function buildConversationContext(input: {
     newsQueue: input.newsQueue,
     newsCursor: input.newsCursor,
     onboarding,
+    interviewSession: input.interviewSession,
     ...tiered,
   };
 }

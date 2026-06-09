@@ -5,6 +5,8 @@ export interface AppEnv {
   everMemOsBaseUrl: string;
   everMemOsApiKey: string;
   everMemOsUserId: string;
+  domesticLlmApiKey: string;
+  domesticLlmBaseUrl: string;
 }
 
 export function readAppEnv(): AppEnv {
@@ -18,5 +20,7 @@ export function readAppEnv(): AppEnv {
     everMemOsApiKey: import.meta.env.VITE_EVERMEMOS_API_KEY ?? "",
     everMemOsUserId:
       import.meta.env.VITE_EVERMEMOS_USER_ID ?? "my_brain_local",
+    domesticLlmApiKey: import.meta.env.VITE_DOMESTIC_LLM_API_KEY ?? "",
+    domesticLlmBaseUrl: import.meta.env.VITE_DOMESTIC_LLM_BASE_URL ?? "",
   };
 }

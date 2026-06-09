@@ -2,8 +2,11 @@ import { toResearchTempId } from "@/agent/jobs/topicResearchJob";
 import type { AgentTraceStep, ProposalEnvelope } from "@/agent/types";
 import type { BrainGraphSnapshot } from "@/domain/graph";
 import type { VisualRelationKind } from "@/lib/graphVisualTokens";
+import { SHOWCASE_VOICE_SCRIPT } from "@/showcase/showcaseFixtures";
 import type { ResearchRunRecord } from "@/stores/researchRunStore";
 import type { SelfCheckItem } from "@/stores/appStore";
+
+export { SHOWCASE_VOICE_SCRIPT };
 
 const VISUAL_GRAPH_NOW = "2026-06-01T00:00:00.000Z";
 

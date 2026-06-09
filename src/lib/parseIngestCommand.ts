@@ -31,6 +31,11 @@ export function parseIngestCommand(
     return attempt === 1 ? { kind: "reprompt" } : { kind: "command", command: "skip" };
   }
 
+  // Tentative phrasing ("…吧") on first attempt → clarify before ingest.
+  if (attempt === 1 && /吧[。.!?]?$/u.test(text) && matchesIngest(text)) {
+    return { kind: "reprompt" };
+  }
+
   const hits: IngestCommand[] = [];
   if (matchesSkip(text)) {
     hits.push("skip");

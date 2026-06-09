@@ -1,3 +1,4 @@
+import type { InterviewQuestion } from "@/domain/actions/interviewQuestion";
 import type { BrainGraphSnapshot } from "@/domain/graph";
 import type { NewsItem } from "@/domain/news";
 import type { UserProfile } from "@/domain/profile";
@@ -10,7 +11,8 @@ export type ConversationState =
   | "small_talk"
   | "briefing"
   | "ingest_decision"
-  | "teaching";
+  | "teaching"
+  | "interview";
 
 export type OnboardingStep =
   | "intro"
@@ -33,7 +35,15 @@ export type ConversationEvent =
   | { type: "newsAvailable"; queueLength: number }
   | { type: "ingestAnswer"; command: IngestCommand }
   | { type: "ingestReprompt"; reason?: string }
-  | { type: "topicRequest"; topic: string; mode?: "single" | "walkthrough" };
+  | { type: "topicRequest"; topic: string; mode?: "single" | "walkthrough" }
+  | { type: "interviewStart" }
+  | { type: "interviewSkip" }
+  | { type: "interviewNext" };
+
+export interface InterviewSessionContext {
+  questions: InterviewQuestion[];
+  cursor: number;
+}
 
 export interface ConversationContext {
   newsQueue: NewsItem[];
@@ -45,6 +55,8 @@ export interface ConversationContext {
   /** Formatted profile + subgraph digest for LLM context injection. */
   graphContextDigest?: string;
   onboarding: OnboardingProgress;
+  /** KOS-C3: in-flight interview pack cursor (session-only, no persist). */
+  interviewSession?: InterviewSessionContext;
 }
 
 export interface Turn {
@@ -52,6 +64,9 @@ export interface Turn {
   expect?: "ingest" | "free";
   highlightNodeIds?: string[];
   nextState?: ConversationState;
+  /** KOS-C3: interview session lifecycle for store sync (no graph writes). */
+  interviewAction?: "start" | "skip" | "next";
+  interviewQuestions?: InterviewQuestion[];
 }
 
 export const DEFAULT_ONBOARDING: OnboardingProgress = {
