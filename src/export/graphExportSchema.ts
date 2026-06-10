@@ -1,4 +1,14 @@
 import type { BrainGraphSnapshot, GraphEdge, RelationType } from "@/domain/graph";
+import {
+  isConceptNode,
+  isDecisionNode,
+  isProjectNode,
+  isQuestionNode,
+  isSkillNode,
+  isSourceNode,
+  type QuestionStatus,
+} from "@/domain/graph";
+import { sourceNodeToSourceRef } from "@/domain/nodes/sourceNode";
 import type { SourceRef } from "@/domain/graph/sourceRef";
 import { normalizeSourceRefs } from "@/domain/graph/sourceRef";
 
@@ -7,11 +17,21 @@ export const GRAPH_EXPORT_SCHEMA_VERSION = "my-brain-graph/1.0" as const;
 
 export type GraphExportSchemaVersion = typeof GRAPH_EXPORT_SCHEMA_VERSION;
 
+export type GraphExportNodeKind =
+  | "concept"
+  | "project"
+  | "source"
+  | "decision"
+  | "question"
+  | "skill";
+
 const RELATION_TYPES = new Set<RelationType>([
   "is_a",
   "depends_on",
   "replaces",
   "related",
+  "used_in",
+  "decided_for",
 ]);
 
 export interface GraphExportNode {
@@ -21,6 +41,19 @@ export interface GraphExportNode {
   archived: boolean;
   sourceRefs: SourceRef[];
   updatedAt: string;
+  /** Omitted for legacy concept-only exports; KP-08+ adds structural kinds. */
+  nodeKind?: GraphExportNodeKind;
+  /** KP-11 Decision fields */
+  rationale?: string;
+  alternativesConsidered?: string[];
+  /** KP-12 Question fields */
+  prompt?: string;
+  context?: string;
+  questionStatus?: QuestionStatus;
+  /** KP-13 Skill fields */
+  name?: string;
+  proficiency?: string;
+  reviewCadence?: string;
 }
 
 export interface GraphExportEdge {
@@ -60,17 +93,128 @@ function parseRelationType(value: unknown): RelationType | null {
   return RELATION_TYPES.has(value as RelationType) ? (value as RelationType) : null;
 }
 
+function parseQuestionStatus(value: unknown): QuestionStatus | undefined {
+  const raw = String(value ?? "").trim();
+  if (raw === "open" || raw === "answered" || raw === "archived") {
+    return raw;
+  }
+  return undefined;
+}
+
+function parseStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  return value.map((item) => String(item).trim()).filter(Boolean);
+}
+
+function parseExportNodeKind(value: unknown): GraphExportNodeKind | undefined {
+  const raw = String(value ?? "").trim();
+  if (
+    raw === "project" ||
+    raw === "source" ||
+    raw === "decision" ||
+    raw === "question" ||
+    raw === "skill"
+  ) {
+    return raw;
+  }
+  return undefined;
+}
+
+function parseExportNodeFields(item: Record<string, unknown>): Partial<GraphExportNode> {
+  const nodeKind = parseExportNodeKind(item.nodeKind);
+  const rationale = String(item.rationale ?? "").trim();
+  const alternativesConsidered = parseStringArray(item.alternativesConsidered);
+  const prompt = String(item.prompt ?? "").trim();
+  const context = String(item.context ?? "").trim();
+  const questionStatus = parseQuestionStatus(item.questionStatus);
+  const name = String(item.name ?? "").trim();
+  const proficiency = String(item.proficiency ?? "").trim();
+  const reviewCadence = String(item.reviewCadence ?? "").trim();
+
+  return {
+    ...(nodeKind ? { nodeKind } : {}),
+    ...(rationale ? { rationale } : {}),
+    ...(alternativesConsidered ? { alternativesConsidered } : {}),
+    ...(prompt ? { prompt } : {}),
+    ...(context ? { context } : {}),
+    ...(questionStatus ? { questionStatus } : {}),
+    ...(name ? { name } : {}),
+    ...(proficiency ? { proficiency } : {}),
+    ...(reviewCadence ? { reviewCadence } : {}),
+  };
+}
+
 export function toGraphExportNode(
   node: BrainGraphSnapshot["nodes"][number],
 ): GraphExportNode {
-  return {
+  if (isSourceNode(node)) {
+    return {
+      id: node.id,
+      title: node.title,
+      intro: node.intro,
+      archived: node.archived,
+      sourceRefs: [sourceNodeToSourceRef(node)],
+      updatedAt: node.updatedAt,
+      nodeKind: "source",
+    };
+  }
+  if (isDecisionNode(node)) {
+    return {
+      id: node.id,
+      title: node.title,
+      intro: node.rationale,
+      archived: node.archived,
+      sourceRefs: normalizeSourceRefs(node.sourceRefs),
+      updatedAt: node.updatedAt,
+      nodeKind: "decision",
+      rationale: node.rationale,
+      alternativesConsidered: [...node.alternativesConsidered],
+    };
+  }
+  if (isQuestionNode(node)) {
+    return {
+      id: node.id,
+      title: node.title,
+      intro: node.context,
+      archived: node.archived,
+      sourceRefs: normalizeSourceRefs(node.sourceRefs),
+      updatedAt: node.updatedAt,
+      nodeKind: "question",
+      prompt: node.prompt,
+      context: node.context,
+      questionStatus: node.status,
+    };
+  }
+  if (isSkillNode(node)) {
+    return {
+      id: node.id,
+      title: node.title,
+      intro: node.intro,
+      archived: node.archived,
+      sourceRefs: normalizeSourceRefs(node.sourceRefs),
+      updatedAt: node.updatedAt,
+      nodeKind: "skill",
+      name: node.name,
+      proficiency: node.proficiency,
+      reviewCadence: node.reviewCadence,
+    };
+  }
+  const base: GraphExportNode = {
     id: node.id,
     title: node.title,
     intro: node.intro,
     archived: node.archived,
-    sourceRefs: normalizeSourceRefs(node.sourceRefs),
+    sourceRefs: normalizeSourceRefs(
+      isConceptNode(node) ? node.sourceRefs : node.sourceRefs,
+    ),
     updatedAt: node.updatedAt,
   };
+  if (isProjectNode(node)) {
+    return { ...base, nodeKind: "project" };
+  }
+  return base;
 }
 
 export function toGraphExportEdge(edge: GraphEdge): GraphExportEdge {
@@ -125,6 +269,7 @@ export function parseGraphExportJson(raw: unknown): GraphExportJson {
       archived: item.archived === true,
       sourceRefs: normalizeSourceRefs(item.sourceRefs),
       updatedAt,
+      ...parseExportNodeFields(item),
     });
   }
 

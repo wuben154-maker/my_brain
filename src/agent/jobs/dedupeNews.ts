@@ -1,4 +1,4 @@
-import type { BrainGraphSnapshot } from "@/domain/graph";
+import { isConceptNode, type BrainGraphSnapshot } from "@/domain/graph";
 import type { NewsItem } from "@/domain/news";
 
 /** Normalize titles for exact-match dedupe (fuzzy similarity is a later enhancement). */
@@ -20,6 +20,7 @@ export function dedupeAgainstGraph(
 ): NewsItem[] {
   const graphUrls = new Set(
     graph.nodes
+      .filter(isConceptNode)
       .map((node) => node.sourceUrl)
       .filter((url): url is string => url != null && url.length > 0)
       .map(normalizeSourceUrl),

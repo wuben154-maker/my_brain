@@ -7,6 +7,13 @@ export interface ProviderEnv {
   everMemOsUserId?: string;
   domesticLlmApiKey?: string;
   domesticLlmBaseUrl?: string;
+  modelscopeApiKey?: string;
+  modelscopeBaseUrl?: string;
+  modelscopeLlmModel?: string;
+  volcAppId?: string;
+  volcAccessKey?: string;
+  volcConnectId?: string;
+  volcRealtimeModel?: string;
 }
 
 export interface CreateAppProvidersOptions {

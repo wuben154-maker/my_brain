@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { conceptNodes } from "@/domain/graph";
 import {
   countSourcedConcepts,
   indexSourcesByDomain,
@@ -19,8 +20,9 @@ function focusConceptOnGraph(nodeId: string): void {
 /** Docs nav partition — browse concepts grouped by source domain (N2). */
 export function DocsLibrary() {
   const nodes = useGraphStore((state) => state.nodes);
-  const groups = useMemo(() => indexSourcesByDomain(nodes), [nodes]);
-  const total = countSourcedConcepts(nodes);
+  const concepts = useMemo(() => conceptNodes(nodes), [nodes]);
+  const groups = useMemo(() => indexSourcesByDomain(concepts), [concepts]);
+  const total = countSourcedConcepts(concepts);
 
   if (total === 0) {
     return (

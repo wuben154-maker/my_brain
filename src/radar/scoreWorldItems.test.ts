@@ -54,6 +54,34 @@ describe("scoreWorldItems", () => {
     }
   });
 
+  it("excludes not_interested feedback from top3 ranking", () => {
+    const items = activeFixtureItems();
+    const baseline = scoreWorldItems({
+      graph: SHOWCASE_GRAPH_SNAPSHOT,
+      profile: DEFAULT_USER_PROFILE,
+      items,
+    });
+    const previousTop1 = baseline.ranked[0]!.item.id;
+
+    const adjusted = scoreWorldItems({
+      graph: SHOWCASE_GRAPH_SNAPSHOT,
+      profile: DEFAULT_USER_PROFILE,
+      items,
+      feedbackByItemId: {
+        [previousTop1]: [
+          {
+            kind: "not_interested",
+            worldItemId: previousTop1,
+            at: RADAR_SHOWCASE_NOW,
+          },
+        ],
+      },
+    });
+
+    const top3Ids = adjusted.ranked.slice(0, 3).map((entry) => entry.item.id);
+    expect(top3Ids).not.toContain(previousTop1);
+  });
+
   it("keeps showcase WorldItems in the top5 of the full mock radar pool", () => {
     const result = scoreWorldItems({
       graph: SHOWCASE_GRAPH_SNAPSHOT,

@@ -2,11 +2,31 @@
 
 my_brain 的目标是一个语音优先、local-first 的个人知识操作系统。它不是 RSS 阅读器，也不是普通 RAG 聊天框；核心循环是把外部世界变化讲给用户听，由用户决定哪些进入长期图谱，再由系统自动整理已确认知识，并保留 reason、history 和 undo。
 
+## 成熟度口径（KP-06）
+
+避免「spec 全 ✅ = 产品已成熟」误读。文档与 README 使用三档标签：
+
+| 标签 | 含义 |
+|------|------|
+| **default** | 正常启动（无 query flag）可见的主路径；mock-first 可演示 |
+| **harness-backed** | 逻辑与 Vitest harness 已覆盖；UI 或 live API 可能仍 partial |
+| **experimental** | 演示/降级/Phase 6–8；不得写进 README 默认承诺 |
+
+复跑验证命令见 [`docs/evals/README.md`](./evals/README.md)。
+
+## 默认体验 — 三条路径（裁定一致）
+
+| 路径 | 触发 | 成熟度 | 说明 |
+|------|------|--------|------|
+| **Radar 默认** | 无 query flag / 正常启动 | **default** | mock-first top 3 + `RadarSignal`；live 成功则增强，失败 fixture fallback |
+| **Showcase 演示** | `?showcase=1` | **experimental** | 固定演示脚本；面试/截图专用，**不是**默认产品入口 |
+| **RSS flatten legacy** | Radar/source 全失败时内部 fallback | **experimental** | 降级遗留路径；**不得**文档化或渲染为主体验 |
+
 ## 四层知识 OS
 
 | 层 | 职责 | Stage 1 状态 |
 |---|---|---|
-| 信息雷达层 | 从 AI / GitHub / RSS 等来源发现变化，形成 briefing 候选 | Showcase 使用固定 `SHOWCASE_BRIEFING_ITEMS`；真实 Radar 属 roadmap |
+| 信息雷达层 | 从 AI / GitHub / RSS 等来源发现变化，形成 briefing 候选 | **default**：无 flag Radar mock-first top 3；**experimental**：`?showcase=1` 固定项 |
 | 语音伴侣层 | 用可中断语音讲解、追问、接收「入 / 不要 / 讲细点」 | Mock-first 核心闭环已可演示 |
 | 个人知识图谱层 | 保存长期概念节点、关系、来源、归档状态和结构历史 | Stage 1 以 concept graph + graph history 为主 |
 | 认知操作层 | 基于图谱生成复习、面试、项目、写作、研究建议 | Stage 1 仅展示边界；行动建议和草稿生成是 roadmap |
@@ -28,7 +48,18 @@ flowchart LR
   graph --> actions[认知操作层]
 ```
 
-Showcase 的固定路径是：
+**Radar 默认**（主路径）：
+
+```text
+正常启动（无 flag）
+  -> runLaunchSequence Radar branch
+  -> daily top 3 + RadarSignal
+  -> 用户语音「入 / 不要 / 讲细点」
+  -> applyIngestCreate（仅「入」）
+  -> auto-curate + graphHistoryStore undo
+```
+
+**Showcase 演示**（`?showcase=1`，非默认）：
 
 ```text
 ?showcase=1
@@ -40,12 +71,14 @@ Showcase 的固定路径是：
   -> graphHistoryStore undo
 ```
 
+**RSS flatten legacy** 仅在 Radar/source 失败时内部降级；不得作为文档或 UI 的主入口文案。
+
 ## 目录映射
 
 | 概念 | 主要路径 | 说明 |
 |---|---|---|
 | 应用入口 | `src/App.tsx` | 组合全屏星图、语音伴侣、设置与浮层 |
-| 启动流程 | `src/lib/runLaunchSequence.ts` | 普通启动链；showcase 路径由 wrapper 注入 fixtures |
+| 启动流程 | `src/lib/runLaunchSequence.ts` | **default** Radar 启动链；`?showcase=1` 走 showcase wrapper |
 | Showcase 启动 | `src/showcase/runShowcaseLaunchSequence.ts` | `?showcase=1` 的确定性启动入口 |
 | Showcase fixtures | `src/showcase/showcaseFixtures.ts` | 固定 graph、briefing、ingest candidate、golden curation |
 | Showcase 脚本 | `src/showcase/showcaseCompanionScript.ts` | 三口令逐步 briefing 期望 |
@@ -79,20 +112,21 @@ Showcase 的固定路径是：
 - 删除语义是 archive，不是 hard delete。
 - 行动层可以生成建议或草稿，但不会自动发 issue、不会自动发布文章、不会自动执行外部写操作。
 
-## Stage 1 已实现
+## Stage 1 已实现（按成熟度）
 
-Stage 1 的目标是作品级核心闭环，而不是完整 Radar 或完整 Action OS。
+Stage 1 目标是可信主闭环，而非完整 Action OS 或 live API 全量验收。
 
-| 能力 | 当前展示状态 | 证据 / 入口 |
+| 能力 | 成熟度 | 证据 / 入口 |
 |---|---|---|
-| 固定 demo graph | 7 节点、5 边、含 archived 示例 | `SHOWCASE_GRAPH_SNAPSHOT` |
-| 固定 3 条趋势 | `showcase-brief-1`、`showcase-brief-2`、`showcase-brief-3` | `SHOWCASE_BRIEFING_ITEMS` |
-| 用户确认入库 | 第 3 条 Graphiti 经「入」创建节点 | `showcase-ingest-graphiti` |
-| 星图点亮 | 入库后聚焦 / 高亮新节点 | Showcase core loop |
-| 自动整理 | 入库后固定 link 到 `demo-agent` | reasonCode `ingest_link` |
-| 整理报告 | 展示 reasonCode、reasonDetail、summary、affected nodes | KOS-A3 UI |
-| Undo | 撤销自动连边，保留用户确认节点 | `graphHistoryStore.undo` |
-| Mock-first | 无 API key 可跑通 | `?showcase=1` |
+| Radar 默认启动 top 3 | **default** | `runLaunchSequence` · [`docs/evals/radar-relevance.md`](./evals/radar-relevance.md) |
+| 用户确认入库 (V3) | **default** | `applyIngestCreate` · [`docs/evals/ingest-quality.md`](./evals/ingest-quality.md) |
+| 入库后自动整理 + undo (V4) | **default** | `autoCurate` · [`docs/evals/curation-undo.md`](./evals/curation-undo.md) |
+| Weekly Review 主路径 | **harness-backed** | `buildWeeklyBrainReview` · KP-03 |
+| 画像 / feedback 闭环 | **harness-backed** | [`docs/evals/profile-growth.md`](./evals/profile-growth.md) |
+| CognitiveAction 草稿 | **harness-backed** | [`docs/evals/action-usefulness.md`](./evals/action-usefulness.md) |
+| Showcase 固定 demo | **experimental** | `?showcase=1` · `SHOWCASE_BRIEFING_ITEMS` |
+| RSS flatten legacy fallback | **experimental** | 内部降级 only |
+| Mock-first 无 API key | **default** | `pnpm dev` |
 
 ## Roadmap
 
@@ -108,6 +142,7 @@ Stage 1 的目标是作品级核心闭环，而不是完整 Radar 或完整 Acti
 
 ## 参考
 
+- [`docs/evals/README.md`](./evals/README.md)：成熟度标签 + 五类 eval 验证命令。
 - [`docs/DEMO.md`](./DEMO.md)：3 分钟复现步骤。
 - [`docs/SHOWCASE_MOCK_LIVE.md`](./SHOWCASE_MOCK_LIVE.md)：mock/live provider 边界。
 - [`docs/KNOWLEDGE_OS_VISION.md`](./KNOWLEDGE_OS_VISION.md)：长期产品蓝图。

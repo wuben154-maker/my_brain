@@ -5,6 +5,7 @@ import {
   useManualGraphOps,
   type ManualNodeForm,
 } from "@/hooks/useManualGraphOps";
+import { isConceptNode } from "@/domain/graph";
 import { useGraphStore } from "@/stores/graphStore";
 
 const EMPTY_FORM: ManualNodeForm = {
@@ -51,7 +52,7 @@ export function ManualGraphPanel() {
   const confirmProposalsList = pendingProposal ? [pendingProposal] : [];
 
   useEffect(() => {
-    if (selectedNode) {
+    if (selectedNode && isConceptNode(selectedNode)) {
       setMode("edit");
       setForm({
         title: selectedNode.title,
@@ -209,7 +210,7 @@ export function ManualGraphPanel() {
             />
           </label>
 
-          {selectedNode?.sourceUrl ? (
+          {selectedNode && isConceptNode(selectedNode) && selectedNode.sourceUrl ? (
             <a
               href={selectedNode.sourceUrl}
               target="_blank"

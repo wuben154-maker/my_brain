@@ -5,6 +5,11 @@ import {
 import { loadPersonaPreset } from "@/persona/loadPreset";
 import type { LlmProvider } from "@/providers/llm/types";
 import { selectTeachingHighlights } from "@/conversation/selectTeachingHighlights";
+import {
+  buildTeachingTurn,
+  formatElaborationDepthPrefix,
+  resolveTeachingElaborationDepth,
+} from "@/conversation/teachingDepth";
 import type { PersonaPreset } from "@/domain/profile";
 import type {
   ConversationContext,
@@ -34,6 +39,33 @@ function stylize(
 
 function currentNewsItem(ctx: ConversationContext) {
   return ctx.newsQueue[ctx.newsCursor] ?? null;
+}
+
+function resolveConceptIdForItem(
+  ctx: ConversationContext,
+  itemId: string,
+): string {
+  const signals = ctx.briefingSignalsByItemId?.[itemId] ?? [];
+  return signals[0]?.linkedNodeIds[0] ?? "demo-rag";
+}
+
+function resolveItemElaborationDepth(
+  ctx: ConversationContext,
+  itemId: string,
+): number {
+  const signals = ctx.briefingSignalsByItemId?.[itemId] ?? [];
+  return resolveTeachingElaborationDepth({
+    profile: ctx.profile,
+    conceptId: resolveConceptIdForItem(ctx, itemId),
+    worldItemId: itemId,
+    signals,
+    feedbackByItemId: ctx.briefingFeedbackByItemId ?? {},
+    topicKeyByItemId: ctx.topicKeyByItemId ?? {},
+  });
+}
+
+function topicRequestsRagTeaching(topic: string): boolean {
+  return /rag|检索增强/i.test(topic);
 }
 
 function wantsNews(transcript: string): boolean {
@@ -146,6 +178,11 @@ async function explainBriefingItem(
   if (depth === "elaborate") {
     const extra = await llm.explainConcept(item.title, ctx.profile);
     core = `${core}\n\n${extra}`;
+  }
+  const elaborationDepth = resolveItemElaborationDepth(ctx, item.id);
+  const prefix = formatElaborationDepthPrefix(elaborationDepth);
+  if (prefix) {
+    core = `${prefix}${core}`;
   }
   return stylize(ctx, core, item.title);
 }
@@ -382,6 +419,16 @@ export async function nextTurn(
   }
 
   if (event.type === "topicRequest") {
+    if (topicRequestsRagTeaching(event.topic)) {
+      const teaching = buildTeachingTurn("demo-rag", ctx.profile);
+      const highlights = selectTeachingHighlights(ctx.graph, event.topic);
+      return {
+        say: stylize(ctx, teaching, event.topic),
+        expect: "free",
+        highlightNodeIds: highlights,
+        nextState: "teaching",
+      };
+    }
     const core = await llm.explainConcept(event.topic, ctx.profile);
     const highlights = selectTeachingHighlights(ctx.graph, event.topic);
     return {

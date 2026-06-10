@@ -2,6 +2,7 @@ import type { AutoCurateProposal } from "@/agent/curation/autoCurate";
 import { buildCreateProposalFromNews } from "@/conversation/ingestActions";
 import type { IngestCommand } from "@/conversation/types";
 import type { BrainGraphSnapshot, ConceptNode, GraphMutationProposal } from "@/domain/graph";
+import { createProjectNode, type ProjectNode } from "@/domain/nodes/projectNode";
 import type { SourceRef } from "@/domain/graph/sourceRef";
 import { sourceRefFromLegacySourceUrl } from "@/domain/graph/sourceRef";
 import type { NewsItem } from "@/domain/news";
@@ -12,6 +13,10 @@ import { mapNewsItemToWorldItem } from "@/radar/worldSources/worldSourceAdapter"
 
 /** Frozen clock for deterministic showcase snapshots. */
 export const SHOWCASE_NOW = "2026-06-01T00:00:00.000Z";
+
+/** KP-08 showcase Project nodes (real ids referenced by KOS-E2). */
+export const SHOWCASE_PROJECT_VOICE_ID = "proj-voice-companion";
+export const SHOWCASE_PROJECT_MCP_ID = "proj-brain-mcp";
 
 export const SHOWCASE_PERSONA_ID = "mentor" as const;
 
@@ -38,7 +43,19 @@ function showcaseLegacyNode(
   return base;
 }
 
-/** §3.1 — fixed demo graph (7 nodes + 5 edges, one archived). */
+function showcaseProjectNode(
+  input: Pick<ProjectNode, "id" | "title" | "intro" | "archived"> &
+    Partial<Pick<ProjectNode, "sourceRefs" | "createdAt" | "updatedAt">>,
+) {
+  return createProjectNode({
+    ...input,
+    sourceRefs: input.sourceRefs ?? [],
+    createdAt: input.createdAt ?? SHOWCASE_NOW,
+    updatedAt: input.updatedAt ?? SHOWCASE_NOW,
+  });
+}
+
+/** §3.1 — fixed demo graph (7 concepts + 2 projects + edges, one archived concept). */
 export const SHOWCASE_GRAPH_SNAPSHOT: BrainGraphSnapshot = {
   nodes: [
     showcaseLegacyNode({
@@ -104,6 +121,18 @@ export const SHOWCASE_GRAPH_SNAPSHOT: BrainGraphSnapshot = {
       createdAt: SHOWCASE_NOW,
       updatedAt: SHOWCASE_NOW,
     }),
+    showcaseProjectNode({
+      id: SHOWCASE_PROJECT_VOICE_ID,
+      title: "沉浸式语音伴侣",
+      intro: "my_brain v2 主形态：全屏星图 + 可打断 Realtime 语音",
+      archived: false,
+    }),
+    showcaseProjectNode({
+      id: SHOWCASE_PROJECT_MCP_ID,
+      title: "Brain MCP 只读",
+      intro: "brain_search_nodes / brain_outline 只读工具面",
+      archived: false,
+    }),
   ],
   edges: [
     {
@@ -135,6 +164,18 @@ export const SHOWCASE_GRAPH_SNAPSHOT: BrainGraphSnapshot = {
       sourceId: "demo-bert",
       targetId: "demo-transformer",
       relationType: "replaces",
+    },
+    {
+      id: "e-used-voice",
+      sourceId: "demo-agent",
+      targetId: SHOWCASE_PROJECT_VOICE_ID,
+      relationType: "used_in",
+    },
+    {
+      id: "e-used-mcp",
+      sourceId: "demo-mcp",
+      targetId: SHOWCASE_PROJECT_MCP_ID,
+      relationType: "used_in",
     },
   ],
 };

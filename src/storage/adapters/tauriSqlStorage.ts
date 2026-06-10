@@ -2,7 +2,14 @@ import Database from "@tauri-apps/plugin-sql";
 
 import type { TauriSqlDatabaseLike } from "./tauriSqlDatabase";
 
-import type { BrainGraphSnapshot, ConceptNode, GraphEdge } from "@/domain/graph";
+import type { BrainGraphSnapshot, BrainNode, ConceptNode, GraphEdge } from "@/domain/graph";
+import { isDecisionNode, isProjectNode, isQuestionNode, isSkillNode, isSourceNode, type QuestionStatus } from "@/domain/graph";
+import type { DecisionNode } from "@/domain/nodes/decisionNode";
+import type { ProjectNode } from "@/domain/nodes/projectNode";
+import type { QuestionNode } from "@/domain/nodes/questionNode";
+import type { SkillNode } from "@/domain/nodes/skillNode";
+import type { SourceNode } from "@/domain/nodes/sourceNode";
+import type { SourceRefKind } from "@/domain/graph/sourceRef";
 
 import { DEFAULT_USER_PROFILE, type UserProfile } from "@/domain/profile";
 import {
@@ -33,6 +40,8 @@ import {
   migrateConceptSourceRefsColumnsTauri,
   migrateEdgeArchivedColumnTauri,
   migrateLearningTracesTableTauri,
+  migrateBriefingFeedbackTableTauri,
+  applyGraphSchemaMigrationsTauri,
 } from "../schemaMigrations";
 import type {
   CurationReasonCode,
@@ -63,7 +72,34 @@ import {
 
 } from "../proposalPersistence";
 
+import {
+  briefingFeedbackToStoredRow,
+  LIST_BRIEFING_FEEDBACK_SQL,
+  mapStoredBriefingFeedbackRows,
+  type StoredBriefingFeedbackRow,
+} from "../briefingFeedbackRepo";
+import type { BriefingFeedback } from "@/domain/radar/briefingItem";
+
 import type { StorageProvider } from "../types";
+
+function parseStringArrayJson(json: string | null | undefined): string[] {
+  if (!json) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(json) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.map((item) => String(item).trim()).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function serializeStringArrayJson(values: string[]): string {
+  return JSON.stringify(values);
+}
 
 
 
@@ -112,6 +148,8 @@ export class TauriSqlStorageProvider implements StorageProvider {
     await migrateCognitiveActionsMetadataColumnTauri(this.db);
     await migrateConceptSourceRefsColumnsTauri(this.db);
     await migrateEdgeArchivedColumnTauri(this.db);
+    await migrateBriefingFeedbackTableTauri(this.db);
+    await applyGraphSchemaMigrationsTauri(this.db);
 
   }
 
@@ -195,7 +233,7 @@ export class TauriSqlStorageProvider implements StorageProvider {
 
     const db = this.requireDb();
 
-    const nodes = await db.select<
+    const conceptRows = await db.select<
 
       Array<
         Omit<ConceptNode, "archived" | "sourceRefs"> & {
@@ -216,6 +254,84 @@ export class TauriSqlStorageProvider implements StorageProvider {
 
     );
 
+    const projectRows = await db.select<
+      Array<
+        Omit<ProjectNode, "archived" | "sourceRefs" | "nodeKind"> & {
+          archived: number;
+          sourceRefsJson?: string | null;
+        }
+      >
+    >(
+      `SELECT id, title, intro, source_refs_json AS sourceRefsJson,
+              archived, created_at AS createdAt, updated_at AS updatedAt
+       FROM projects`,
+    );
+
+    let sourceRows: Array<
+      Omit<SourceNode, "archived" | "nodeKind"> & { archived: number }
+    > = [];
+    try {
+      sourceRows = await db.select<typeof sourceRows>(
+        `SELECT id, title, intro, url, kind, world_item_id AS worldItemId,
+                ingested_at AS ingestedAt, archived,
+                created_at AS createdAt, updated_at AS updatedAt
+         FROM sources`,
+      );
+    } catch {
+      sourceRows = [];
+    }
+
+    let decisionRows: Array<
+      Omit<DecisionNode, "archived" | "sourceRefs" | "alternativesConsidered" | "nodeKind"> & {
+        archived: number;
+        alternativesConsideredJson?: string | null;
+        sourceRefsJson?: string | null;
+      }
+    > = [];
+    try {
+      decisionRows = await db.select<typeof decisionRows>(
+        `SELECT id, title, rationale, alternatives_considered_json AS alternativesConsideredJson,
+                source_refs_json AS sourceRefsJson, archived,
+                created_at AS createdAt, updated_at AS updatedAt
+         FROM decisions`,
+      );
+    } catch {
+      decisionRows = [];
+    }
+
+    let questionRows: Array<
+      Omit<QuestionNode, "archived" | "sourceRefs" | "nodeKind"> & {
+        archived: number;
+        sourceRefsJson?: string | null;
+      }
+    > = [];
+    try {
+      questionRows = await db.select<typeof questionRows>(
+        `SELECT id, title, prompt, context, status, source_refs_json AS sourceRefsJson,
+                archived, created_at AS createdAt, updated_at AS updatedAt
+         FROM questions`,
+      );
+    } catch {
+      questionRows = [];
+    }
+
+    let skillRows: Array<
+      Omit<SkillNode, "archived" | "sourceRefs" | "nodeKind"> & {
+        archived: number;
+        sourceRefsJson?: string | null;
+      }
+    > = [];
+    try {
+      skillRows = await db.select<typeof skillRows>(
+        `SELECT id, name, title, intro, proficiency, review_cadence AS reviewCadence,
+                source_refs_json AS sourceRefsJson, archived,
+                created_at AS createdAt, updated_at AS updatedAt
+         FROM skills`,
+      );
+    } catch {
+      skillRows = [];
+    }
+
 
 
     const edges = await db.select<
@@ -232,7 +348,95 @@ export class TauriSqlStorageProvider implements StorageProvider {
 
 
 
-    const conceptIds = new Set(nodes.map((node) => node.id));
+    const conceptNodes: BrainNode[] = conceptRows.map((row) =>
+      normalizeConceptProvenance(
+        normalizeConceptSalience({
+          ...row,
+          sourceRefs: parseSourceRefsJson(row.sourceRefsJson),
+          archived: row.archived === 1,
+          salience: row.salience ?? undefined,
+          lastTouchedAt: row.lastTouchedAt ?? undefined,
+          archivedAt: row.archivedAt ?? undefined,
+          supersedesNodeId: row.supersedesNodeId ?? undefined,
+        }),
+      ),
+    );
+
+    const projectNodes: BrainNode[] = projectRows.map((row) => ({
+      nodeKind: "project" as const,
+      id: row.id,
+      title: row.title,
+      intro: row.intro,
+      sourceRefs: parseSourceRefsJson(row.sourceRefsJson),
+      archived: row.archived === 1,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
+
+    const sourceNodes: BrainNode[] = sourceRows.map((row) => ({
+      nodeKind: "source" as const,
+      id: row.id,
+      title: row.title,
+      intro: row.intro,
+      url: row.url ?? null,
+      kind: row.kind as SourceRefKind,
+      ...(row.worldItemId ? { worldItemId: row.worldItemId } : {}),
+      ingestedAt: row.ingestedAt,
+      archived: row.archived === 1,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
+
+    const decisionNodes: BrainNode[] = decisionRows.map((row) => ({
+      nodeKind: "decision" as const,
+      id: row.id,
+      title: row.title,
+      intro: row.rationale,
+      rationale: row.rationale,
+      alternativesConsidered: parseStringArrayJson(row.alternativesConsideredJson),
+      sourceRefs: parseSourceRefsJson(row.sourceRefsJson),
+      archived: row.archived === 1,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
+
+    const questionNodes: BrainNode[] = questionRows.map((row) => ({
+      nodeKind: "question" as const,
+      id: row.id,
+      title: row.title,
+      intro: row.context || row.prompt,
+      prompt: row.prompt,
+      context: row.context,
+      status: row.status as QuestionStatus,
+      sourceRefs: parseSourceRefsJson(row.sourceRefsJson),
+      archived: row.archived === 1,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
+
+    const skillNodes: BrainNode[] = skillRows.map((row) => ({
+      nodeKind: "skill" as const,
+      id: row.id,
+      name: row.name,
+      title: row.title,
+      intro: row.intro,
+      proficiency: row.proficiency,
+      reviewCadence: row.reviewCadence,
+      sourceRefs: parseSourceRefsJson(row.sourceRefsJson),
+      archived: row.archived === 1,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
+
+    const nodes = [
+      ...conceptNodes,
+      ...projectNodes,
+      ...sourceNodes,
+      ...decisionNodes,
+      ...questionNodes,
+      ...skillNodes,
+    ];
+    const nodeIds = new Set(nodes.map((node) => node.id));
 
     const displayEdges = this.filterVisibleEdges(
 
@@ -244,37 +448,28 @@ export class TauriSqlStorageProvider implements StorageProvider {
 
       })),
 
-      conceptIds,
+      nodeIds,
 
     );
 
 
 
-    return {
-
-      nodes: nodes.map((row) =>
-        normalizeConceptProvenance(
-          normalizeConceptSalience({
-            ...row,
-            sourceRefs: parseSourceRefsJson(row.sourceRefsJson),
-            archived: row.archived === 1,
-            salience: row.salience ?? undefined,
-            lastTouchedAt: row.lastTouchedAt ?? undefined,
-            archivedAt: row.archivedAt ?? undefined,
-            supersedesNodeId: row.supersedesNodeId ?? undefined,
-          }),
-        ),
-      ),
-
-      edges: displayEdges,
-
-    };
+    return { nodes, edges: displayEdges };
 
   }
 
 
 
   async saveConcept(node: ConceptNode): Promise<void> {
+    if (
+      isProjectNode(node) ||
+      isSourceNode(node) ||
+      isDecisionNode(node) ||
+      isQuestionNode(node) ||
+      isSkillNode(node)
+    ) {
+      throw new Error("saveConcept called with non-concept node");
+    }
 
     const db = this.requireDb();
 
@@ -315,6 +510,147 @@ export class TauriSqlStorageProvider implements StorageProvider {
 
     );
 
+  }
+
+
+
+  async saveProject(node: ProjectNode): Promise<void> {
+
+    const db = this.requireDb();
+
+    await db.execute(
+
+      `INSERT INTO projects (id, title, intro, source_refs_json, archived, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT(id) DO UPDATE SET
+         title = $2,
+         intro = $3,
+         source_refs_json = $4,
+         archived = $5,
+         updated_at = $7`,
+
+      [
+        node.id,
+        node.title,
+        node.intro,
+        serializeSourceRefsJson(node.sourceRefs ?? []),
+        node.archived ? 1 : 0,
+        node.createdAt,
+        node.updatedAt,
+      ],
+
+    );
+
+  }
+
+  async saveSource(node: SourceNode): Promise<void> {
+    const db = this.requireDb();
+    await db.execute(
+      `INSERT INTO sources (id, title, intro, url, kind, world_item_id, ingested_at, archived, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       ON CONFLICT(id) DO UPDATE SET
+         title = $2,
+         intro = $3,
+         url = $4,
+         kind = $5,
+         world_item_id = $6,
+         ingested_at = $7,
+         archived = $8,
+         updated_at = $10`,
+      [
+        node.id,
+        node.title,
+        node.intro,
+        node.url,
+        node.kind,
+        node.worldItemId ?? null,
+        node.ingestedAt,
+        node.archived ? 1 : 0,
+        node.createdAt,
+        node.updatedAt,
+      ],
+    );
+  }
+
+  async saveDecision(node: DecisionNode): Promise<void> {
+    const db = this.requireDb();
+    await db.execute(
+      `INSERT INTO decisions (id, title, rationale, alternatives_considered_json, source_refs_json, archived, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       ON CONFLICT(id) DO UPDATE SET
+         title = $2,
+         rationale = $3,
+         alternatives_considered_json = $4,
+         source_refs_json = $5,
+         archived = $6,
+         updated_at = $8`,
+      [
+        node.id,
+        node.title,
+        node.rationale,
+        serializeStringArrayJson(node.alternativesConsidered),
+        serializeSourceRefsJson(node.sourceRefs ?? []),
+        node.archived ? 1 : 0,
+        node.createdAt,
+        node.updatedAt,
+      ],
+    );
+  }
+
+  async saveQuestion(node: QuestionNode): Promise<void> {
+    const db = this.requireDb();
+    await db.execute(
+      `INSERT INTO questions (id, title, prompt, context, status, source_refs_json, archived, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       ON CONFLICT(id) DO UPDATE SET
+         title = $2,
+         prompt = $3,
+         context = $4,
+         status = $5,
+         source_refs_json = $6,
+         archived = $7,
+         updated_at = $9`,
+      [
+        node.id,
+        node.title,
+        node.prompt,
+        node.context,
+        node.status,
+        serializeSourceRefsJson(node.sourceRefs ?? []),
+        node.archived ? 1 : 0,
+        node.createdAt,
+        node.updatedAt,
+      ],
+    );
+  }
+
+  async saveSkill(node: SkillNode): Promise<void> {
+    const db = this.requireDb();
+    await db.execute(
+      `INSERT INTO skills (id, name, title, intro, proficiency, review_cadence, source_refs_json, archived, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       ON CONFLICT(id) DO UPDATE SET
+         name = $2,
+         title = $3,
+         intro = $4,
+         proficiency = $5,
+         review_cadence = $6,
+         source_refs_json = $7,
+         archived = $8,
+         updated_at = $10`,
+      [
+        node.id,
+        node.name,
+        node.title,
+        node.intro,
+        node.proficiency,
+        node.reviewCadence,
+        serializeSourceRefsJson(node.sourceRefs ?? []),
+        node.archived ? 1 : 0,
+        node.createdAt,
+        node.updatedAt,
+      ],
+    );
   }
 
 
@@ -411,6 +747,60 @@ export class TauriSqlStorageProvider implements StorageProvider {
 
     await db.execute("DELETE FROM concepts WHERE id = $1", [conceptId]);
 
+  }
+
+
+
+  async deleteProject(projectId: string): Promise<void> {
+
+    const db = this.requireDb();
+
+    await db.execute(
+
+      "DELETE FROM edges WHERE source_id = $1 OR target_id = $1",
+
+      [projectId],
+
+    );
+
+    await db.execute("DELETE FROM projects WHERE id = $1", [projectId]);
+
+  }
+
+  async deleteSource(sourceId: string): Promise<void> {
+    const db = this.requireDb();
+    await db.execute(
+      "DELETE FROM edges WHERE source_id = $1 OR target_id = $1",
+      [sourceId],
+    );
+    await db.execute("DELETE FROM sources WHERE id = $1", [sourceId]);
+  }
+
+  async deleteDecision(decisionId: string): Promise<void> {
+    const db = this.requireDb();
+    await db.execute(
+      "DELETE FROM edges WHERE source_id = $1 OR target_id = $1",
+      [decisionId],
+    );
+    await db.execute("DELETE FROM decisions WHERE id = $1", [decisionId]);
+  }
+
+  async deleteQuestion(questionId: string): Promise<void> {
+    const db = this.requireDb();
+    await db.execute(
+      "DELETE FROM edges WHERE source_id = $1 OR target_id = $1",
+      [questionId],
+    );
+    await db.execute("DELETE FROM questions WHERE id = $1", [questionId]);
+  }
+
+  async deleteSkill(skillId: string): Promise<void> {
+    const db = this.requireDb();
+    await db.execute(
+      "DELETE FROM edges WHERE source_id = $1 OR target_id = $1",
+      [skillId],
+    );
+    await db.execute("DELETE FROM skills WHERE id = $1", [skillId]);
   }
 
 
@@ -884,6 +1274,46 @@ export class TauriSqlStorageProvider implements StorageProvider {
         action.createdAt,
       ],
     );
+  }
+
+  async listBriefingFeedback(): Promise<BriefingFeedback[]> {
+    const db = this.requireDb();
+    const rows = await db.select<StoredBriefingFeedbackRow[]>(
+      LIST_BRIEFING_FEEDBACK_SQL,
+    );
+    return mapStoredBriefingFeedbackRows(rows);
+  }
+
+  async saveBriefingFeedback(feedback: BriefingFeedback): Promise<void> {
+    const db = this.requireDb();
+    const row = briefingFeedbackToStoredRow(feedback);
+    await db.execute(
+      `INSERT INTO briefing_feedback (id, world_item_id, kind, at)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT(id) DO UPDATE SET
+         world_item_id = excluded.world_item_id,
+         kind = excluded.kind,
+         at = excluded.at`,
+      [row.id, row.world_item_id, row.kind, row.at],
+    );
+  }
+
+  /** KP-07: scoped write transaction for graph + history co-persist. */
+  async runInTransaction<T>(fn: () => Promise<T>): Promise<T> {
+    const db = this.requireDb();
+    await db.execute("BEGIN IMMEDIATE");
+    try {
+      const result = await fn();
+      await db.execute("COMMIT");
+      return result;
+    } catch (error) {
+      try {
+        await db.execute("ROLLBACK");
+      } catch {
+        // ignore nested rollback failure
+      }
+      throw error;
+    }
   }
 
   private requireDb(): TauriSqlDatabase {

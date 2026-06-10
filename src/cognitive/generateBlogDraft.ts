@@ -1,5 +1,6 @@
 import { createCognitiveAction } from "@/actions/createCognitiveAction";
 import type { BrainGraphSnapshot, ConceptNode } from "@/domain/graph";
+import { isConceptNode } from "@/domain/graph";
 import { migrateLegacySourceUrlToSourceRefs } from "@/domain/graph/sourceRef";
 import type {
   BlogDraftMetadata,
@@ -79,7 +80,7 @@ const SECTION_TEMPLATES: SectionTemplate[] = [
 function activeNodeMap(graph: BrainGraphSnapshot): Map<string, ConceptNode> {
   const map = new Map<string, ConceptNode>();
   for (const node of graph.nodes) {
-    if (!node.archived) {
+    if (!node.archived && isConceptNode(node)) {
       map.set(node.id, node);
     }
   }

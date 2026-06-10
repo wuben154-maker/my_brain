@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { isConceptNode } from "@/domain/graph";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { computeGraphDepth } from "@/lib/computeGraphDepth";
 import { useGraphStore } from "@/stores/graphStore";
@@ -10,7 +11,9 @@ export function GraphStatsCard() {
 
   const stats = useMemo(() => {
     const active = nodes.filter((node) => !node.archived);
-    const sources = nodes.filter((node) => node.sourceUrl).length;
+    const sources = nodes.filter(
+      (node) => isConceptNode(node) && node.sourceUrl,
+    ).length;
     const depth = computeGraphDepth(
       active.map((node) => node.id),
       edges.map((edge) => ({ sourceId: edge.sourceId, targetId: edge.targetId })),

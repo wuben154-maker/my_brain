@@ -29,6 +29,13 @@ describe("bootSelfCheck", () => {
           everMemOsUserId: "my_brain_local",
           domesticLlmApiKey: "",
           domesticLlmBaseUrl: "",
+          modelscopeApiKey: "",
+          modelscopeBaseUrl: "",
+          modelscopeLlmModel: "",
+          volcAppId: "",
+          volcAccessKey: "",
+          volcConnectId: "",
+          volcRealtimeModel: "",
         },
         storage,
       );

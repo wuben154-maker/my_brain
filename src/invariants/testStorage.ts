@@ -22,8 +22,38 @@ function wrapBetterSqliteBackend(backend: BetterSqliteBackend): StorageProvider 
     saveConcept: async (node) => {
       backend.saveConcept(node);
     },
+    saveProject: async (node) => {
+      backend.saveProject(node);
+    },
+    saveSource: async (node) => {
+      backend.saveSource(node);
+    },
+    saveDecision: async (node) => {
+      backend.saveDecision(node);
+    },
+    saveQuestion: async (node) => {
+      backend.saveQuestion(node);
+    },
+    saveSkill: async (node) => {
+      backend.saveSkill(node);
+    },
     deleteConcept: async (conceptId) => {
       backend.deleteConcept(conceptId);
+    },
+    deleteProject: async (projectId) => {
+      backend.deleteProject(projectId);
+    },
+    deleteSource: async (sourceId) => {
+      backend.deleteSource(sourceId);
+    },
+    deleteDecision: async (decisionId) => {
+      backend.deleteDecision(decisionId);
+    },
+    deleteQuestion: async (questionId) => {
+      backend.deleteQuestion(questionId);
+    },
+    deleteSkill: async (skillId) => {
+      backend.deleteSkill(skillId);
     },
     saveEdge: async (edge) => {
       backend.saveEdge(edge);
@@ -68,6 +98,11 @@ function wrapBetterSqliteBackend(backend: BetterSqliteBackend): StorageProvider 
     saveCognitiveAction: async (action) => {
       backend.saveCognitiveAction(action);
     },
+    listBriefingFeedback: async () => backend.listBriefingFeedback(),
+    saveBriefingFeedback: async (feedback) => {
+      backend.saveBriefingFeedback(feedback);
+    },
+    runInTransaction: async (fn) => backend.runInTransaction(fn),
   };
 }
 

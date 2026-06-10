@@ -1,9 +1,13 @@
 import type {
   BrainGraphSnapshot,
+  BrainNode,
   ConceptNode,
   GraphEdge,
   GraphMutationProposal,
 } from "@/domain/graph";
+import { isConceptNode, isDecisionNode, isProjectNode, isQuestionNode, isSkillNode, isSourceNode } from "@/domain/graph";
+import type { ProjectNode } from "@/domain/nodes/projectNode";
+import type { SourceNode } from "@/domain/nodes/sourceNode";
 import {
   migrateLegacySourceUrlToSourceRefs,
   normalizeConceptProvenance,
@@ -24,6 +28,14 @@ import {
   DEFAULT_SALIENCE,
 } from "@/lib/salience";
 import type { StorageProvider } from "@/storage/types";
+
+/**
+ * KP-07 must-co-transact audit:
+ * - `persistGraphSnapshot` alone: ingest create, proposal approve, manual graph ops.
+ * - Graph + history together: use `coTransactGraphAndHistory` from `@/storage/transaction`
+ *   (auto-curate). Undo: `coTransactGraphUndo` in graphHistoryStore.
+ * See `MUST_CO_TRANSACT_MUTATION_PATHS` in transaction.ts.
+ */
 
 let graphMutationClock: (() => string) | null = null;
 
@@ -90,8 +102,120 @@ function newEdgeId(sourceId: string, targetId: string, relationType: string): st
   return `edge-${sourceId}-${targetId}-${relationType}-${Date.now()}`;
 }
 
-function findNode(snapshot: BrainGraphSnapshot, id: string): ConceptNode | undefined {
-  return snapshot.nodes.find((node) => node.id === id);
+function findConceptNode(
+  snapshot: BrainGraphSnapshot,
+  id: string,
+): ConceptNode | undefined {
+  const node = snapshot.nodes.find((item) => item.id === id);
+  if (!node || !isConceptNode(node)) {
+    return undefined;
+  }
+  return node;
+}
+
+function conceptNodeChanged(prev: ConceptNode, next: ConceptNode): boolean {
+  return (
+    prev.title !== next.title ||
+    prev.intro !== next.intro ||
+    prev.sourceUrl !== next.sourceUrl ||
+    !sourceRefsEqual(prev.sourceRefs ?? [], next.sourceRefs ?? []) ||
+    prev.archived !== next.archived ||
+    prev.archivedAt !== next.archivedAt ||
+    prev.supersedesNodeId !== next.supersedesNodeId ||
+    prev.updatedAt !== next.updatedAt ||
+    prev.salience !== next.salience ||
+    prev.lastTouchedAt !== next.lastTouchedAt
+  );
+}
+
+function projectNodeChanged(prev: ProjectNode, next: ProjectNode): boolean {
+  return (
+    prev.title !== next.title ||
+    prev.intro !== next.intro ||
+    !sourceRefsEqual(prev.sourceRefs ?? [], next.sourceRefs ?? []) ||
+    prev.archived !== next.archived ||
+    prev.updatedAt !== next.updatedAt
+  );
+}
+
+function sourceNodeChanged(prev: SourceNode, next: SourceNode): boolean {
+  return (
+    prev.title !== next.title ||
+    prev.intro !== next.intro ||
+    prev.url !== next.url ||
+    prev.kind !== next.kind ||
+    prev.worldItemId !== next.worldItemId ||
+    prev.ingestedAt !== next.ingestedAt ||
+    prev.archived !== next.archived ||
+    prev.updatedAt !== next.updatedAt
+  );
+}
+
+function brainNodeChanged(prev: BrainNode, next: BrainNode): boolean {
+  if (isProjectNode(prev) && isProjectNode(next)) {
+    return projectNodeChanged(prev, next);
+  }
+  if (isSourceNode(prev) && isSourceNode(next)) {
+    return sourceNodeChanged(prev, next);
+  }
+  if (isConceptNode(prev) && isConceptNode(next)) {
+    return conceptNodeChanged(prev, next);
+  }
+  return true;
+}
+
+async function deleteBrainNode(
+  storage: StorageProvider,
+  node: BrainNode,
+): Promise<void> {
+  if (isProjectNode(node)) {
+    await storage.deleteProject(node.id);
+    return;
+  }
+  if (isSourceNode(node)) {
+    await storage.deleteSource(node.id);
+    return;
+  }
+  if (isDecisionNode(node)) {
+    await storage.deleteDecision(node.id);
+    return;
+  }
+  if (isQuestionNode(node)) {
+    await storage.deleteQuestion(node.id);
+    return;
+  }
+  if (isSkillNode(node)) {
+    await storage.deleteSkill(node.id);
+    return;
+  }
+  await storage.deleteConcept(node.id);
+}
+
+async function saveBrainNode(
+  storage: StorageProvider,
+  node: BrainNode,
+): Promise<void> {
+  if (isProjectNode(node)) {
+    await storage.saveProject(node);
+    return;
+  }
+  if (isSourceNode(node)) {
+    await storage.saveSource(node);
+    return;
+  }
+  if (isDecisionNode(node)) {
+    await storage.saveDecision(node);
+    return;
+  }
+  if (isQuestionNode(node)) {
+    await storage.saveQuestion(node);
+    return;
+  }
+  if (isSkillNode(node)) {
+    await storage.saveSkill(node);
+    return;
+  }
+  await storage.saveConcept(node);
 }
 
 function touchNode(node: ConceptNode, timestamp: string): void {
@@ -172,7 +296,7 @@ export function applyGraphMutation(
     }
     case "attach": {
       const payload = readAttachPayload(proposal.payload);
-      const node = findNode({ nodes, edges }, payload.nodeId);
+      const node = findConceptNode({ nodes, edges }, payload.nodeId);
       if (!node) {
         throw new Error("attach 目标节点不存在");
       }
@@ -194,8 +318,8 @@ export function applyGraphMutation(
     }
     case "merge": {
       const payload = readMergePayload(proposal.payload);
-      const source = findNode({ nodes, edges }, payload.sourceNodeId);
-      const target = findNode({ nodes, edges }, payload.targetNodeId);
+      const source = findConceptNode({ nodes, edges }, payload.sourceNodeId);
+      const target = findConceptNode({ nodes, edges }, payload.targetNodeId);
       if (!source || !target) {
         throw new Error("merge 节点不存在");
       }
@@ -217,12 +341,12 @@ export function applyGraphMutation(
     }
     case "archive": {
       const payload = readArchivePayload(proposal.payload);
-      const node = findNode({ nodes, edges }, payload.nodeId);
+      const node = findConceptNode({ nodes, edges }, payload.nodeId);
       if (!node) {
         throw new Error("archive 目标节点不存在");
       }
       if (payload.migrateEdgesToNodeId) {
-        const target = findNode({ nodes, edges }, payload.migrateEdgesToNodeId);
+        const target = findConceptNode({ nodes, edges }, payload.migrateEdgesToNodeId);
         if (!target || target.archived) {
           throw new Error("archive 边迁移目标不存在");
         }
@@ -244,7 +368,7 @@ export function applyGraphMutation(
     }
     case "update": {
       const payload = readUpdatePayload(proposal.payload);
-      const node = findNode({ nodes, edges }, payload.nodeId);
+      const node = findConceptNode({ nodes, edges }, payload.nodeId);
       if (!node) {
         throw new Error("update 目标节点不存在");
       }
@@ -263,8 +387,8 @@ export function applyGraphMutation(
       break;
     }
     case "link": {      const payload = readLinkPayload(proposal.payload);
-      const source = findNode({ nodes, edges }, payload.sourceId);
-      const target = findNode({ nodes, edges }, payload.targetId);
+      const source = findConceptNode({ nodes, edges }, payload.sourceId);
+      const target = findConceptNode({ nodes, edges }, payload.targetId);
       if (!source || !target) {
         throw new Error("link 节点不存在");
       }
@@ -304,31 +428,20 @@ export async function persistGraphSnapshot(
 
   for (const node of before.nodes) {
     if (!afterNodeIds.has(node.id)) {
-      await storage.deleteConcept(node.id);
+      await deleteBrainNode(storage, node);
     }
   }
 
   for (const node of after.nodes) {
     const prev = beforeNodes.get(node.id);
-    if (
-      !prev ||
-      prev.title !== node.title ||
-      prev.intro !== node.intro ||
-      prev.sourceUrl !== node.sourceUrl ||
-      !sourceRefsEqual(prev.sourceRefs ?? [], node.sourceRefs ?? []) ||
-      prev.archived !== node.archived ||      prev.archivedAt !== node.archivedAt ||
-      prev.supersedesNodeId !== node.supersedesNodeId ||
-      prev.updatedAt !== node.updatedAt ||
-      prev.salience !== node.salience ||
-      prev.lastTouchedAt !== node.lastTouchedAt
-    ) {
-      await storage.saveConcept(node);
+    if (!prev || brainNodeChanged(prev, node)) {
+      await saveBrainNode(storage, node);
     }
   }
   for (const node of before.nodes) {
     const next = after.nodes.find((item) => item.id === node.id);
     if (next && next.archived && !node.archived) {
-      await storage.saveConcept(next);
+      await saveBrainNode(storage, next);
     }
   }
 
@@ -364,19 +477,8 @@ export async function persistGraphHistoryUndoSnapshot(
 
   for (const node of before.nodes) {
     const currentNode = current.nodes.find((item) => item.id === node.id);
-    if (
-      !currentNode ||
-      currentNode.title !== node.title ||
-      currentNode.intro !== node.intro ||
-      currentNode.sourceUrl !== node.sourceUrl ||
-      currentNode.archived !== node.archived ||
-      currentNode.archivedAt !== node.archivedAt ||
-      currentNode.supersedesNodeId !== node.supersedesNodeId ||
-      currentNode.updatedAt !== node.updatedAt ||
-      currentNode.salience !== node.salience ||
-      currentNode.lastTouchedAt !== node.lastTouchedAt
-    ) {
-      await storage.saveConcept(node);
+    if (!currentNode || brainNodeChanged(currentNode, node)) {
+      await saveBrainNode(storage, node);
     }
   }
 

@@ -2,6 +2,8 @@ import type { InterviewQuestion } from "@/domain/actions/interviewQuestion";
 import type { BrainGraphSnapshot } from "@/domain/graph";
 import type { NewsItem } from "@/domain/news";
 import type { UserProfile } from "@/domain/profile";
+import type { BriefingFeedback } from "@/domain/radar/briefingItem";
+import type { RadarSignal } from "@/domain/radar/radarSignal";
 
 /** V3 parses transcripts; V2 conductor consumes resolved commands. */
 export type IngestCommand = "ingest" | "skip" | "elaborate";
@@ -57,6 +59,10 @@ export interface ConversationContext {
   onboarding: OnboardingProgress;
   /** KOS-C3: in-flight interview pack cursor (session-only, no persist). */
   interviewSession?: InterviewSessionContext;
+  /** KP-05: briefing feedback + signals for elaboration depth resolution. */
+  briefingFeedbackByItemId?: Record<string, BriefingFeedback[]>;
+  briefingSignalsByItemId?: Record<string, RadarSignal[]>;
+  topicKeyByItemId?: Record<string, string>;
 }
 
 export interface Turn {

@@ -16,6 +16,7 @@ import {
   SHOWCASE_INGEST_CANDIDATE,
   SHOWCASE_NOW,
 } from "@/showcase/showcaseFixtures";
+import { isConceptNode, isProjectNode, nodeSourceRefs } from "@/domain/graph";
 import { setGraphMutationClockForTests } from "@/lib/graphMutations";
 
 describe("provenanceIngest integration", () => {
@@ -38,7 +39,11 @@ describe("provenanceIngest integration", () => {
     try {
       await storage.init();
       for (const node of SHOWCASE_GRAPH_SNAPSHOT.nodes) {
-        await storage.saveConcept(node);
+        if (isConceptNode(node)) {
+          await storage.saveConcept(node);
+        } else if (isProjectNode(node)) {
+          await storage.saveProject(node);
+        }
       }
 
       const brief = SHOWCASE_BRIEFING_ITEMS.find(
@@ -58,10 +63,12 @@ describe("provenanceIngest integration", () => {
       const graph = visibleGraph(await storage.loadGraph());
       const ingested = graph.nodes.find((node) => node.id === nodeId);
       expect(ingested).toBeDefined();
-      expect(ingested?.sourceRefs).toEqual(PROVENANCE_GRAPH_GOLDEN.sourceRefs);
-      expect(ingested?.updatedAt).toBe(PROVENANCE_GRAPH_GOLDEN.updatedAt);
-      expect(ingested?.intro).not.toBe(brief!.title);
-      expect(ingested?.intro).not.toBe(brief!.summary);
+      if (ingested && isConceptNode(ingested)) {
+        expect(ingested.sourceRefs).toEqual(PROVENANCE_GRAPH_GOLDEN.sourceRefs);
+        expect(ingested.updatedAt).toBe(PROVENANCE_GRAPH_GOLDEN.updatedAt);
+        expect(ingested.intro).not.toBe(brief!.title);
+        expect(ingested.intro).not.toBe(brief!.summary);
+      }
     } finally {
       cleanup();
     }
@@ -72,13 +79,17 @@ describe("provenanceIngest integration", () => {
     try {
       await storage.init();
       for (const node of SHOWCASE_GRAPH_SNAPSHOT.nodes) {
-        await storage.saveConcept(node);
+        if (isConceptNode(node)) {
+          await storage.saveConcept(node);
+        } else if (isProjectNode(node)) {
+          await storage.saveProject(node);
+        }
       }
 
       const before = await storage.loadGraphForDisplay();
       for (const node of before.nodes) {
         expect(
-          (node.sourceRefs ?? []).every((ref) => ref.worldItemId === undefined),
+          nodeSourceRefs(node).every((ref) => ref.worldItemId === undefined),
         ).toBe(true);
       }
     } finally {

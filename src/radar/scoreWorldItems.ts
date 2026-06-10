@@ -1,5 +1,6 @@
 import type { BrainGraphSnapshot } from "@/domain/graph";
 import type { UserProfile } from "@/domain/profile";
+import type { BriefingFeedback } from "@/domain/radar/briefingItem";
 import {
   assertRadarSignal,
   type RadarSignal,
@@ -8,12 +9,14 @@ import {
 } from "@/domain/radar/radarSignal";
 import type { WorldItem } from "@/domain/radar/worldItem";
 import { MockRelevanceScorer, type RelevanceScorer } from "@/radar/mockRelevanceScorer";
+import { applyBriefingFeedbackWithProfilePriority } from "@/radar/profileRerank";
 
 export interface ScoreWorldItemsInput {
   graph: BrainGraphSnapshot;
   profile: UserProfile;
   items: WorldItem[];
   scorer?: RelevanceScorer;
+  feedbackByItemId?: Record<string, BriefingFeedback[]>;
 }
 
 export function scoreWorldItems(input: ScoreWorldItemsInput): ScoreWorldItemsResult {
@@ -22,7 +25,13 @@ export function scoreWorldItems(input: ScoreWorldItemsInput): ScoreWorldItemsRes
     .map((item) => scorer.score({ graph: input.graph, profile: input.profile, item }))
     .map((entry) => normalizeScoredEntry(entry, input.graph));
 
-  const ranked = sortRanked(scored);
+  const ranked = sortRanked(
+    applyBriefingFeedbackWithProfilePriority(
+      scored,
+      input.profile,
+      input.feedbackByItemId ?? {},
+    ),
+  );
   return {
     ranked,
     signalsByItemId: Object.fromEntries(

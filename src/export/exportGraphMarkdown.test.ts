@@ -21,8 +21,10 @@ describe("exportGraphMarkdown", () => {
     const markdown = exportGraphMarkdown(shuffled, { exportedAt: SHOWCASE_NOW });
     const titles = [...markdown.matchAll(/^## (.+)$/gm)].map((match) => match[1]);
     expect(titles).toEqual([
+      "沉浸式语音伴侣",
       "AI Agent",
       "BERT",
+      "Brain MCP 只读",
       "LLM",
       "MCP",
       "RAG",

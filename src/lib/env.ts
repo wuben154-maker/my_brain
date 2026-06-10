@@ -7,6 +7,13 @@ export interface AppEnv {
   everMemOsUserId: string;
   domesticLlmApiKey: string;
   domesticLlmBaseUrl: string;
+  modelscopeApiKey: string;
+  modelscopeBaseUrl: string;
+  modelscopeLlmModel: string;
+  volcAppId: string;
+  volcAccessKey: string;
+  volcConnectId: string;
+  volcRealtimeModel: string;
 }
 
 export function readAppEnv(): AppEnv {
@@ -22,5 +29,15 @@ export function readAppEnv(): AppEnv {
       import.meta.env.VITE_EVERMEMOS_USER_ID ?? "my_brain_local",
     domesticLlmApiKey: import.meta.env.VITE_DOMESTIC_LLM_API_KEY ?? "",
     domesticLlmBaseUrl: import.meta.env.VITE_DOMESTIC_LLM_BASE_URL ?? "",
+    modelscopeApiKey: import.meta.env.VITE_MODELSCOPE_API_KEY ?? "",
+    modelscopeBaseUrl:
+      import.meta.env.VITE_MODELSCOPE_BASE_URL ??
+      "https://api-inference.modelscope.cn/v1",
+    modelscopeLlmModel:
+      import.meta.env.VITE_MODELSCOPE_LLM_MODEL ?? "Qwen/Qwen2.5-7B-Instruct",
+    volcAppId: import.meta.env.VITE_VOLC_APP_ID ?? "",
+    volcAccessKey: import.meta.env.VITE_VOLC_ACCESS_KEY ?? "",
+    volcConnectId: import.meta.env.VITE_VOLC_CONNECT_ID ?? "",
+    volcRealtimeModel: import.meta.env.VITE_VOLC_REALTIME_MODEL ?? "2.2.0.0",
   };
 }

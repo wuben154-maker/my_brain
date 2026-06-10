@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GraphMutationProposal } from "@/domain/graph";
+import { isConceptNode, type GraphMutationProposal } from "@/domain/graph";
 import type { NewsItem } from "@/domain/news";
 import { DEFAULT_USER_PROFILE } from "@/domain/profile";
 import { newsItemStatus } from "@/components/explore/newsItemStatus";
@@ -434,7 +434,9 @@ describe("Product invariants (AGENTS.md core)", () => {
       const node = after.nodes[0];
       expect(node?.title).toBe("RAG");
       expect(node?.intro.length).toBeGreaterThan(0);
-      expect(node?.sourceUrl).toBe("https://example.com/rag");
+      expect(node && isConceptNode(node) && node.sourceUrl).toBe(
+        "https://example.com/rag",
+      );
     });
 
     it("attach merges intro text into existing concept node", () => {

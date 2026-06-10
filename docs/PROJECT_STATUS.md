@@ -2,7 +2,7 @@
 
 > **读者**：给其他 AI 模型 / 新加入的开发者。读完本文应能回答：这是什么产品、架构怎么分层、目前做到哪、缺什么、从哪里继续改。
 >
-> **更新时间**：2026-06-04（与 `specs/README.md` 里程碑索引、`AGENTS.md` 对照；若二者冲突，以 **spec 头部状态 + 本报告「差距」节** 为准）。
+> **更新时间**：2026-06-10（与 `specs/README.md` 里程碑索引、`AGENTS.md` 对照；若二者冲突，以 **spec 头部状态 + 本报告「差距」节** 为准）。
 >
 > **更细的契约**：单功能见 `specs/*.md`；产品全文见 `PRODUCT.md`；架构 RFC 见 `AGENT.md`。
 
@@ -11,6 +11,24 @@
 ## 1. 一句话定义
 
 **my_brain** 是一个**语音优先、本地存储**的 AI 知识伴侣（v2 沉浸式星图）：帮用户追 AI 资讯与 GitHub 趋势，**语音确认入库**后由 AI **自动整理**图谱（merge/link/archive，可撤销），科幻星图 UI + 可打断语音。用得越久，画像越准。
+
+### 成熟度口径（KP-06 — 避免误读）
+
+| 标签 | 含义 |
+|------|------|
+| **default** | 正常启动无 flag 的主路径（Radar → ingest → curation → Review 入口） |
+| **harness-backed** | Vitest/regression 已覆盖；live API 或完整 UI 可能仍 partial |
+| **experimental** | `?showcase=1`、RSS flatten legacy fallback、Phase 6–8、受控外部写 |
+
+**spec 头部 ✅** 表示 harness/mock 契约落地，**不等于** default 产品已交付。复跑命令：[`docs/evals/README.md`](./evals/README.md)。
+
+### 默认体验 — 三条路径（与 README / ARCHITECTURE 一致）
+
+| 路径 | 触发 | 成熟度 |
+|------|------|--------|
+| **Radar 默认** | 无 query flag | **default** |
+| **Showcase 演示** | `?showcase=1` | **experimental** |
+| **RSS flatten legacy** | Radar/source 失败内部 fallback | **experimental** |
 
 ---
 
@@ -41,10 +59,10 @@
 | UI | React 18 + Vite + Tailwind；状态 Zustand |
 | 图谱可视化 | `react-force-graph-2d`（默认）+ `react-force-graph-3d` / three.js（G1 开关） |
 | 存储 | SQLite：`better-sqlite3`（Web 开发/Vite 插件）/ `@tauri-apps/plugin-sql`（桌面） |
-| 语音 | `VoiceProvider` → Mock / OpenAI Realtime |
-| LLM | `LlmProvider` → Mock（默认）/ OpenAI（fail-fast，未完整接入） |
+| 语音 | `VoiceProvider` → Mock / OpenAI Realtime / 豆包 Volc Realtime（skeleton） |
+| LLM | `LlmProvider` → Mock（默认）/ OpenAI（fail-fast）/ ModelScope OpenAI-compatible |
 | 记忆 | `MemoryProvider` → Mock（默认）/ EverMemOS REST sidecar |
-| 资讯 | `NewsSource` 插件（启动抓取 RSS + GitHub trending 等） |
+| 资讯 | `NewsSource` 插件（RSS 权威源 + GitHub trending + arXiv cs.AI；默认 demo，live env-gated） |
 
 **开发命令**（仓库根目录）：
 
@@ -146,13 +164,18 @@ src/
 
 ## 6. 当前运行形态（默认开发体验）
 
-| 能力 | 默认模式 | 说明 |
-|------|----------|------|
-| LLM | **mock** | 图谱提议、讲解、研究链可走通；不耗 API |
-| Memory | **mock** | 无 Docker 即可开发/CI |
-| Voice | **mock** 或 Realtime | 配 `VITE_OPENAI_API_KEY` 可走 Realtime WebSocket；barge-in 有实现与 mock 测 |
-| 存储 | **SQLite 本地** | Web dev 经 Vite 插件写 `better-sqlite3` |
-| 图谱变更 | **UI 确认** | 探索区逐条 confirm；收件箱逐条 approve；占位符 ID 经 `resolveProposalForApply` 解析 |
+| 能力 | 成熟度 | 默认模式 | 说明 |
+|------|--------|----------|------|
+| 启动 / Radar briefing | **default** | mock-first top 3 | 无 flag 主路径；见 KP-01 |
+| Showcase 演示 | **experimental** | `?showcase=1` | 固定脚本，非默认 |
+| RSS flatten legacy | **experimental** | 内部 fallback | 非主入口 |
+| LLM | **harness-backed** | **mock** | 图谱提议、讲解、研究链可走通；不耗 API |
+| Memory | **harness-backed** | **mock** | 无 Docker 即可开发/CI |
+| Voice | **default** / partial live | **mock** 或 Realtime | 配 `VITE_OPENAI_API_KEY` 可走 Realtime WebSocket |
+| 存储 | **default** | **SQLite 本地** | Web dev 经 Vite 插件写 `better-sqlite3` |
+| 图谱变更 | **default** | 语音确认 create + 自动 curation | V3 gate + V4 auto-curate + undo |
+| Weekly Review | **harness-backed** | companion shell | KP-03 主路径 harness |
+| CognitiveAction | **harness-backed** | draft-only | 不自动外部发布 |
 
 **环境变量**（见 `.env.example`）：`VITE_LLM_PROVIDER`、`VITE_MEMORY_PROVIDER`、`VITE_OPENAI_API_KEY`、`VITE_EVERMEMOS_*` 等。
 
@@ -170,7 +193,7 @@ src/
 | EverMemOS 真联机召回 | 适配器与契约已写；**CI/默认 dev 不依赖 sidecar** |
 | 串讲图谱同步高亮 | 部分视觉/token 有；**与语音强绑定的 walkthrough 未完整** |
 
-**结论**：仓库处于 **「spec 里程碑宽覆盖 + mock 路径可演示 + 测试 320+」**，而非 **「开箱即用、全 OpenAI、全语音的成品 MVP」**。
+**结论**：仓库处于 **「spec 里程碑宽覆盖 + harness 可回归 + mock 默认路径可演示」**，而非 **「开箱即用、全 OpenAI、全语音的成品 MVP」**。Eval 索引：[`docs/evals/`](./evals/README.md)。
 
 ---
 
@@ -223,6 +246,7 @@ src/
 |------|------|
 | `PRODUCT.md` | 产品 PRD、MVP 范围 |
 | `AGENT.md` | 架构、Agent 阶段、记忆 B 方案（注意 Status 段落可能滞后） |
+| `docs/evals/README.md` | 成熟度标签 + 五类 eval 验证命令（KP-06） |
 | `specs/README.md` | 里程碑索引 + 不变量 + 债务表 |
 | `specs/*.md` | 单功能工作单 |
 | `docs/VISUAL_FEEDBACK.md` | Playwright 截图回归 |

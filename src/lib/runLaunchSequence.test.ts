@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTempStorage } from "@/invariants/testStorage";
-import type { NewsItem } from "@/domain/news";
 import { RADAR_RANKING_GOLDEN } from "@/radar/radarRankingGolden";
 import { RADAR_ACTIVE_GOLDEN_COUNT } from "@/radar/worldSources/fixtureWorldSource";
 import { createShowcaseGraphSnapshot } from "@/showcase/showcaseFixtures";
@@ -12,18 +11,6 @@ import { useAppStore } from "@/stores/appStore";
 const storageRef = vi.hoisted(() => ({
   current: null as StorageProvider | null,
 }));
-
-const mockNewsItems: NewsItem[] = [
-  {
-    id: "n-boot-1",
-    category: "ai_news",
-    title: "Boot test headline",
-    summary: "Summary",
-    sourceName: "Mock RSS",
-    sourceUrl: "https://example.com/a",
-    publishedAt: null,
-  },
-];
 
 vi.mock("@/storage/createStorageProvider", () => ({
   createStorageProvider: () => {
@@ -48,19 +35,7 @@ vi.mock("@/providers", async (importOriginal) => {
         news: {
           list: () => providers.news.list(),
           fetchAll: async () => {
-            if (
-              typeof window !== "undefined" &&
-              window.location.search.includes("radar=1")
-            ) {
-              throw new Error("mock live source failure");
-            }
-            return [
-              {
-                sourceId: "mock",
-                sourceLabel: "Mock",
-                items: mockNewsItems,
-              },
-            ];
+            throw new Error("mock live source failure");
           },
         },
       };
@@ -122,10 +97,10 @@ describe("runLaunchSequence (V1)", () => {
     resetLaunchSequenceGuard();
   });
 
-  // newsQueue lives in appStore only (session-scoped); specs/README debt #4 — not persisted to SQLite.
-  it("migrates self_check → loading → companion with newsQueue", async () => {
+  it("migrates self_check → loading → companion with radar newsQueue", async () => {
     const { storage } = createTempStorage();
     storageRef.current = storage;
+    useGraphStore.getState().setGraph(createShowcaseGraphSnapshot());
 
     const launchPromise = runLaunchSequence();
     await Promise.resolve();
@@ -137,7 +112,8 @@ describe("runLaunchSequence (V1)", () => {
 
     const state = useAppStore.getState();
     expect(state.phase).toBe("companion");
-    expect(state.newsQueue.length).toBeGreaterThan(0);
+    expect(state.newsQueue.length).toBe(3);
+    expect(useBriefingStore.getState().todayItems).toHaveLength(3);
     expect(state.selfChecks.some((c) => c.id === "mic")).toBe(true);
     expect(state.selfChecks.some((c) => c.id === "storage")).toBe(true);
   });
@@ -181,7 +157,7 @@ describe("runLaunchSequence (V1)", () => {
     const state = useAppStore.getState();
     expect(state.phase).toBe("companion");
     const logs = state.bootLogs.join("\n");
-    expect(logs).toContain("OpenAI 密钥未配置");
+    expect(logs).toContain("Live API 密钥未配置");
     vi.unstubAllEnvs();
   });
 

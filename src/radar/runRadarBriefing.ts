@@ -8,7 +8,7 @@ import {
 import type { WorldItemStore } from "@/domain/radar/worldItemStore";
 import type { UserProfile } from "@/domain/profile";
 import type { AppProviders } from "@/providers";
-import { buildDailyBriefing } from "@/radar/selectDailyBriefing";
+import { selectDailyBriefing } from "@/radar/selectDailyBriefing";
 import { rankWorldItems } from "@/radar/scoreWorldItems";
 import { runWorldIngest } from "@/radar/runWorldIngest";
 import { RADAR_SHOWCASE_NOW } from "@/radar/worldSources/fixtureWorldSource";
@@ -54,12 +54,10 @@ export async function runRadarBriefing(
     graph: input.graph,
     profile: input.profile,
     items: ingest.activeItems,
-  });
-
-  const briefingItems = buildDailyBriefing({
-    ranked,
     feedbackByItemId: input.feedbackByItemId ?? {},
   });
+
+  const briefingItems = selectDailyBriefing(ranked, { max: 3 });
 
   return {
     store: ingest.store,

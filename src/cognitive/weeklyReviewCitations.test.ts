@@ -29,6 +29,19 @@ function buildFixtureReview() {
   });
 }
 
+describe("graphHistoryCitation", () => {
+  it("graph_changes section cites every history entry in the window", () => {
+    const review = buildFixtureReview();
+    const graphChanges = review.sections.find((s) => s.kind === "graph_changes");
+    expect(graphChanges).toBeDefined();
+    for (const entry of WEEKLY_REVIEW_FIXTURE_HISTORY) {
+      expect(graphChanges!.citationKeys).toContain(
+        citationKey("historyEntry", entry.id),
+      );
+    }
+  });
+});
+
 describe("weeklyReviewCitations", () => {
   it("every historyEntry citation exists in input history", () => {
     const review = buildFixtureReview();

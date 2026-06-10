@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { conceptNodes } from "@/domain/graph";
 import { buildGraphOutline, type OutlineTreeNode } from "@/lib/graphOutline";
 import { useGraphStore } from "@/stores/graphStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -76,7 +77,7 @@ export function MindmapOutline() {
   const nodes = useGraphStore((state) => state.nodes);
   const edges = useGraphStore((state) => state.edges);
   const forest = useMemo(
-    () => buildGraphOutline(nodes, edges),
+    () => buildGraphOutline(conceptNodes(nodes), edges),
     [nodes, edges],
   );
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());

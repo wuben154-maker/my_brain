@@ -1,4 +1,5 @@
-import type { BrainGraphSnapshot, ConceptNode, GraphEdge } from "@/domain/graph";
+import type { BrainGraphSnapshot, BrainNode, GraphEdge } from "@/domain/graph";
+import { conceptNodes, isConceptNode } from "@/domain/graph";
 import type { UserProfile } from "@/domain/profile";
 import {
   BRAIN_MCP_READ_TOOL_NAMES,
@@ -46,13 +47,13 @@ export const BRAIN_WRITE_TOOL_BLOCKLIST = [
 export type BrainReadonlyToolName = BrainMcpReadToolName;
 
 export interface BrainSearchResult {
-  nodes: ConceptNode[];
+  nodes: BrainNode[];
 }
 
 export interface BrainNeighborhoodResult {
   centerId: string;
   hops: number;
-  nodes: ConceptNode[];
+  nodes: BrainNode[];
   edges: GraphEdge[];
 }
 
@@ -74,7 +75,7 @@ function tokenize(text: string): string[] {
     .filter((part) => part.length > 1);
 }
 
-function scoreNode(node: ConceptNode, queryTokens: Set<string>): number {
+function scoreNode(node: BrainNode, queryTokens: Set<string>): number {
   const tokens = tokenize(`${node.title} ${node.intro}`);
   let overlap = 0;
   for (const token of tokens) {
@@ -85,7 +86,8 @@ function scoreNode(node: ConceptNode, queryTokens: Set<string>): number {
   if (overlap === 0) {
     return 0;
   }
-  return overlap * 2 + (node.salience ?? 1);
+  const salience = isConceptNode(node) ? (node.salience ?? 1) : 1;
+  return overlap * 2 + salience;
 }
 
 function clampLimit(limit: number): number {
@@ -135,7 +137,11 @@ export async function brainSearch(
   if (!trimmed) {
     return {
       nodes: [...graph.nodes]
-        .sort((a, b) => (b.salience ?? 1) - (a.salience ?? 1))
+        .sort((a, b) => {
+          const sa = isConceptNode(a) ? (a.salience ?? 1) : 1;
+          const sb = isConceptNode(b) ? (b.salience ?? 1) : 1;
+          return sb - sa;
+        })
         .slice(0, capped),
     };
   }
@@ -154,7 +160,7 @@ export async function brainSearch(
 export async function brainGetNode(
   nodeId: string,
   deps: BrainReadonlyDeps,
-): Promise<ConceptNode | null> {
+): Promise<BrainNode | null> {
   const id = nodeId.trim();
   if (!id) {
     return null;
@@ -210,14 +216,14 @@ export async function brainNeighborhood(
   );
   const nodes = nodeIds
     .map((id) => nodeById.get(id))
-    .filter((node): node is ConceptNode => node !== undefined);
+    .filter((node): node is BrainNode => node !== undefined);
 
   return { centerId, hops: cappedHops, nodes, edges };
 }
 
 export function brainOutline(graph: BrainGraphSnapshot): BrainOutlineEntry[] {
   const active = visibleGraph(graph);
-  return flattenOutline(buildGraphOutline(active.nodes, active.edges));
+  return flattenOutline(buildGraphOutline(conceptNodes(active.nodes), active.edges));
 }
 
 /** Sanitized profile text for external agents — no secrets or internal tuning. */

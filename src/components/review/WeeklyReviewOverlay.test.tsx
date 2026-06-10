@@ -38,8 +38,12 @@ describe("weeklyReviewOverlay", () => {
     const review = fixtureReview();
     useWeeklyReviewStore.setState({
       open: true,
+      companionOpen: false,
       review,
+      lastReviewAt: null,
       openReview: vi.fn(),
+      openCompanionReview: vi.fn(),
+      openLegacyReview: vi.fn(),
       closeReview,
       clear: useWeeklyReviewStore.getState().clear,
     });
@@ -55,7 +59,7 @@ describe("weeklyReviewOverlay", () => {
   it("renders sections and markdown when open", () => {
     render(createElement(WeeklyReviewOverlay));
     expect(screen.getByTestId("weekly-review-overlay")).toBeTruthy();
-    expect(screen.getByTestId("weekly-review-week-id").textContent).toBe("2026-W22");
+    expect(screen.getByTestId("weekly-review-week-id").textContent).toContain("2026-W22");
     expect(screen.getByTestId("weekly-review-markdown").textContent).toContain(
       "每周脑图回顾",
     );

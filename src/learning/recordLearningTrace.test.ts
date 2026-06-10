@@ -13,6 +13,7 @@ import {
   resetLearningTraceIdCounter,
   validateLearningTraceInput,
 } from "@/learning/recordLearningTrace";
+import type { StorageProvider } from "@/storage/types";
 import { SHOWCASE_BRIEFING_ITEMS } from "@/showcase/showcaseFixtures";
 
 describe("recordLearningTrace", () => {
@@ -83,7 +84,7 @@ describe("recordLearningTrace", () => {
   });
 
   it("falls back to memory when storage save fails", async () => {
-    const failingStorage = {
+    const failingStorage: StorageProvider = {
       init: async () => undefined,
       close: async () => undefined,
       loadGraph: async () => ({ nodes: [], edges: [] }),
@@ -111,6 +112,18 @@ describe("recordLearningTrace", () => {
       },
       listCognitiveActions: async () => [],
       saveCognitiveAction: async () => undefined,
+      listBriefingFeedback: async () => [],
+      saveBriefingFeedback: async () => undefined,
+      saveProject: async () => undefined,
+      deleteProject: async () => undefined,
+      saveSource: async () => undefined,
+      saveDecision: async () => undefined,
+      saveQuestion: async () => undefined,
+      saveSkill: async () => undefined,
+      deleteSource: async () => undefined,
+      deleteDecision: async () => undefined,
+      deleteQuestion: async () => undefined,
+      deleteSkill: async () => undefined,
     };
 
     await recordLearningTrace(

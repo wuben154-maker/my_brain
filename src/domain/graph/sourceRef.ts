@@ -16,6 +16,8 @@ export interface SourceRef {
   kind: SourceRefKind;
   worldItemId?: string;
   ingestedAt: string;
+  /** KP-10 — when set, points at a canonical Source graph node id. */
+  sourceNodeId?: string;
 }
 
 const SOURCE_REF_KINDS = new Set<SourceRefKind>([
@@ -67,11 +69,16 @@ export function normalizeSourceRef(raw: unknown): SourceRef | null {
     typeof record.worldItemId === "string" && record.worldItemId.trim().length > 0
       ? record.worldItemId.trim()
       : undefined;
+  const sourceNodeId =
+    typeof record.sourceNodeId === "string" && record.sourceNodeId.trim().length > 0
+      ? record.sourceNodeId.trim()
+      : undefined;
   return {
     url,
     title,
     kind: url === null ? "manual" : kind,
     ...(worldItemId ? { worldItemId } : {}),
+    ...(sourceNodeId ? { sourceNodeId } : {}),
     ingestedAt,
   };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BrainGraphSnapshot } from "@/domain/graph";
+import type { BrainGraphSnapshot, ConceptNode } from "@/domain/graph";
 import { DEFAULT_USER_PROFILE } from "@/domain/profile";
 import { autoCurate, type AutoCurateProposal } from "@/agent/curation/autoCurate";
 
@@ -14,7 +14,7 @@ function node(
   id: string,
   title: string,
   intro = "",
-): BrainGraphSnapshot["nodes"][number] {
+): ConceptNode {
   return {
     id,
     title,
@@ -192,5 +192,17 @@ describe("autoCurate", () => {
     expect(archive?.reasonCode).toBe("stale");
     expect(archive?.reasonDetail).toBe("超过 90 天未更新");
     expect(archive?.affectedNodeIds).toEqual(["stale"]);
+  });
+
+  it("never creates Source graph nodes", async () => {
+    const newNode = node("fresh-source-guard", "全新概念", "n");
+    const proposals = await autoCurate(
+      graph({ nodes: [newNode] }),
+      newNode,
+      DEFAULT_USER_PROFILE,
+      { stale: [] },
+    );
+    expect(proposals.every((p) => p.kind !== "create")).toBe(true);
+    expect(proposals.every((p) => p.payload?.nodeKind !== "source")).toBe(true);
   });
 });

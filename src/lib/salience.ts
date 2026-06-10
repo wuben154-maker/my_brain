@@ -1,4 +1,5 @@
 import type { BrainGraphSnapshot, ConceptNode } from "../domain/graph";
+import { isConceptNode } from "../domain/graph";
 
 export type SalienceEventKind =
   | "recall_hit"
@@ -100,7 +101,7 @@ export function rankLowSalienceCandidates(
   const maxSalience = options.maxSalience ?? 0.4;
 
   return snapshot.nodes
-    .filter((node) => !node.archived)
+    .filter((node): node is ConceptNode => isConceptNode(node) && !node.archived)
     .map((node) => ({
       node,
       salience: computeSalience(node, nowMs, events),

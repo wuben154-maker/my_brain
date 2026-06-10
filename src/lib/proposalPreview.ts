@@ -4,6 +4,7 @@ import type {
   GraphEdge,
   GraphMutationProposal,
 } from "@/domain/graph";
+import { isConceptNode } from "@/domain/graph";
 import {
   readAttachPayload,
   readArchivePayload,
@@ -36,7 +37,10 @@ function findNodeByTitle(
 ): ConceptNode | undefined {
   const norm = normalizeTitle(title);
   return graph.nodes.find(
-    (node) => !node.archived && normalizeTitle(node.title) === norm,
+    (node): node is ConceptNode =>
+      isConceptNode(node) &&
+      !node.archived &&
+      normalizeTitle(node.title) === norm,
   );
 }
 

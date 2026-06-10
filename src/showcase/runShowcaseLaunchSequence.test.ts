@@ -134,7 +134,7 @@ describe("runShowcaseLaunchSequence", () => {
 
     const display = await fixture.storage.loadGraphForDisplay();
     expect(display.nodes).toHaveLength(SHOWCASE_GRAPH_SNAPSHOT.nodes.length);
-    expect(visibleGraph(display).nodes).toHaveLength(6);
+    expect(visibleGraph(display).nodes).toHaveLength(8);
 
     fixture.cleanup();
   });

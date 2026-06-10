@@ -64,6 +64,22 @@ describe("providerConfigRecovery", () => {
       true,
     );
   });
+
+  it("modelscope mode without key degrades to mock with warning", async () => {
+    const { readLlmProviderMode } = await import("@/lib/llmProviderMode");
+    vi.mocked(readLlmProviderMode).mockReturnValue("modelscope");
+
+    const warnings: string[] = [];
+    const llm = createLlmProvider(
+      { openAiApiKey: "", modelscopeApiKey: "" },
+      { warn: (message) => warnings.push(message) },
+    );
+
+    expect(llm.id).toBe("mock-llm");
+    expect(warnings.some((line) => line.toLowerCase().includes("modelscope"))).toBe(
+      true,
+    );
+  });
 });
 
 describe("provider layer boundary scan", () => {

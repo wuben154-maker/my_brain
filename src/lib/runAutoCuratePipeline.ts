@@ -1,14 +1,12 @@
 import { autoCurate } from "@/agent/curation/autoCurate";
+import { isConceptNode } from "@/domain/graph";
 import { autoCurateForShowcase } from "@/showcase/showcaseFixtures";
 import { isShowcaseDemoMode } from "@/showcase/showcaseDemoMode";
 import type { GraphHistoryEntry } from "@/domain/graphHistory";
 import type { UserProfile } from "@/domain/profile";
 import { buildGraphHistoryEntry } from "@/lib/graphHistoryMeta";
-import {
-  applyGraphMutation,
-  persistGraphSnapshot,
-  visibleGraph,
-} from "@/lib/graphMutations";
+import { applyGraphMutation, visibleGraph } from "@/lib/graphMutations";
+import { coTransactGraphAndHistory } from "@/storage/transaction";
 import { syncDisplayGraph } from "@/lib/syncDisplayGraph";
 import type { LlmProvider } from "@/providers/llm/types";
 import type { StorageProvider } from "@/storage/types";
@@ -28,7 +26,7 @@ export async function runAutoCurateAfterIngest(
 ): Promise<GraphHistoryEntry[]> {
   const visible = await deps.storage.loadGraph();
   const newNode = visible.nodes.find((node) => node.id === newNodeId);
-  if (!newNode || newNode.archived) {
+  if (!newNode || newNode.archived || !isConceptNode(newNode)) {
     return [];
   }
 
@@ -50,9 +48,9 @@ export async function runAutoCurateAfterIngest(
     if (JSON.stringify(before) === JSON.stringify(after)) {
       continue;
     }
-    await persistGraphSnapshot(deps.storage, before, after);
     const entry = buildGraphHistoryEntry(proposal, before, after);
-    await historyStore.record(deps.storage, entry);
+    await coTransactGraphAndHistory(deps.storage, before, after, entry);
+    await historyStore.record(deps.storage, entry, { skipPersist: true });
     recorded.push(entry);
     working = after;
   }

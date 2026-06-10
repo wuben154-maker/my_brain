@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import type { BrainGraphSnapshot, GraphMutationProposal } from "@/domain/graph";
+import { nodeSourceUrl, type BrainGraphSnapshot, type GraphMutationProposal } from "@/domain/graph";
 
 import {
 
@@ -187,7 +187,7 @@ function normalizeGraphForCompare(snapshot: BrainGraphSnapshot) {
 
         intro: node.intro,
 
-        sourceUrl: node.sourceUrl,
+        sourceUrl: nodeSourceUrl(node),
 
         archived: node.archived,
 

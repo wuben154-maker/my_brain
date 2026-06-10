@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { BrainGraphSnapshot, ConceptNode, GraphEdge } from "@/domain/graph";
+import type { BrainGraphSnapshot, BrainNode, ConceptNode, GraphEdge } from "@/domain/graph";
 interface GraphState extends BrainGraphSnapshot {
   /** KOS-A2 star-light: focused ingest node (pulse target). */
   focusNodeId: string | null;
@@ -10,7 +10,7 @@ interface GraphState extends BrainGraphSnapshot {
   previewGhostEdges: GraphEdge[];
   selectedNodeId: string | null;
   setGraph: (snapshot: BrainGraphSnapshot) => void;
-  upsertNode: (node: ConceptNode) => void;
+  upsertNode: (node: BrainNode) => void;
   upsertEdge: (edge: GraphEdge) => void;
   setIngestStarLight: (nodeId: string) => void;
   clearIngestStarLight: () => void;

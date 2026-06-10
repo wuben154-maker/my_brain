@@ -1,5 +1,6 @@
 import { createCognitiveAction } from "@/actions/createCognitiveAction";
 import type { BrainGraphSnapshot, ConceptNode } from "@/domain/graph";
+import { isConceptNode, nodeSourceRefs } from "@/domain/graph";
 import type {
   CognitiveAction,
   CognitiveActionCitation,
@@ -91,7 +92,7 @@ const DUPLICATE_FIXTURE_IDS = new Set(
 function activeNodeMap(graph: BrainGraphSnapshot): Map<string, ConceptNode> {
   const map = new Map<string, ConceptNode>();
   for (const node of graph.nodes) {
-    if (!node.archived) {
+    if (!node.archived && isConceptNode(node)) {
       map.set(node.id, node);
     }
   }
@@ -101,7 +102,7 @@ function activeNodeMap(graph: BrainGraphSnapshot): Map<string, ConceptNode> {
 function ingestedWorldItemIds(graph: BrainGraphSnapshot): Set<string> {
   const ids = new Set<string>();
   for (const node of graph.nodes) {
-    for (const ref of node.sourceRefs ?? []) {
+    for (const ref of nodeSourceRefs(node)) {
       if (ref.worldItemId) {
         ids.add(ref.worldItemId);
       }

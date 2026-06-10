@@ -1,7 +1,19 @@
 import Database from "better-sqlite3";
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
-import type { BrainGraphSnapshot, ConceptNode, GraphEdge } from "../../domain/graph";
+import type {
+  BrainGraphSnapshot,
+  BrainNode,
+  ConceptNode,
+  GraphEdge,
+} from "../../domain/graph";
+import { isDecisionNode, isProjectNode, isQuestionNode, isSkillNode, isSourceNode, type QuestionStatus } from "../../domain/graph";
+import type { DecisionNode } from "../../domain/nodes/decisionNode";
+import type { ProjectNode } from "../../domain/nodes/projectNode";
+import type { QuestionNode } from "../../domain/nodes/questionNode";
+import type { SkillNode } from "../../domain/nodes/skillNode";
+import type { SourceNode } from "../../domain/nodes/sourceNode";
+import type { SourceRefKind } from "../../domain/graph/sourceRef";
 import { DEFAULT_USER_PROFILE, type UserProfile } from "../../domain/profile";
 import {
   parseProfileExtensionFields,
@@ -33,6 +45,8 @@ import {
   migrateConceptSourceRefsColumnsSqlite,
   migrateEdgeArchivedColumnSqlite,
   migrateLearningTracesTableSqlite,
+  migrateBriefingFeedbackTableSqlite,
+  applyGraphSchemaMigrationsSqlite,
 } from "../schemaMigrations";
 import {
   normalizeConceptProvenance,
@@ -48,6 +62,39 @@ import {
   prepareProposalUpsertRow,
   type StoredProposalRow,
 } from "../proposalPersistence";
+import {
+  briefingFeedbackToStoredRow,
+  LIST_BRIEFING_FEEDBACK_SQL,
+  mapStoredBriefingFeedbackRows,
+  type StoredBriefingFeedbackRow,
+} from "../briefingFeedbackRepo";
+import type { BriefingFeedback } from "../../domain/radar/briefingItem";
+
+function sqliteTableExists(db: Database.Database, name: string): boolean {
+  const row = db
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
+    .get(name) as { name: string } | undefined;
+  return row != null;
+}
+
+function parseStringArrayJson(json: string | null | undefined): string[] {
+  if (!json) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(json) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.map((item) => String(item).trim()).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function serializeStringArrayJson(values: string[]): string {
+  return JSON.stringify(values);
+}
 
 export interface BetterSqliteBackendOptions {
   dbPath: string;
@@ -78,6 +125,8 @@ export class BetterSqliteBackend {
     migrateCognitiveActionsMetadataColumnSqlite(this.db);
     migrateConceptSourceRefsColumnsSqlite(this.db);
     migrateEdgeArchivedColumnSqlite(this.db);
+    migrateBriefingFeedbackTableSqlite(this.db);
+    applyGraphSchemaMigrationsSqlite(this.db);
   }
 
   close(): void {
@@ -90,17 +139,17 @@ export class BetterSqliteBackend {
   }
 
   loadGraphForDisplay(): BrainGraphSnapshot {
-    const snapshot = this.loadAllConceptsAndEdges();
-    const conceptIds = new Set(snapshot.nodes.map((node) => node.id));
+    const snapshot = this.loadAllNodesAndEdges();
+    const nodeIds = new Set(snapshot.nodes.map((node) => node.id));
     return {
       nodes: snapshot.nodes,
-      edges: this.filterVisibleEdges(snapshot.edges, conceptIds),
+      edges: this.filterVisibleEdges(snapshot.edges, nodeIds),
     };
   }
 
-  private loadAllConceptsAndEdges(): BrainGraphSnapshot {
+  private loadAllNodesAndEdges(): BrainGraphSnapshot {
     const db = this.requireDb();
-    const nodes = db
+    const conceptRows = db
       .prepare(
         `SELECT id, title, intro, source_url AS sourceUrl, source_refs_json AS sourceRefsJson,
                 archived, created_at AS createdAt, updated_at AS updatedAt,
@@ -119,6 +168,82 @@ export class BetterSqliteBackend {
       }
     >;
 
+    const projectRows = sqliteTableExists(db, "projects")
+      ? (db
+          .prepare(
+            `SELECT id, title, intro, source_refs_json AS sourceRefsJson,
+                    archived, created_at AS createdAt, updated_at AS updatedAt
+             FROM projects`,
+          )
+          .all() as Array<
+          Omit<ProjectNode, "archived" | "sourceRefs" | "nodeKind"> & {
+            archived: number;
+            sourceRefsJson?: string | null;
+          }
+        >)
+      : [];
+
+    const sourceRows = sqliteTableExists(db, "sources")
+      ? (db
+          .prepare(
+            `SELECT id, title, intro, url, kind, world_item_id AS worldItemId,
+                    ingested_at AS ingestedAt, archived,
+                    created_at AS createdAt, updated_at AS updatedAt
+             FROM sources`,
+          )
+          .all() as Array<
+          Omit<SourceNode, "archived" | "nodeKind"> & { archived: number }
+        >)
+      : [];
+
+    const decisionRows = sqliteTableExists(db, "decisions")
+      ? (db
+          .prepare(
+            `SELECT id, title, rationale, alternatives_considered_json AS alternativesConsideredJson,
+                    source_refs_json AS sourceRefsJson, archived,
+                    created_at AS createdAt, updated_at AS updatedAt
+             FROM decisions`,
+          )
+          .all() as Array<
+          Omit<DecisionNode, "archived" | "sourceRefs" | "alternativesConsidered" | "nodeKind"> & {
+            archived: number;
+            alternativesConsideredJson?: string | null;
+            sourceRefsJson?: string | null;
+          }
+        >)
+      : [];
+
+    const questionRows = sqliteTableExists(db, "questions")
+      ? (db
+          .prepare(
+            `SELECT id, title, prompt, context, status, source_refs_json AS sourceRefsJson,
+                    archived, created_at AS createdAt, updated_at AS updatedAt
+             FROM questions`,
+          )
+          .all() as Array<
+          Omit<QuestionNode, "archived" | "sourceRefs" | "nodeKind"> & {
+            archived: number;
+            sourceRefsJson?: string | null;
+          }
+        >)
+      : [];
+
+    const skillRows = sqliteTableExists(db, "skills")
+      ? (db
+          .prepare(
+            `SELECT id, name, title, intro, proficiency, review_cadence AS reviewCadence,
+                    source_refs_json AS sourceRefsJson, archived,
+                    created_at AS createdAt, updated_at AS updatedAt
+             FROM skills`,
+          )
+          .all() as Array<
+          Omit<SkillNode, "archived" | "sourceRefs" | "nodeKind"> & {
+            archived: number;
+            sourceRefsJson?: string | null;
+          }
+        >)
+      : [];
+
     const edges = db
       .prepare(
         `SELECT id, source_id AS sourceId, target_id AS targetId,
@@ -129,42 +254,119 @@ export class BetterSqliteBackend {
       Omit<GraphEdge, "archived"> & { archived: number }
     >;
 
-    const conceptIds = new Set(nodes.map((node) => node.id));
+    const conceptNodes: BrainNode[] = conceptRows.map((row) =>
+      normalizeConceptProvenance(
+        normalizeConceptSalience({
+          ...row,
+          sourceRefs: parseSourceRefsJson(row.sourceRefsJson),
+          archived: row.archived === 1,
+          salience: row.salience ?? undefined,
+          lastTouchedAt: row.lastTouchedAt ?? undefined,
+          archivedAt: row.archivedAt ?? undefined,
+          supersedesNodeId: row.supersedesNodeId ?? undefined,
+        }),
+      ),
+    );
+
+    const projectNodes: BrainNode[] = projectRows.map((row) => ({
+      nodeKind: "project" as const,
+      id: row.id,
+      title: row.title,
+      intro: row.intro,
+      sourceRefs: parseSourceRefsJson(row.sourceRefsJson),
+      archived: row.archived === 1,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
+
+    const sourceNodes: BrainNode[] = sourceRows.map((row) => ({
+      nodeKind: "source" as const,
+      id: row.id,
+      title: row.title,
+      intro: row.intro,
+      url: row.url ?? null,
+      kind: row.kind as SourceRefKind,
+      ...(row.worldItemId ? { worldItemId: row.worldItemId } : {}),
+      ingestedAt: row.ingestedAt,
+      archived: row.archived === 1,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
+
+    const decisionNodes: BrainNode[] = decisionRows.map((row) => ({
+      nodeKind: "decision" as const,
+      id: row.id,
+      title: row.title,
+      intro: row.rationale,
+      rationale: row.rationale,
+      alternativesConsidered: parseStringArrayJson(row.alternativesConsideredJson),
+      sourceRefs: parseSourceRefsJson(row.sourceRefsJson),
+      archived: row.archived === 1,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
+
+    const questionNodes: BrainNode[] = questionRows.map((row) => ({
+      nodeKind: "question" as const,
+      id: row.id,
+      title: row.title,
+      intro: row.context || row.prompt,
+      prompt: row.prompt,
+      context: row.context,
+      status: row.status as QuestionStatus,
+      sourceRefs: parseSourceRefsJson(row.sourceRefsJson),
+      archived: row.archived === 1,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
+
+    const skillNodes: BrainNode[] = skillRows.map((row) => ({
+      nodeKind: "skill" as const,
+      id: row.id,
+      name: row.name,
+      title: row.title,
+      intro: row.intro,
+      proficiency: row.proficiency,
+      reviewCadence: row.reviewCadence,
+      sourceRefs: parseSourceRefsJson(row.sourceRefsJson),
+      archived: row.archived === 1,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
+
+    const nodes = [
+      ...conceptNodes,
+      ...projectNodes,
+      ...sourceNodes,
+      ...decisionNodes,
+      ...questionNodes,
+      ...skillNodes,
+    ];
+    const nodeIds = new Set(nodes.map((node) => node.id));
     const displayEdges = this.filterVisibleEdges(
       edges.map((row) => ({
         ...row,
         archived: row.archived === 1,
       })),
-      conceptIds,
+      nodeIds,
     );
 
-    return {
-      nodes: nodes.map((row) =>
-        normalizeConceptProvenance(
-          normalizeConceptSalience({
-            ...row,
-            sourceRefs: parseSourceRefsJson(row.sourceRefsJson),
-            archived: row.archived === 1,
-            salience: row.salience ?? undefined,
-            lastTouchedAt: row.lastTouchedAt ?? undefined,
-            archivedAt: row.archivedAt ?? undefined,
-            supersedesNodeId: row.supersedesNodeId ?? undefined,
-          }),
-        ),
-      ),
-      edges: displayEdges,
-    };
+    return { nodes, edges: displayEdges };
+  }
+
+  private loadAllConceptsAndEdges(): BrainGraphSnapshot {
+    return this.loadAllNodesAndEdges();
   }
 
   private filterVisibleEdges(
     edges: GraphEdge[],
-    conceptIds: Set<string>,
+    nodeIds: Set<string>,
   ): GraphEdge[] {
     return edges.filter(
       (edge) =>
         !edge.archived &&
-        conceptIds.has(edge.sourceId) &&
-        conceptIds.has(edge.targetId),
+        nodeIds.has(edge.sourceId) &&
+        nodeIds.has(edge.targetId),
     );
   }
 
@@ -212,7 +414,189 @@ export class BetterSqliteBackend {
     db.prepare("DELETE FROM concepts WHERE id = ?").run(conceptId);
   }
 
+  deleteProject(projectId: string): void {
+    const db = this.requireDb();
+    db.prepare("DELETE FROM edges WHERE source_id = ? OR target_id = ?").run(
+      projectId,
+      projectId,
+    );
+    db.prepare("DELETE FROM projects WHERE id = ?").run(projectId);
+  }
+
+  deleteSource(sourceId: string): void {
+    const db = this.requireDb();
+    db.prepare("DELETE FROM edges WHERE source_id = ? OR target_id = ?").run(
+      sourceId,
+      sourceId,
+    );
+    db.prepare("DELETE FROM sources WHERE id = ?").run(sourceId);
+  }
+
+  deleteDecision(decisionId: string): void {
+    const db = this.requireDb();
+    db.prepare("DELETE FROM edges WHERE source_id = ? OR target_id = ?").run(
+      decisionId,
+      decisionId,
+    );
+    db.prepare("DELETE FROM decisions WHERE id = ?").run(decisionId);
+  }
+
+  deleteQuestion(questionId: string): void {
+    const db = this.requireDb();
+    db.prepare("DELETE FROM edges WHERE source_id = ? OR target_id = ?").run(
+      questionId,
+      questionId,
+    );
+    db.prepare("DELETE FROM questions WHERE id = ?").run(questionId);
+  }
+
+  deleteSkill(skillId: string): void {
+    const db = this.requireDb();
+    db.prepare("DELETE FROM edges WHERE source_id = ? OR target_id = ?").run(
+      skillId,
+      skillId,
+    );
+    db.prepare("DELETE FROM skills WHERE id = ?").run(skillId);
+  }
+
+  saveProject(node: ProjectNode): void {
+    const db = this.requireDb();
+    db.prepare(
+      `INSERT INTO projects (id, title, intro, source_refs_json, archived, created_at, updated_at)
+       VALUES (@id, @title, @intro, @sourceRefsJson, @archived, @createdAt, @updatedAt)
+       ON CONFLICT(id) DO UPDATE SET
+         title = excluded.title,
+         intro = excluded.intro,
+         source_refs_json = excluded.source_refs_json,
+         archived = excluded.archived,
+         updated_at = excluded.updated_at`,
+    ).run({
+      id: node.id,
+      title: node.title,
+      intro: node.intro,
+      sourceRefsJson: serializeSourceRefsJson(node.sourceRefs ?? []),
+      archived: node.archived ? 1 : 0,
+      createdAt: node.createdAt,
+      updatedAt: node.updatedAt,
+    });
+  }
+
+  saveSource(node: SourceNode): void {
+    const db = this.requireDb();
+    db.prepare(
+      `INSERT INTO sources (id, title, intro, url, kind, world_item_id, ingested_at, archived, created_at, updated_at)
+       VALUES (@id, @title, @intro, @url, @kind, @worldItemId, @ingestedAt, @archived, @createdAt, @updatedAt)
+       ON CONFLICT(id) DO UPDATE SET
+         title = excluded.title,
+         intro = excluded.intro,
+         url = excluded.url,
+         kind = excluded.kind,
+         world_item_id = excluded.world_item_id,
+         ingested_at = excluded.ingested_at,
+         archived = excluded.archived,
+         updated_at = excluded.updated_at`,
+    ).run({
+      id: node.id,
+      title: node.title,
+      intro: node.intro,
+      url: node.url,
+      kind: node.kind,
+      worldItemId: node.worldItemId ?? null,
+      ingestedAt: node.ingestedAt,
+      archived: node.archived ? 1 : 0,
+      createdAt: node.createdAt,
+      updatedAt: node.updatedAt,
+    });
+  }
+
+  saveDecision(node: DecisionNode): void {
+    const db = this.requireDb();
+    db.prepare(
+      `INSERT INTO decisions (id, title, rationale, alternatives_considered_json, source_refs_json, archived, created_at, updated_at)
+       VALUES (@id, @title, @rationale, @alternativesConsideredJson, @sourceRefsJson, @archived, @createdAt, @updatedAt)
+       ON CONFLICT(id) DO UPDATE SET
+         title = excluded.title,
+         rationale = excluded.rationale,
+         alternatives_considered_json = excluded.alternatives_considered_json,
+         source_refs_json = excluded.source_refs_json,
+         archived = excluded.archived,
+         updated_at = excluded.updated_at`,
+    ).run({
+      id: node.id,
+      title: node.title,
+      rationale: node.rationale,
+      alternativesConsideredJson: serializeStringArrayJson(node.alternativesConsidered),
+      sourceRefsJson: serializeSourceRefsJson(node.sourceRefs ?? []),
+      archived: node.archived ? 1 : 0,
+      createdAt: node.createdAt,
+      updatedAt: node.updatedAt,
+    });
+  }
+
+  saveQuestion(node: QuestionNode): void {
+    const db = this.requireDb();
+    db.prepare(
+      `INSERT INTO questions (id, title, prompt, context, status, source_refs_json, archived, created_at, updated_at)
+       VALUES (@id, @title, @prompt, @context, @status, @sourceRefsJson, @archived, @createdAt, @updatedAt)
+       ON CONFLICT(id) DO UPDATE SET
+         title = excluded.title,
+         prompt = excluded.prompt,
+         context = excluded.context,
+         status = excluded.status,
+         source_refs_json = excluded.source_refs_json,
+         archived = excluded.archived,
+         updated_at = excluded.updated_at`,
+    ).run({
+      id: node.id,
+      title: node.title,
+      prompt: node.prompt,
+      context: node.context,
+      status: node.status,
+      sourceRefsJson: serializeSourceRefsJson(node.sourceRefs ?? []),
+      archived: node.archived ? 1 : 0,
+      createdAt: node.createdAt,
+      updatedAt: node.updatedAt,
+    });
+  }
+
+  saveSkill(node: SkillNode): void {
+    const db = this.requireDb();
+    db.prepare(
+      `INSERT INTO skills (id, name, title, intro, proficiency, review_cadence, source_refs_json, archived, created_at, updated_at)
+       VALUES (@id, @name, @title, @intro, @proficiency, @reviewCadence, @sourceRefsJson, @archived, @createdAt, @updatedAt)
+       ON CONFLICT(id) DO UPDATE SET
+         name = excluded.name,
+         title = excluded.title,
+         intro = excluded.intro,
+         proficiency = excluded.proficiency,
+         review_cadence = excluded.review_cadence,
+         source_refs_json = excluded.source_refs_json,
+         archived = excluded.archived,
+         updated_at = excluded.updated_at`,
+    ).run({
+      id: node.id,
+      name: node.name,
+      title: node.title,
+      intro: node.intro,
+      proficiency: node.proficiency,
+      reviewCadence: node.reviewCadence,
+      sourceRefsJson: serializeSourceRefsJson(node.sourceRefs ?? []),
+      archived: node.archived ? 1 : 0,
+      createdAt: node.createdAt,
+      updatedAt: node.updatedAt,
+    });
+  }
+
   saveConcept(node: ConceptNode): void {
+    if (
+      isProjectNode(node) ||
+      isSourceNode(node) ||
+      isDecisionNode(node) ||
+      isQuestionNode(node) ||
+      isSkillNode(node)
+    ) {
+      throw new Error("saveConcept called with non-concept node");
+    }
     const db = this.requireDb();
     db.prepare(
       `INSERT INTO concepts (id, title, intro, source_url, source_refs_json, archived, created_at, updated_at,
@@ -562,6 +946,43 @@ export class BetterSqliteBackend {
       action.status,
       action.createdAt,
     );
+  }
+
+  listBriefingFeedback(): BriefingFeedback[] {
+    const db = this.requireDb();
+    const rows = db.prepare(LIST_BRIEFING_FEEDBACK_SQL).all() as StoredBriefingFeedbackRow[];
+    return mapStoredBriefingFeedbackRows(rows);
+  }
+
+  saveBriefingFeedback(feedback: BriefingFeedback): void {
+    const db = this.requireDb();
+    const row = briefingFeedbackToStoredRow(feedback);
+    db.prepare(
+      `INSERT INTO briefing_feedback (id, world_item_id, kind, at)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         world_item_id = excluded.world_item_id,
+         kind = excluded.kind,
+         at = excluded.at`,
+    ).run(row.id, row.world_item_id, row.kind, row.at);
+  }
+
+  /** KP-07: scoped write transaction for graph + history co-persist. */
+  async runInTransaction<T>(fn: () => Promise<T>): Promise<T> {
+    const db = this.requireDb();
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      const result = await fn();
+      db.exec("COMMIT");
+      return result;
+    } catch (error) {
+      try {
+        db.exec("ROLLBACK");
+      } catch {
+        // ignore nested rollback failure
+      }
+      throw error;
+    }
   }
 
   private requireDb(): Database.Database {

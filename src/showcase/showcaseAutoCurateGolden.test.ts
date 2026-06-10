@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isConceptNode } from "@/domain/graph";
 import {
   SHOWCASE_AUTO_CURATE_GOLDEN,
   autoCurateForShowcase,
@@ -31,7 +32,11 @@ describe("showcaseAutoCurateGolden", () => {
 
   it("returns no proposals for non-showcase nodes", () => {
     const graph = createShowcaseGraphSnapshot();
-    const other = graph.nodes.find((n) => n.id === "demo-rag")!;
+    const other = graph.nodes.find((n) => n.id === "demo-rag");
+    expect(other).toBeDefined();
+    if (!other || !isConceptNode(other)) {
+      throw new Error("demo-rag should be a concept node");
+    }
     expect(autoCurateForShowcase(graph, other)).toEqual([]);
   });
 

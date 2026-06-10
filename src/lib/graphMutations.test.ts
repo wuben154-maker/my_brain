@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { BrainGraphSnapshot, GraphEdge, GraphMutationProposal } from "@/domain/graph";
+import { isConceptNode } from "@/domain/graph";
 import { readRepoSource } from "@/invariants/readRepoSource";
 import { createTempStorage } from "@/invariants/testStorage";
 import type { StorageProvider } from "@/storage/types";
@@ -125,9 +126,12 @@ describe("graphMutations", () => {
     const node = after.nodes.find((item) => item.id === "a");
     expect(node?.title).toBe("上下文窗口");
     expect(node?.intro).toBe("更新后的简介");
-    expect(node?.sourceUrl).toBe("https://example.com/context");
-    expect(node?.salience).toBeGreaterThan(1);
-    expect(node?.lastTouchedAt).toBeTruthy();
+    expect(isConceptNode(node!)).toBe(true);
+    if (isConceptNode(node!)) {
+      expect(node.sourceUrl).toBe("https://example.com/context");
+      expect(node.salience).toBeGreaterThan(1);
+      expect(node.lastTouchedAt).toBeTruthy();
+    }
   });
 
   it("archives node and migrates incident edges", () => {
@@ -305,8 +309,10 @@ describe("graphMutations", () => {
     });
     const archived = after.nodes.find((item) => item.id === "with-ref");
     expect(archived?.archived).toBe(true);
-    expect(archived?.sourceRefs).toHaveLength(1);
-    expect(archived?.sourceRefs?.[0]?.worldItemId).toBe("radar-wi-showcase-3");
+    if (archived && isConceptNode(archived)) {
+      expect(archived.sourceRefs).toHaveLength(1);
+      expect(archived.sourceRefs?.[0]?.worldItemId).toBe("radar-wi-showcase-3");
+    }
   });
 
   it("persistGraphHistoryUndoSnapshot never calls deleteEdge", () => {
@@ -415,7 +421,9 @@ describe("graphMutations", () => {
         ],
       };
       for (const node of current.nodes) {
-        await storage.saveConcept(node);
+        if (isConceptNode(node)) {
+          await storage.saveConcept(node);
+        }
       }
       for (const edge of current.edges) {
         await storage.saveEdge(edge);

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { GraphHistoryEntry } from "@/domain/graphHistory";
 import type { BrainGraphSnapshot } from "@/domain/graph";
-import { persistGraphHistoryUndoSnapshot } from "@/lib/graphMutations";
+import { coTransactGraphUndo } from "@/storage/transaction";
 import { syncDisplayGraph } from "@/lib/syncDisplayGraph";
 import type { StorageProvider } from "@/storage/types";
 import { useGraphStore } from "@/stores/graphStore";
@@ -15,7 +15,11 @@ interface GraphHistoryState {
   persistWarning: boolean;
   lastUndoError: string | null;
   load: (storage: StorageProvider) => Promise<void>;
-  record: (storage: StorageProvider, entry: GraphHistoryEntry) => Promise<void>;
+  record: (
+    storage: StorageProvider,
+    entry: GraphHistoryEntry,
+    options?: { skipPersist?: boolean },
+  ) => Promise<void>;
   undo: (
     storage: StorageProvider,
     mutationId: string,
@@ -38,12 +42,14 @@ export const useGraphHistoryStore = create<GraphHistoryState>((set, get) => ({
     const rows = await storage.listGraphHistory();
     set({ entries: rows, loaded: true });
   },
-  record: async (storage, entry) => {
+  record: async (storage, entry, options) => {
     let persistWarning = false;
-    try {
-      await storage.saveGraphHistoryEntry(entry);
-    } catch {
-      persistWarning = true;
+    if (!options?.skipPersist) {
+      try {
+        await storage.saveGraphHistoryEntry(entry);
+      } catch {
+        persistWarning = true;
+      }
     }
     set((state) => ({
       entries: [entry, ...state.entries],
@@ -59,8 +65,7 @@ export const useGraphHistoryStore = create<GraphHistoryState>((set, get) => ({
       return null;
     }
     const current = await storage.loadGraphForDisplay();
-    await persistGraphHistoryUndoSnapshot(storage, current, entry.before, entry.after);
-    await storage.setGraphHistoryUndone(mutationId);
+    await coTransactGraphUndo(storage, current, entry);
     await syncDisplayGraph(storage);
     const snapshot = await storage.loadGraphForDisplay();
     useGraphStore.getState().setGraph(snapshot);

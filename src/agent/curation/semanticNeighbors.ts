@@ -1,4 +1,5 @@
 import type { BrainGraphSnapshot, ConceptNode } from "@/domain/graph";
+import { isConceptNode } from "@/domain/graph";
 import type { EmbeddingProvider } from "@/providers/embedding/types";
 
 export interface SemanticPeerRank {
@@ -26,7 +27,8 @@ export async function rankSemanticPeers(
   opts?: { topK?: number; minScore?: number },
 ): Promise<SemanticPeerRank[]> {
   const peers = graph.nodes.filter(
-    (node) => !node.archived && node.id !== anchor.id,
+    (node): node is ConceptNode =>
+      isConceptNode(node) && !node.archived && node.id !== anchor.id,
   );
   if (peers.length === 0) {
     return [];

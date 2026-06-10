@@ -7,6 +7,7 @@ import type {
   GraphMutationProposal,
 
 } from "@/domain/graph";
+import { isConceptNode } from "@/domain/graph";
 
 import type { CurationReasonCode } from "@/domain/graphHistory";
 
@@ -108,7 +109,7 @@ function bestOverlapPeer(
 
   for (const node of graph.nodes) {
 
-    if (node.archived || node.id === newNode.id) {
+    if (node.archived || node.id === newNode.id || !isConceptNode(node)) {
 
       continue;
 

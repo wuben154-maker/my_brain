@@ -1,6 +1,7 @@
 import { readLlmProviderMode } from "@/lib/llmProviderMode";
 import { createDomesticLlmProvider } from "./llm/domesticMockLlmProvider";
 import { createMockLlmProvider } from "./llm/mockLlmProvider";
+import { createModelScopeLlmProvider } from "./llm/modelscopeLlmProvider";
 import { createOpenAiLlmProvider } from "./llm/openaiLlmProvider";
 import type { LlmProvider } from "./llm/types";
 import { isMissingApiKeyError } from "./providerConfigError";
@@ -8,6 +9,9 @@ import type { CreateAppProvidersOptions, ProviderEnv } from "./providerTypes";
 
 export const MISSING_API_KEY_FALLBACK_WARNING =
   "[my-brain] domestic-mock LLM 缺少 API Key，已降级为 mock LLM";
+
+export const MODELSCOPE_MISSING_KEY_FALLBACK_WARNING =
+  "[my-brain] modelscope LLM 缺少 API Key，已降级为 mock LLM";
 
 export type ResolveLlmProviderOptions = CreateAppProvidersOptions;
 
@@ -19,6 +23,14 @@ export function createConfiguredLlmProvider(env: ProviderEnv): LlmProvider {
     return createDomesticLlmProvider({
       apiKey: env.domesticLlmApiKey,
       baseUrl: env.domesticLlmBaseUrl,
+    });
+  }
+
+  if (mode === "modelscope") {
+    return createModelScopeLlmProvider({
+      apiKey: env.modelscopeApiKey,
+      baseUrl: env.modelscopeBaseUrl,
+      model: env.modelscopeLlmModel,
     });
   }
 
@@ -52,11 +64,20 @@ export function resolveLlmProviderWithFallback(
     return createMockLlmProvider();
   }
 
+  if (mode === "modelscope" && !env.modelscopeApiKey?.trim()) {
+    warn(MODELSCOPE_MISSING_KEY_FALLBACK_WARNING);
+    return createMockLlmProvider();
+  }
+
   try {
     return createConfiguredLlmProvider(env);
   } catch (error) {
     if (isMissingApiKeyError(error)) {
-      warn(MISSING_API_KEY_FALLBACK_WARNING);
+      warn(
+        mode === "modelscope"
+          ? MODELSCOPE_MISSING_KEY_FALLBACK_WARNING
+          : MISSING_API_KEY_FALLBACK_WARNING,
+      );
       return createMockLlmProvider();
     }
     throw error;

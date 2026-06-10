@@ -18,11 +18,13 @@ import { visibleGraph } from "@/lib/graphMutations";
 
 describe("showcaseFixtures", () => {
   it("exports stable graph snapshot with frozen timestamp", () => {
-    expect(SHOWCASE_GRAPH_SNAPSHOT.nodes).toHaveLength(7);
-    expect(SHOWCASE_GRAPH_SNAPSHOT.edges).toHaveLength(5);
+    expect(SHOWCASE_GRAPH_SNAPSHOT.nodes).toHaveLength(9);
+    expect(SHOWCASE_GRAPH_SNAPSHOT.edges).toHaveLength(7);
     for (const node of SHOWCASE_GRAPH_SNAPSHOT.nodes) {
-      expect(node.createdAt).toBe(SHOWCASE_NOW);
       expect(node.updatedAt).toBe(SHOWCASE_NOW);
+      if ("createdAt" in node) {
+        expect(node.createdAt).toBe(SHOWCASE_NOW);
+      }
     }
     expect(JSON.stringify(SHOWCASE_GRAPH_SNAPSHOT)).toMatchSnapshot();
   });
@@ -33,8 +35,8 @@ describe("showcaseFixtures", () => {
     expect(clone).not.toBe(SHOWCASE_GRAPH_SNAPSHOT);
   });
 
-  it("exposes six visible nodes (demo-bert archived)", () => {
-    expect(countShowcaseVisibleNodes()).toBe(6);
+  it("exposes eight visible nodes (demo-bert archived; two projects visible)", () => {
+    expect(countShowcaseVisibleNodes()).toBe(8);
     const bert = SHOWCASE_GRAPH_SNAPSHOT.nodes.find((n) => n.id === "demo-bert");
     expect(bert?.archived).toBe(true);
     expect(visibleGraph(SHOWCASE_GRAPH_SNAPSHOT).nodes.map((n) => n.id)).not.toContain(

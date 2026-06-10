@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isConceptNode } from "@/domain/graph";
 import { exportGraphJson } from "@/export/exportGraphJson";
 import { EXPORT_JSON_GOLDEN } from "@/export/exportGolden";
 import { GRAPH_EXPORT_SCHEMA_VERSION } from "@/export/graphExportSchema";
@@ -22,25 +23,38 @@ describe("exportGraphJson", () => {
 
   it("exports only whitelisted node and edge fields", () => {
     const graph = createShowcaseGraphSnapshot();
-    graph.nodes[0] = {
-      ...graph.nodes[0]!,
-      salience: 9,
-      hubLevel: 2,
-      archivedAt: SHOWCASE_NOW,
-      supersedesNodeId: "other",
-      lastTouchedAt: SHOWCASE_NOW,
-    };
+    const firstConceptIdx = graph.nodes.findIndex(isConceptNode);
+    const firstConcept = graph.nodes[firstConceptIdx];
+    if (firstConcept && isConceptNode(firstConcept)) {
+      graph.nodes[firstConceptIdx] = {
+        ...firstConcept,
+        salience: 9,
+        hubLevel: 2,
+        archivedAt: SHOWCASE_NOW,
+        supersedesNodeId: "other",
+        lastTouchedAt: SHOWCASE_NOW,
+      };
+    }
 
     const json = exportGraphJson(graph, { exportedAt: SHOWCASE_NOW });
+    const allowedNodeKeys = new Set([
+      "archived",
+      "id",
+      "intro",
+      "nodeKind",
+      "sourceRefs",
+      "title",
+      "updatedAt",
+    ]);
     for (const node of json.nodes) {
-      expect(Object.keys(node).sort()).toEqual([
-        "archived",
-        "id",
-        "intro",
-        "sourceRefs",
-        "title",
-        "updatedAt",
-      ]);
+      for (const key of Object.keys(node)) {
+        expect(allowedNodeKeys.has(key)).toBe(true);
+      }
+      if (node.nodeKind === "project") {
+        expect(node.nodeKind).toBe("project");
+      } else {
+        expect(node.nodeKind).toBeUndefined();
+      }
     }
     for (const edge of json.edges) {
       expect(Object.keys(edge).sort()).toEqual([

@@ -8,6 +8,15 @@
 - **不移动** 已有 `specs/KOS-*.md`、`specs/V*.md` 等平铺 spec；历史链接保持有效。
 - KP 系列是 **产品化执行层**：在 KOS-B3（daily-briefing）、KOS-D3（weekly-brain-review）等已实现 harness 之上，定义 **默认入口、UI contract、主路径 E2E、H5-storage-transactions gate、总验收门**。
 - 实现 KP 时 **复用** 已有 domain/store/test，不重写 ranking/ingest/curation 内核。
+- **成熟度文档**（KP-06）：[`docs/evals/README.md`](../../docs/evals/README.md) — 区分 **default / harness-backed / experimental**；spec ✅ ≠ default 已交付。
+
+## 成熟度口径（KP-06）
+
+| 标签 | 含义 |
+|------|------|
+| **default** | 无 flag 正常启动主路径（Radar mock-first top 3 → V3 ingest → V4 curation/undo） |
+| **harness-backed** | Vitest/regression 覆盖；UI 或 live API 可能 partial（Weekly Review、profile loop、Action drafts） |
+| **experimental** | `?showcase=1`、RSS flatten legacy fallback、Phase 6–8、KP-15 受控外部写 |
 
 ## 默认体验裁定（全系列硬约束）
 
@@ -36,7 +45,7 @@
 | 4 | [KP-03-weekly-review-mainflow](./KP-03-weekly-review-mainflow.md) | `weekly-review-mainflow` | 3 | KP-00, KOS-D3 | planned | Weekly Review 主路径入口；绑定 graph history |
 | 5 | [KP-04-feedback-persistence](./KP-04-feedback-persistence.md) | `feedback-persistence` | 2 | KP-01, KOS-B3 | planned | feedback 持久化并影响下一轮 ranking |
 | 6 | [KP-05-profile-teaching-loop](./KP-05-profile-teaching-loop.md) | `profile-teaching-loop` | 2 | KP-04, KOS-C2 | planned | 画像修正 + teaching depth 可见闭环 |
-| 7 | [KP-06-evals-docs](./KP-06-evals-docs.md) | `evals-docs` | 4 | KP-01–05 | planned | `docs/evals/` + 成熟度/默认体验文档口径 |
+| 7 | [KP-06-evals-docs](./KP-06-evals-docs.md) | `evals-docs` | 4 | KP-01–05 | planned | [`docs/evals/`](../../docs/evals/README.md) + 成熟度/默认体验文档口径 |
 | 8 | [KP-07-storage-transaction-gate](./KP-07-storage-transaction-gate.md) | `storage-transaction-gate` | 4.5 | H5 债务；可与 KP-06 并行 | planned | graph+history 原子性 + 迁移框架；**阻塞 KP-08** |
 | 9 | [KP-08-project-node-minimal](./KP-08-project-node-minimal.md) | `project-node-minimal` | 5 | KP-07, KOS-E2 | planned | 最小 `Project` 节点；Phase 6 不重复 |
 | 10 | [KP-09-phase-1-5-acceptance-gate](./KP-09-phase-1-5-acceptance-gate.md) | `phase-1-5-gate` | gate | KP-00–08 | planned | 主路径 E2E + dogfood 质量 + 边界；PASS 才进 Phase 6–8 |
@@ -85,7 +94,7 @@ KP-00（第一步，阻塞后续）
 | KP-00, KP-01, KP-03 | 必须 `/plan-design-review` | `design-review` + `qa` 或 companion visual smoke |
 | KP-02, KP-05, KP-08, KP-10–15（有 UI） | 视改动 `/plan-design-review` | `design-review` + `qa` |
 | KP-04（仅 store） | — | 无 UI 则 storage/integration test |
-| KP-06, KP-07 | — | docs/storage tests |
+| KP-06, KP-07 | — | docs/storage tests · [`docs/evals/README.md`](../../docs/evals/README.md) |
 | KP-09 | — | `spec-verifier` + `spec-acceptance-review` |
 | KP-14, KP-15 | 信任边界 UI | **必须**重点 `design-review` + `qa` |
 

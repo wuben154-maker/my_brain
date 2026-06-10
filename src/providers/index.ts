@@ -2,6 +2,10 @@ import { OpenAiRealtimeVoiceProvider } from "./voice/openaiRealtimeVoiceProvider
 
 import { MockVoiceProvider } from "./voice/mockVoiceProvider";
 
+import { VolcengineRealtimeVoiceProvider } from "./voice/volcengineRealtimeVoiceProvider";
+
+import { ArxivNewsSource } from "./news/arxivNewsSource";
+
 import { GitHubTrendingNewsSource } from "./news/githubTrendingSource";
 
 import { RssNewsSource } from "./news/rssNewsSource";
@@ -55,13 +59,18 @@ export interface AppProviders {
 
 
 export function createVoiceProvider(options: CreateAppProvidersOptions = {}): VoiceProvider {
+  if (options.forceMock) {
+    return new MockVoiceProvider();
+  }
 
-  return !options.forceMock && readVoiceProviderMode() === "openai-realtime"
-
-    ? new OpenAiRealtimeVoiceProvider()
-
-    : new MockVoiceProvider();
-
+  const mode = readVoiceProviderMode();
+  if (mode === "openai-realtime") {
+    return new OpenAiRealtimeVoiceProvider();
+  }
+  if (mode === "volc-realtime") {
+    return new VolcengineRealtimeVoiceProvider();
+  }
+  return new MockVoiceProvider();
 }
 
 
@@ -116,6 +125,8 @@ export function createAppProviders(
 
       new GitHubTrendingNewsSource(),
 
+      new ArxivNewsSource(),
+
     ]),
 
     memory: createMemoryProvider({
@@ -150,6 +161,26 @@ export {
 
 export {
 
+  ModelScopeLlmProvider,
+
+  createModelScopeLlmProvider,
+
+  DEFAULT_MODELSCOPE_BASE_URL,
+
+  DEFAULT_MODELSCOPE_MODEL,
+
+} from "./llm/modelscopeLlmProvider";
+
+export {
+
+  VolcengineRealtimeVoiceProvider,
+
+  createVolcengineRealtimeVoiceProvider,
+
+} from "./voice/volcengineRealtimeVoiceProvider";
+
+export {
+
   ProviderConfigError,
 
   isMissingApiKeyError,
@@ -165,6 +196,8 @@ export {
   resolveLlmProviderWithFallback,
 
   MISSING_API_KEY_FALLBACK_WARNING,
+
+  MODELSCOPE_MISSING_KEY_FALLBACK_WARNING,
 
 } from "./providerConfigRecovery";
 

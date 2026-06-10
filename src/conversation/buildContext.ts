@@ -16,6 +16,8 @@ import { DEFAULT_ONBOARDING } from "@/conversation/types";
 import type { NewsItem } from "@/domain/news";
 import type { UserProfile } from "@/domain/profile";
 import type { BrainGraphSnapshot } from "@/domain/graph";
+import type { BriefingFeedback } from "@/domain/radar/briefingItem";
+import type { RadarSignal } from "@/domain/radar/radarSignal";
 
 export function shouldActivateOnboarding(
   graph: BrainGraphSnapshot,
@@ -61,6 +63,9 @@ export function buildConversationContext(input: {
   highlightNodeIds?: string[];
   working?: WorkingContext;
   interviewSession?: InterviewSessionContext;
+  briefingFeedbackByItemId?: Record<string, BriefingFeedback[]>;
+  briefingSignalsByItemId?: Record<string, RadarSignal[]>;
+  topicKeyByItemId?: Record<string, string>;
 }): ConversationContext {
   const onboarding = resolveOnboarding(
     input.graph,
@@ -117,6 +122,9 @@ export function buildConversationContext(input: {
     newsCursor: input.newsCursor,
     onboarding,
     interviewSession: input.interviewSession,
+    briefingFeedbackByItemId: input.briefingFeedbackByItemId,
+    briefingSignalsByItemId: input.briefingSignalsByItemId,
+    topicKeyByItemId: input.topicKeyByItemId,
     ...tiered,
   };
 }

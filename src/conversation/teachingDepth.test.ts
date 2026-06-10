@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_USER_PROFILE } from "@/domain/profile";
 import { RAG_BASIC_DEFINITION_SUBSTRING } from "@/domain/profile/userProfile";
 import {
+  buildProfileTeachingRationale,
   buildTeachingTurn,
+  profileBaseElaborationDepth,
   teachingTurnIncludesBasicDefinition,
 } from "@/conversation/teachingDepth";
 
@@ -30,5 +32,35 @@ describe("teachingDepth", () => {
     const text = buildTeachingTurn("demo-rag", profile);
     expect(teachingTurnIncludesBasicDefinition(text)).toBe(false);
     expect(text).toContain("架构取舍");
+  });
+
+  it("buildProfileTeachingRationale includes signal and profile summary", () => {
+    const lines = buildProfileTeachingRationale(DEFAULT_USER_PROFILE, {
+      worldItemId: "radar-wi-rel-1",
+      reasonCode: "project_adjacent",
+      explanation: "涉及实时语音。",
+      linkedNodeIds: ["demo-agent"],
+      score: 0.9,
+    });
+    expect(lines.some((line) => line.includes("推荐依据"))).toBe(true);
+    expect(lines.some((line) => line.includes("RAG 理解"))).toBe(true);
+  });
+
+  it("profileBaseElaborationDepth increases with understanding level", () => {
+    const unfamiliar = profileBaseElaborationDepth(
+      {
+        ...DEFAULT_USER_PROFILE,
+        understanding: { "demo-rag": "unfamiliar" },
+      },
+      "demo-rag",
+    );
+    const canExplain = profileBaseElaborationDepth(
+      {
+        ...DEFAULT_USER_PROFILE,
+        understanding: { "demo-rag": "can_explain" },
+      },
+      "demo-rag",
+    );
+    expect(canExplain).toBeGreaterThan(unfamiliar);
   });
 });

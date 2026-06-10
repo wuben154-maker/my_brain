@@ -10,6 +10,7 @@ import { GraphMinimap, type MinimapNode } from "@/components/brain/GraphMinimap"
 import { GraphZoomControls } from "@/components/brain/GraphZoomControls";
 import { NodeHoverCard } from "@/components/brain/NodeHoverCard";
 import type { RelationType } from "@/domain/graph";
+import { isConceptNode, isDecisionNode, isProjectNode, isQuestionNode, isSkillNode, isSourceNode, isStarMapAuxiliaryNode } from "@/domain/graph";
 import {
   clusterColorForNodeId,
   graphAccentCyan,
@@ -50,6 +51,7 @@ type GraphDatumNode = {
   salienceAlpha: number;
   previewGhost?: boolean;
   hubLevel?: 1 | 2;
+  nodeKind?: "concept" | "project" | "source" | "decision" | "question" | "skill";
   fx?: number;
   fy?: number;
 };
@@ -143,7 +145,9 @@ export function BrainGraphView(props: BrainGraphViewProps = {}) {
   const graphData = useMemo(
     () => ({
       nodes: [
-        ...nodes.map((node) => {
+        ...nodes
+          .filter((node) => !isStarMapAuxiliaryNode(node))
+          .map((node) => {
           const pinned = pinGraphLayout
             ? VISUAL_GRAPH_PINNED_POSITIONS[node.id]
             : undefined;
@@ -152,8 +156,19 @@ export function BrainGraphView(props: BrainGraphViewProps = {}) {
             title: node.title,
             intro: node.intro,
             archived: node.archived,
-            salienceAlpha: salienceVisualAlpha(node),
-            hubLevel: node.hubLevel,
+            salienceAlpha: isConceptNode(node) ? salienceVisualAlpha(node) : 1,
+            hubLevel: isConceptNode(node) ? node.hubLevel : undefined,
+            nodeKind: isProjectNode(node)
+              ? "project"
+              : isDecisionNode(node)
+                ? "decision"
+                : isQuestionNode(node)
+                  ? "question"
+                  : isSkillNode(node)
+                    ? "skill"
+                    : isSourceNode(node)
+                      ? "source"
+                      : "concept",
             ...(pinned ? { fx: pinned.x, fy: pinned.y } : {}),
           };
           return graphNode;
@@ -598,17 +613,26 @@ export function BrainGraphView(props: BrainGraphViewProps = {}) {
               }
 
               ctx.beginPath();
-              ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
-              ctx.fillStyle = isCompanionHub
-                ? "#e8f7ff"
-                : emphasis && !graphNode.archived
-                  ? "#e0f2fe"
-                  : hubLevel === 2
-                    ? "#f0f9ff"
-                    : clusterColor;
+              if (graphNode.nodeKind === "project") {
+                ctx.moveTo(x, y - radius);
+                ctx.lineTo(x + radius, y);
+                ctx.lineTo(x, y + radius);
+                ctx.lineTo(x - radius, y);
+                ctx.closePath();
+                ctx.fillStyle = emphasis && !graphNode.archived ? "#fde68a" : "#fbbf24";
+              } else {
+                ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
+                ctx.fillStyle = isCompanionHub
+                  ? "#e8f7ff"
+                  : emphasis && !graphNode.archived
+                    ? "#e0f2fe"
+                    : hubLevel === 2
+                      ? "#f0f9ff"
+                      : clusterColor;
+              }
               ctx.fill();
 
-              if (!graphNode.archived && hubLevel !== undefined) {
+              if (!graphNode.archived && hubLevel !== undefined && graphNode.nodeKind !== "project") {
                 const ringPad = isCompanionHub ? 10 : hubLevel === 2 ? 5 : 3.5;
                 const ringCount = isCompanionHub
                   ? companionLiveEnhance

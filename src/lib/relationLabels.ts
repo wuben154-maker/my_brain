@@ -5,6 +5,8 @@ const RELATION_LABELS: Record<RelationType, string> = {
   depends_on: "依赖于",
   replaces: "取代",
   related: "相关",
+  used_in: "用于",
+  decided_for: "决策于",
 };
 
 export function relationTypeLabel(relationType: RelationType): string {

@@ -53,7 +53,7 @@ describe("buildWeeklyBrainReview", () => {
     });
 
     const graphChanges = review.sections.find((s) => s.kind === "graph_changes");
-    expect(graphChanges?.body).toContain("本周无结构变更");
+    expect(graphChanges?.body).toContain("回顾窗口内无结构变更");
 
     const merged = review.sections.find((s) => s.kind === "merged_archived");
     expect(merged).toBeUndefined();

@@ -16,13 +16,24 @@ interface StorageBackend {
   listGraphHistory(): unknown;
   listLearningTraces(): unknown;
   listCognitiveActions(): unknown;
+  listBriefingFeedback(): unknown;
   loadGraphForDisplay(): unknown;
   loadUserProfile(): unknown;
   listPendingProposals(): unknown;
   getAppMeta(key: string): unknown;
   loadAgentUsage(usageDate: string): unknown;
   saveConcept(body: unknown): void;
+  saveProject(body: unknown): void;
+  saveSource(body: unknown): void;
+  saveDecision(body: unknown): void;
+  saveQuestion(body: unknown): void;
+  saveSkill(body: unknown): void;
   deleteConcept(id: string): void;
+  deleteProject(id: string): void;
+  deleteSource(id: string): void;
+  deleteDecision(id: string): void;
+  deleteQuestion(id: string): void;
+  deleteSkill(id: string): void;
   saveEdge(body: unknown): void;
   deleteEdge(id: string): void;
   syncEdgesSnapshot(body: unknown): void;
@@ -34,6 +45,7 @@ interface StorageBackend {
   setGraphHistoryUndone(id: string): void;
   saveLearningTrace(body: unknown): void;
   saveCognitiveAction(body: unknown): void;
+  saveBriefingFeedback(body: unknown): void;
   addAgentUsage(usageDate: string, tokens: number): void;
 }
 
@@ -122,6 +134,11 @@ export function myBrainStoragePlugin(): Plugin {
             return;
           }
 
+          if (path === "/briefing-feedback" && req.method === "GET") {
+            res.end(JSON.stringify(backend!.listBriefingFeedback()));
+            return;
+          }
+
           if (path === "/graph/display" && req.method === "GET") {
             res.end(JSON.stringify(backend!.loadGraphForDisplay()));
             return;
@@ -164,8 +181,68 @@ export function myBrainStoragePlugin(): Plugin {
               return;
             }
 
+            if (path === "/project") {
+              backend!.saveProject(body);
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
+            if (path === "/source") {
+              backend!.saveSource(body);
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
+            if (path === "/decision") {
+              backend!.saveDecision(body);
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
+            if (path === "/question") {
+              backend!.saveQuestion(body);
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
+            if (path === "/skill") {
+              backend!.saveSkill(body);
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
             if (path === "/concept/delete") {
               backend!.deleteConcept(String(body.id));
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
+            if (path === "/project/delete") {
+              backend!.deleteProject(String(body.id));
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
+            if (path === "/source/delete") {
+              backend!.deleteSource(String(body.id));
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
+            if (path === "/decision/delete") {
+              backend!.deleteDecision(String(body.id));
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
+            if (path === "/question/delete") {
+              backend!.deleteQuestion(String(body.id));
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
+            if (path === "/skill/delete") {
+              backend!.deleteSkill(String(body.id));
               res.end(JSON.stringify({ ok: true }));
               return;
             }
@@ -232,6 +309,12 @@ export function myBrainStoragePlugin(): Plugin {
 
             if (path === "/cognitive-actions/save") {
               backend!.saveCognitiveAction(body);
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            }
+
+            if (path === "/briefing-feedback/save") {
+              backend!.saveBriefingFeedback(body);
               res.end(JSON.stringify({ ok: true }));
               return;
             }

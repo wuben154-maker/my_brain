@@ -1,5 +1,6 @@
 import { createCognitiveAction } from "@/actions/createCognitiveAction";
-import type { BrainGraphSnapshot, ConceptNode } from "@/domain/graph";
+import type { BrainGraphSnapshot, BrainNode } from "@/domain/graph";
+import { isProjectNode } from "@/domain/graph";
 import type { CognitiveAction, CognitiveActionCitation } from "@/domain/actions/cognitiveAction";
 import type { ProjectSuggestionMetadata } from "@/domain/actions/cognitiveAction";
 import {
@@ -17,6 +18,8 @@ import { RADAR_FIXTURE_WORLD_ITEMS } from "@/radar/worldSources/fixtureWorldSour
 import {
   SHOWCASE_INGEST_NODE_ID,
   SHOWCASE_NOW,
+  SHOWCASE_PROJECT_MCP_ID,
+  SHOWCASE_PROJECT_VOICE_ID,
 } from "@/showcase/showcaseFixtures";
 export interface GenerateProjectSuggestionsInput {
   graph: BrainGraphSnapshot;
@@ -36,6 +39,8 @@ interface SuggestionTemplate {
   kind: "project_issue" | "roadmap";
   title: string;
   linkedNodeIds: string[];
+  /** KP-08: real Project node ids from graph when present. */
+  linkedProjectIds?: string[];
   optionalGraphitiNodeId?: string;
   buildCopy: (ctx: TemplateContext) => {
     reason: string;
@@ -47,7 +52,7 @@ interface SuggestionTemplate {
 }
 
 interface TemplateContext {
-  nodeMap: Map<string, ConceptNode>;
+  nodeMap: Map<string, BrainNode>;
   trendById: Map<string, WorldItem>;
   weeklyReview?: WeeklyBrainReview;
 }
@@ -58,10 +63,12 @@ const SUGGESTION_TEMPLATES: SuggestionTemplate[] = [
     kind: "project_issue",
     title: "Issue 草稿 · Graphiti 语音演示与 Realtime 打断",
     linkedNodeIds: ["demo-agent", SHOWCASE_INGEST_NODE_ID],
+    linkedProjectIds: [SHOWCASE_PROJECT_VOICE_ID],
     optionalGraphitiNodeId: SHOWCASE_INGEST_NODE_ID,
     buildCopy: ({ nodeMap, trendById, weeklyReview }) => {
       const graphiti = nodeMap.get(SHOWCASE_INGEST_NODE_ID);
       const agent = nodeMap.get("demo-agent");
+      const project = nodeMap.get(SHOWCASE_PROJECT_VOICE_ID);
       const trend =
         trendById.get(PROJECT_SUGGESTION_TREND_FIXTURE_ID) ??
         trendById.values().next().value;
@@ -77,6 +84,9 @@ const SUGGESTION_TEMPLATES: SuggestionTemplate[] = [
           "基于图谱节点 Graphiti、AI Agent 与外部趋势信号，生成可确认的 GitHub Issue 草稿（未提交）。",
         reason: [
           `节点「${graphiti?.title ?? "Graphiti"}」已连到「${agent?.title ?? "AI Agent"}」，适合开一条 voice demo 引导 issue。`,
+          project
+            ? `Project「${project.title}」是语音伴侣主形态，issue 应对齐 ${project.id}。`
+            : "",
           `外部趋势 ${trendRef} 强调 speech-to-speech 打断能力，与沉浸式伴侣核心 loop 对齐。`,
           weeklyHint,
         ]
@@ -94,16 +104,20 @@ const SUGGESTION_TEMPLATES: SuggestionTemplate[] = [
     kind: "roadmap",
     title: "Roadmap 草稿 · Brain MCP 只读边界与 Agent 接入",
     linkedNodeIds: ["demo-mcp", "demo-agent"],
+    linkedProjectIds: [SHOWCASE_PROJECT_MCP_ID],
     buildCopy: ({ nodeMap }) => {
       const mcp = nodeMap.get("demo-mcp");
       const agent = nodeMap.get("demo-agent");
+      const project = nodeMap.get(SHOWCASE_PROJECT_MCP_ID);
       return {
         intro:
           "基于 MCP 与 AI Agent 节点关系，整理只读 Brain MCP 与后续 Agent 工具接入的 roadmap 草稿。",
         reason: [
           `节点「${mcp?.title ?? "MCP"}」定义 Model Context Protocol 工具面；`,
           `「${agent?.title ?? "AI Agent"}」负责编排。`,
-          "Brain MCP 当前保持只读（brain_search / brain_outline），project issue 创建需用户确认，不得自动写入 GitHub。",
+          project
+            ? `Project「${project.title}」（${project.id}）约束只读 MCP 与 issue 草稿 confirm 门控。`
+            : "Brain MCP 当前保持只读（brain_search / brain_outline），project issue 创建需用户确认，不得自动写入 GitHub。",
         ].join(""),
         expectedImpact:
           "明确 F1 边界后，E2 项目建议与 E3 写作模式可共用 CognitiveAction draft 流程，避免误触外部写操作。",
@@ -114,8 +128,8 @@ const SUGGESTION_TEMPLATES: SuggestionTemplate[] = [
   },
 ];
 
-function activeNodeMap(graph: BrainGraphSnapshot): Map<string, ConceptNode> {
-  const map = new Map<string, ConceptNode>();
+function activeNodeMap(graph: BrainGraphSnapshot): Map<string, BrainNode> {
+  const map = new Map<string, BrainNode>();
   for (const node of graph.nodes) {
     if (!node.archived) {
       map.set(node.id, node);
@@ -126,16 +140,21 @@ function activeNodeMap(graph: BrainGraphSnapshot): Map<string, ConceptNode> {
 
 function resolveLinkedIds(
   template: SuggestionTemplate,
-  nodeMap: Map<string, ConceptNode>,
+  nodeMap: Map<string, BrainNode>,
 ): string[] {
-  const baseIds = template.linkedNodeIds.filter((id) => {
+  const projectIds = (template.linkedProjectIds ?? []).filter((id) =>
+    nodeMap.has(id),
+  );
+  const conceptIds = template.linkedNodeIds.filter((id) => {
     if (id === template.optionalGraphitiNodeId && !nodeMap.has(id)) {
       return false;
     }
-    return nodeMap.has(id);
+    const node = nodeMap.get(id);
+    return node !== undefined && !isProjectNode(node);
   });
-  if (baseIds.length > 0) {
-    return baseIds;
+  const merged = [...new Set([...projectIds, ...conceptIds])];
+  if (merged.length > 0) {
+    return merged;
   }
   const fallback = [...nodeMap.keys()].slice(0, 2);
   return fallback;
@@ -143,7 +162,7 @@ function resolveLinkedIds(
 
 function buildCitations(
   linkedNodeIds: string[],
-  nodeMap: Map<string, ConceptNode>,
+  nodeMap: Map<string, BrainNode>,
 ): CognitiveActionCitation[] {
   return linkedNodeIds.map((id) => {
     const node = nodeMap.get(id);
@@ -157,7 +176,7 @@ function buildCitations(
 
 function buildActionFromTemplate(
   template: SuggestionTemplate,
-  nodeMap: Map<string, ConceptNode>,
+  nodeMap: Map<string, BrainNode>,
   trendById: Map<string, WorldItem>,
   weeklyReview: WeeklyBrainReview | undefined,
   createdAt: string,
@@ -258,6 +277,11 @@ export function projectSuggestionMatchesGoldenEntry(
       continue;
     }
     if (!projectMeta.linkedNodeIds.includes(nodeId)) {
+      return false;
+    }
+  }
+  for (const projectId of entry.linkedProjectIds ?? []) {
+    if (!projectMeta.linkedNodeIds.includes(projectId)) {
       return false;
     }
   }

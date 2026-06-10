@@ -1,4 +1,8 @@
+import type { NewsItem } from "@/domain/news";
 import { readAppEnv } from "@/lib/env";
+import {
+  resolveVoiceConnectConfig,
+} from "@/lib/voiceConnectConfig";
 import {
   bootstrapShowcaseGraph,
   getShowcaseNewsQueue,
@@ -79,6 +83,13 @@ export async function runLaunchSequence(): Promise<void> {
       everMemOsUserId: env.everMemOsUserId,
       domesticLlmApiKey: env.domesticLlmApiKey,
       domesticLlmBaseUrl: env.domesticLlmBaseUrl,
+      modelscopeApiKey: env.modelscopeApiKey,
+      modelscopeBaseUrl: env.modelscopeBaseUrl,
+      modelscopeLlmModel: env.modelscopeLlmModel,
+      volcAppId: env.volcAppId,
+      volcAccessKey: env.volcAccessKey,
+      volcConnectId: env.volcConnectId,
+      volcRealtimeModel: env.volcRealtimeModel,
     },
     { forceMock: showcaseMode },
   );
@@ -93,7 +104,7 @@ export async function runLaunchSequence(): Promise<void> {
   const speechSignal = launchSpeechAbort.signal;
 
   try {
-    await providers.voice.connect({ apiKey: env.openAiApiKey ?? "" });
+    await providers.voice.connect(resolveVoiceConnectConfig(env));
   } catch {
     store.appendBootLog("  语音通道未连接，自检将仅显示文字");
   }
@@ -128,6 +139,7 @@ export async function runLaunchSequence(): Promise<void> {
         useGraphStore.getState().setGraph(graph);
         await useProfileStore.getState().loadFromStorage(storage);
         await useProposalStore.getState().load(storage);
+        await useBriefingStore.getState().loadFromStorage(storage);
         store.appendBootLog("  图谱与用户画像已加载");
       } catch (error) {
         const message =
@@ -179,12 +191,48 @@ export async function runLaunchSequence(): Promise<void> {
     store.setLoadingMessage("Showcase 模式：加载固定演示资讯…");
     store.appendBootLog("> Showcase 固定 briefing（无网络）…");
     newsQueue = getShowcaseNewsQueue();
-  } else if (radarMode) {
-    store.setLoadingMessage("Radar 模式：生成今日三条 briefing…");
-    store.appendBootLog("> Radar briefing（live 失败则 fixture 兜底）…");
-    const graph = resolveRadarRankingGraph();
-    const profile = useProfileStore.getState().profile;
-    const briefingState = useBriefingStore.getState();
+  } else {
+    newsQueue = await runDefaultRadarLaunch({
+      providers,
+      store,
+      explicitRadarFlag: radarMode,
+    });
+  }
+  store.setNewsQueue(newsQueue);
+  store.appendBootLog(`  候选资讯 ${newsQueue.length} 条`);
+
+  await sleep(800);
+  store.setPhase("companion");
+}
+
+/** Query flag `?radar=1` — explicit alias; default launch is already Radar. */
+export function isRadarLaunchMode(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  const value = new URLSearchParams(window.location.search).get("radar");
+  return value === "1" || value === "true";
+}
+
+interface RunDefaultRadarLaunchInput {
+  providers: ReturnType<typeof createAppProviders>;
+  store: ReturnType<typeof useAppStore.getState>;
+  explicitRadarFlag: boolean;
+}
+
+async function runDefaultRadarLaunch(
+  input: RunDefaultRadarLaunchInput,
+): Promise<NewsItem[]> {
+  const { providers, store, explicitRadarFlag } = input;
+  const radarLabel = explicitRadarFlag ? "Radar（显式 ?radar=1）" : "Radar（默认 mock-first）";
+  store.setLoadingMessage("生成今日三条 Radar briefing…");
+  store.appendBootLog(`> ${radarLabel} · live 失败则 fixture 兜底 · RSS flatten 仅最后 legacy 兜底…`);
+
+  const graph = resolveRadarRankingGraph();
+  const profile = useProfileStore.getState().profile;
+  const briefingState = useBriefingStore.getState();
+
+  try {
     const result = await runRadarBriefing({
       providers,
       graph,
@@ -194,29 +242,32 @@ export async function runLaunchSequence(): Promise<void> {
     });
     store.setWorldItemStore(result.store);
     briefingState.setTodayItems(result.briefingItems);
-    newsQueue = result.newsQueue;
-    store.appendBootLog(
-      `  今日 briefing ${result.briefingItems.length} 条 · active WorldItem ${result.store.listActive().length} 条`,
-    );
-  } else {
-    store.setLoadingMessage("正在抓取今日 AI 资讯与 GitHub 趋势…");
-    store.appendBootLog("> 抓取 RSS / GitHub 趋势…");
-    const newsResults = await providers.news.fetchAll();
-    newsQueue = flattenNewsItems(newsResults);
-  }
-  store.setNewsQueue(newsQueue);
-  store.appendBootLog(`  候选资讯 ${newsQueue.length} 条`);
 
-  await sleep(800);
-  store.setPhase("companion");
+    if (result.briefingItems.length > 0) {
+      store.appendBootLog(
+        `  今日 briefing ${result.briefingItems.length} 条 · active WorldItem ${result.store.listActive().length} 条`,
+      );
+      return result.newsQueue;
+    }
+
+    store.appendBootLog("  WARN: Radar briefing 为空，降级 legacy RSS flatten…");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Radar briefing failed";
+    store.appendBootLog(`  WARN: Radar briefing 失败（${message}），降级 legacy RSS flatten…`);
+  }
+
+  return runLegacyRssFlatten(providers, store);
 }
 
-function isRadarLaunchMode(): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-  const value = new URLSearchParams(window.location.search).get("radar");
-  return value === "1" || value === "true";
+async function runLegacyRssFlatten(
+  providers: ReturnType<typeof createAppProviders>,
+  store: ReturnType<typeof useAppStore.getState>,
+): Promise<NewsItem[]> {
+  store.appendBootLog("> Legacy RSS / GitHub flatten（非默认主路径）…");
+  const newsResults = await providers.news.fetchAll();
+  const newsQueue = flattenNewsItems(newsResults);
+  store.appendBootLog(`  Legacy flatten ${newsQueue.length} 条`);
+  return newsQueue;
 }
 
 function resolveRadarRankingGraph(): BrainGraphSnapshot {

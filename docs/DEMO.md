@@ -48,6 +48,12 @@ http://localhost:1420/?showcase=1
 10. **自动整理报告出现**：入库后的 curation 自动新增一条 link，把 `showcase-ingest-graphiti` 连接到 `demo-agent`，原因码为 `ingest_link`。
 11. **查看历史面板**：Graph history 中应出现一条 `link` entry，含 summary、reasonCode、reasonDetail 和 affected node ids。
 12. **点击「撤销这次整理」**：自动新增的 Graphiti → AI Agent 连边消失，`showcase-ingest-graphiti` 节点仍保留。
+13. **伴侣浮层 · 整理报告（KP-03 主路径）**：入库后 companion shell 自动打开 **整理** slot（`companion-shell-curation-slot`），展示 `ingest_link` 原因码与受影响节点；此处是整理报告，**不是**完整 Weekly Review 正文。
+14. **Review 入口 CTA**：在整理报告中点击「查看每周脑图回顾」（`companion-review-entry-cta`），进入 **回顾** slot（`companion-shell-review-slot`）。
+15. **Weekly Review 正文**：回顾按时间窗口聚合 graph history（自上次 review 起，默认上限 7 天），段落应引用真实 `historyEntry` id（如 link / merge）；无历史时显示诚实空态，不编造节点名。
+16. **行动草稿**：回顾底部可看到 draft-only 行动建议标签，无「一键执行」外部写操作。
+
+> Settings 里的「每周脑图回顾」为辅助入口；主路径是 **入库 → auto-curate → 整理报告 → Review CTA → 每周回顾**。
 
 ## Mock 语音脚本
 
@@ -90,7 +96,9 @@ summary: 已把 Graphiti 连到 AI Agent
 | 启动 / 自检 | 全屏星图、语音光球、mock/demo 状态 |
 | Briefing | 3 条固定 AI/GitHub 趋势按顺序讲解 |
 | Ingest | Graphiti 节点点亮，带 source link |
-| Curation report | 展示 `ingest_link`、中文 reasonDetail、受影响节点 |
+| Curation report | 伴侣浮层整理 slot 或 legacy overlay；展示 `ingest_link`、中文 reasonDetail、受影响节点 |
+| Weekly Review CTA | 整理报告中「查看每周脑图回顾」按钮，非 Settings-only |
+| Weekly Review body | 回顾 slot 展示 graph history 引用与 draft-only 行动建议 |
 | Undo | 自动连边消失，Graphiti 节点保留 |
 
 ## 故障排查
@@ -110,6 +118,7 @@ summary: 已把 Graphiti 连到 AI Agent
 ```bash
 pnpm test -- runShowcaseLaunchSequence showcaseCompanionScript showcaseCoreLoop
 pnpm test -- curationReportOverlay graphHistoryPanel graphHistoryStore showcaseUndoReport
+pnpm test -- buildWeeklyBrainReview weeklyReview weeklyReviewMainflow draftOnlyBoundary graphHistoryCitation
 pnpm check
 ```
 

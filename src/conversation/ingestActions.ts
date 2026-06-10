@@ -29,11 +29,17 @@ import {
 import type { LlmProvider } from "@/providers/llm/types";
 import type { MemoryProvider } from "@/providers/memory/types";
 import {
+  formatElaborationDepthPrefix,
+  resolveTeachingElaborationDepth,
+} from "@/conversation/teachingDepth";
+import { buildBriefingTopicKeyByItemId } from "@/radar/briefingElaboration";
+import {
   recordBriefingElaborateTrace,
   recordBriefingIngestTrace,
   recordBriefingSkipTrace,
 } from "@/learning/recordLearningTrace";
 import type { StorageProvider } from "@/storage/types";
+import { useBriefingStore } from "@/stores/briefingStore";
 import { useIngestStore } from "@/stores/ingestStore";
 import type {
   ConversationEvent,
@@ -202,6 +208,28 @@ export async function applyIngestDecision(
       : "";
     const topic = prependGrounding(item.title, grounding);
     let deeper = await deps.llm.explainConcept(topic, deps.profile);
+    const briefingItem = useBriefingStore
+      .getState()
+      .todayItems.find((entry) => entry.worldItem.id === item.id);
+    const signals = briefingItem?.signals ?? [];
+    const briefingSignalsByItemId = briefingItem
+      ? { [briefingItem.worldItem.id]: signals }
+      : {};
+    const topicKeyByItemId = buildBriefingTopicKeyByItemId(briefingSignalsByItemId);
+    const worldItemId = briefingItem?.worldItem.id ?? item.id;
+    const conceptId = signals[0]?.linkedNodeIds[0] ?? "demo-rag";
+    const teachingDepth = resolveTeachingElaborationDepth({
+      profile: deps.profile,
+      conceptId,
+      worldItemId,
+      signals,
+      feedbackByItemId: useBriefingStore.getState().feedbackByItemId,
+      topicKeyByItemId,
+    });
+    const depthPrefix = formatElaborationDepthPrefix(teachingDepth);
+    if (depthPrefix) {
+      deeper = `${depthPrefix}${deeper}`;
+    }
     if (depth > 1) {
       deeper = `【深入 ${depth}】${deeper}`;
     }

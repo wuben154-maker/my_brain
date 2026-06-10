@@ -5,6 +5,8 @@ import { createMockMemoryProvider } from "./memory/mockMemoryProvider";
 import type { MemoryProvider } from "./memory/types";
 import { createNewsSourceRegistry } from "./news/types";
 import type { NewsSourceRegistry } from "./news/types";
+import { createModelScopeLlmProvider } from "./llm/modelscopeLlmProvider";
+import { VolcengineRealtimeVoiceProvider } from "./voice/volcengineRealtimeVoiceProvider";
 import { MockVoiceProvider } from "./voice/mockVoiceProvider";
 import type { VoiceProvider } from "./voice/types";
 import { fixtureWorldSource } from "@/radar/worldSources/fixtureWorldSource";
@@ -37,6 +39,36 @@ export const PROVIDER_PLUGIN_REGISTRY: readonly ProviderPluginManifest[] = [
     envKeys: [],
     mockImpl: () => createMockLlmProvider(),
     docs: `${PROVIDER_PLUGIN_CONTRACT_DOC}#llm-provider`,
+  },
+  {
+    id: "modelscope-llm",
+    kind: "llm",
+    envKeys: [
+      "MODELSCOPE_API_KEY",
+      "MODELSCOPE_BASE_URL",
+      "MODELSCOPE_LLM_MODEL",
+    ],
+    mockImpl: () => createMockLlmProvider(),
+    liveImpl: () =>
+      createModelScopeLlmProvider({
+        apiKey: import.meta.env.VITE_MODELSCOPE_API_KEY,
+        baseUrl: import.meta.env.VITE_MODELSCOPE_BASE_URL,
+        model: import.meta.env.VITE_MODELSCOPE_LLM_MODEL,
+      }),
+    docs: `${PROVIDER_PLUGIN_CONTRACT_DOC}#modelscope-llm`,
+  },
+  {
+    id: "volc-realtime-voice",
+    kind: "voice",
+    envKeys: [
+      "VOLC_APP_ID",
+      "VOLC_ACCESS_KEY",
+      "VOLC_CONNECT_ID",
+      "VOLC_REALTIME_MODEL",
+    ],
+    mockImpl: () => new MockVoiceProvider(),
+    liveImpl: () => new VolcengineRealtimeVoiceProvider(),
+    docs: `${PROVIDER_PLUGIN_CONTRACT_DOC}#volc-realtime-voice`,
   },
   {
     id: "domestic-mock-llm",

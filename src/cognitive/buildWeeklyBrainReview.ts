@@ -89,20 +89,29 @@ function weakConceptIds(profile: UserProfile): string[] {
 
 function buildGraphChangesSection(
   weekHistory: GraphHistoryEntry[],
+  citations: Map<string, WeeklyBrainReviewCitation>,
 ): Pick<WeeklyBrainReviewSection, "body" | "citationKeys"> {
   if (weekHistory.length === 0) {
-    return { body: "本周无结构变更。", citationKeys: [] };
+    return { body: "回顾窗口内无结构变更。", citationKeys: [] };
   }
   const counts = new Map<string, number>();
+  const keys: string[] = [];
   for (const entry of weekHistory) {
     counts.set(entry.kind, (counts.get(entry.kind) ?? 0) + 1);
+    keys.push(
+      addCitation(citations, {
+        type: "historyEntry",
+        id: entry.id,
+        label: entry.summary,
+      }),
+    );
   }
   const parts = [...counts.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([kind, count]) => `${kind} × ${count}`);
   return {
-    body: `本周共 ${weekHistory.length} 条结构变更：${parts.join("；")}。`,
-    citationKeys: [],
+    body: `回顾窗口共 ${weekHistory.length} 条结构变更：${parts.join("；")}。`,
+    citationKeys: [...new Set(keys)],
   };
 }
 
@@ -113,7 +122,7 @@ function buildNewConceptsSection(
 ): Pick<WeeklyBrainReviewSection, "body" | "citationKeys"> {
   const createEntries = weekHistory.filter((entry) => entry.kind === "create");
   if (createEntries.length === 0) {
-    return { body: "本周无新增概念节点。", citationKeys: [] };
+    return { body: "回顾窗口内无新增概念节点。", citationKeys: [] };
   }
   const keys: string[] = [];
   const lines = createEntries.map((entry) => {
@@ -318,7 +327,7 @@ export function buildWeeklyBrainReview(
   const citations = new Map<string, WeeklyBrainReviewCitation>();
   const sections: WeeklyBrainReviewSection[] = [];
 
-  const graphChanges = buildGraphChangesSection(weekHistory);
+  const graphChanges = buildGraphChangesSection(weekHistory, citations);
   sections.push({
     kind: "graph_changes",
     title: SECTION_TITLES.graph_changes,

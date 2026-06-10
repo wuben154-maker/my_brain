@@ -86,6 +86,8 @@ KOS-A1 → KOS-A2 → KOS-A3 → KOS-A4
 | **Showcase** | `?showcase=1` | 固定演示流 |
 | **RSS flatten legacy** | 内部 fallback | 降级/遗留，**不是**主体验 |
 
+**Eval 索引（KP-06）：** [`docs/evals/README.md`](../docs/evals/README.md) — 五类验证命令 + default / harness-backed / experimental 标签。
+
 ### Spec 索引
 
 | Spec | 代号 | 依赖 | 状态 | 一句话 |
@@ -97,7 +99,7 @@ KOS-A1 → KOS-A2 → KOS-A3 → KOS-A4
 | [KP-03-weekly-review-mainflow](./kos-productization/KP-03-weekly-review-mainflow.md) | `weekly-review-mainflow` | KP-00, KOS-D3 | planned | Weekly Review 主路径 + graph history |
 | [KP-04-feedback-persistence](./kos-productization/KP-04-feedback-persistence.md) | `feedback-persistence` | KP-01 | planned | feedback 持久化 → 下轮 ranking |
 | [KP-05-profile-teaching-loop](./kos-productization/KP-05-profile-teaching-loop.md) | `profile-teaching-loop` | KP-04, KOS-C2 | planned | 画像修正 + teaching depth 闭环 |
-| [KP-06-evals-docs](./kos-productization/KP-06-evals-docs.md) | `evals-docs` | KP-01–05 | planned | `docs/evals/` + 成熟度文档口径 |
+| [KP-06-evals-docs](./kos-productization/KP-06-evals-docs.md) | `evals-docs` | KP-01–05 | planned | [`docs/evals/`](../docs/evals/README.md) + 成熟度文档口径 |
 | [KP-07-storage-transaction-gate](./kos-productization/KP-07-storage-transaction-gate.md) | `storage-transaction-gate` | H5 债务；可与 KP-06 并行 | planned | H5-storage-transactions gate；**阻塞 KP-08** |
 | [KP-08-project-node-minimal](./kos-productization/KP-08-project-node-minimal.md) | `project-node-minimal` | KP-07 | planned | 最小 Project；Phase 6 **不重复** |
 | [KP-09-phase-1-5-acceptance-gate](./kos-productization/KP-09-phase-1-5-acceptance-gate.md) | `phase-1-5-gate` | KP-00–08 | planned | 主路径 E2E 总 gate；PASS 才进 Phase 6–8 |

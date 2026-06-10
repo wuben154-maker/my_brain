@@ -35,12 +35,18 @@ interface LlmTextResponse {
 
 | Variable | Purpose | Required when |
 |---|---|---|
-| `VITE_LLM_PROVIDER` | `mock` (default), `openai`, `domestic-mock` | Always (defaults to mock) |
-| `VITE_OPENAI_API_KEY` | OpenAI voice + LLM | `VITE_LLM_PROVIDER=openai` or realtime voice |
+| `VITE_VOICE_PROVIDER` | `mock` / `openai-realtime` / `volc-realtime` | Realtime voice opt-in |
+| `VITE_VOLC_APP_ID` / `VITE_VOLC_ACCESS_KEY` | 豆包实时语音凭证 | `VITE_VOICE_PROVIDER=volc-realtime` |
+| `VITE_VOLC_REALTIME_MODEL` | `1.2.1.1` / `2.2.0.0` | 可选模型版本 |
+| `VITE_LLM_PROVIDER` | `mock` (default), `openai`, `domestic-mock`, `modelscope` | Always (defaults to mock) |
+| `VITE_MODELSCOPE_API_KEY` | ModelScope OpenAI-compatible LLM | `VITE_LLM_PROVIDER=modelscope` |
+| `VITE_MODELSCOPE_BASE_URL` | 默认 `https://api-inference.modelscope.cn/v1` | 可选 |
+| `VITE_MODELSCOPE_LLM_MODEL` | 例如 `Qwen/Qwen2.5-7B-Instruct` | 可选 |
+| `VITE_OPENAI_API_KEY` | OpenAI voice + LLM | `VITE_LLM_PROVIDER=openai` or `VITE_VOICE_PROVIDER=openai-realtime` |
 | `VITE_DOMESTIC_LLM_API_KEY` | Domestic adapter (logical: `DOMESTIC_LLM_API_KEY`) | `VITE_LLM_PROVIDER=domestic-mock` |
 | `VITE_DOMESTIC_LLM_BASE_URL` | Optional base URL (logical: `DOMESTIC_LLM_BASE_URL`) | Optional |
 | `VITE_MEMORY_PROVIDER` | `mock` / `evermemos` | Memory sidecar opt-in |
-| `VITE_VOICE_PROVIDER` | `mock` / `openai-realtime` | Realtime voice opt-in |
+| `VITE_NEWS_LIVE_FETCH` | `0` (default) / `1` | 公开 RSS + GitHub + arXiv 联网抓取 |
 
 Placeholders live in `.env.example` — **never commit real secrets**.
 
@@ -58,7 +64,8 @@ Assertions:
 
 | Failure | Factory layer | Aggregation layer (`resolveLlmProviderWithFallback`) |
 |---|---|---|
-| `MISSING_API_KEY` | `createDomesticLlmProvider` throws `ProviderConfigError` | Warn + fallback `mockLlmProvider` |
+| `MISSING_API_KEY` | `createDomesticLlmProvider` / `createModelScopeLlmProvider` throw `ProviderConfigError` | Warn + fallback `mockLlmProvider` |
+| ModelScope mode without `VITE_MODELSCOPE_API_KEY` | N/A | Warn + fallback `mockLlmProvider` |
 | OpenAI mode without `VITE_OPENAI_API_KEY` | N/A (OpenAI provider throws on call) | Warn + fallback `mockLlmProvider` |
 | Unknown manifest id | N/A | Default mock registry |
 | Live request timeout (future) | Adapter-specific | Retry 0 → mock stub in demo |

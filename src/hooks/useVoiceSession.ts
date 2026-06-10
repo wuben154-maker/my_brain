@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { readAppEnv } from "@/lib/env";
 import {
+  missingVoiceCredentialMessage,
+  resolveVoiceConnectConfig,
+  voiceCredentialsConfigured,
+} from "@/lib/voiceConnectConfig";
+import {
   distillAndPersistUserProfile,
   formatConversationTranscript,
   hasUserSpeech,
@@ -139,15 +144,13 @@ export function useVoiceSession(options?: {
     setErrorMessage(null);
     try {
       const env = readAppEnv();
-      if (!isMockVoiceProvider(voice) && !env.openAiApiKey) {
-        throw new Error("缺少 OpenAI API Key");
+      if (!isMockVoiceProvider(voice) && !voiceCredentialsConfigured(env)) {
+        throw new Error(missingVoiceCredentialMessage());
       }
-      await voice.connect({
-        apiKey: env.openAiApiKey,
-        model: env.openAiRealtimeModel,
+      await voice.connect(resolveVoiceConnectConfig(env, {
         instructions: DEFAULT_INSTRUCTIONS,
         skipWelcomeUtterance: options?.skipWelcomeUtterance,
-      });
+      }));
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "无法建立语音连接",

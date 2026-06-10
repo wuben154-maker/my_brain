@@ -1,4 +1,5 @@
 import { describe, expect, it, beforeEach } from "vitest";
+import { isConceptNode, isProjectNode } from "@/domain/graph";
 import { applyGraphMutation, persistGraphSnapshot } from "@/lib/graphMutations";
 import { buildGraphHistoryEntry } from "@/lib/graphHistoryMeta";
 import { createTempStorage } from "@/invariants/testStorage";
@@ -21,7 +22,11 @@ async function seedFixtureGraph(
 ) {
   const snapshot = createCurationFixtureSnapshot();
   for (const node of snapshot.nodes) {
-    await storage.saveConcept(node);
+    if (isConceptNode(node)) {
+      await storage.saveConcept(node);
+    } else if (isProjectNode(node)) {
+      await storage.saveProject(node);
+    }
   }
   for (const edge of snapshot.edges) {
     await storage.saveEdge(edge);

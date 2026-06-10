@@ -59,4 +59,91 @@ describe("profileRerank.integration", () => {
     expect(highIndex).toBeLessThan(lowIndex);
     expect(lowIndex - highIndex).toBeGreaterThanOrEqual(2);
   });
+
+  it("not_interested feedback beats distilled interests on the same topic", () => {
+    useProfileStore.getState().reset();
+    const graph = SHOWCASE_GRAPH_SNAPSHOT;
+    const items = activeFixtureItems();
+    const profileWithDistilledInterest = {
+      ...DEFAULT_USER_PROFILE,
+      interests: [...DEFAULT_USER_PROFILE.interests, "AI Agent"],
+    };
+
+    const baseline = rankWorldItems({
+      graph,
+      profile: profileWithDistilledInterest,
+      items,
+    });
+    const previousTop1 = baseline[0]!.item.id;
+
+    const afterFeedback = rankWorldItems({
+      graph,
+      profile: profileWithDistilledInterest,
+      items,
+      feedbackByItemId: {
+        [previousTop1]: [
+          {
+            kind: "not_interested",
+            worldItemId: previousTop1,
+            at: RADAR_SHOWCASE_NOW,
+          },
+        ],
+      },
+    });
+
+    expect(afterFeedback.slice(0, 3).map((entry) => entry.item.id)).not.toContain(
+      previousTop1,
+    );
+  });
+
+  it("profile correction beats not_interested feedback on voice_realtime fixture", async () => {
+    useProfileStore.getState().reset();
+    const graph = SHOWCASE_GRAPH_SNAPSHOT;
+    const items = activeFixtureItems();
+
+    await useProfileStore.getState().applyCorrection(
+      { interestWeights: { voice_realtime: 0.9 } },
+      null,
+    );
+    const correctedProfile = useProfileStore.getState().profile;
+
+    const withFeedbackOnly = rankWorldItems({
+      graph,
+      profile: DEFAULT_USER_PROFILE,
+      items,
+      feedbackByItemId: {
+        [REALTIME_FIXTURE_ID]: [
+          {
+            kind: "not_interested",
+            worldItemId: REALTIME_FIXTURE_ID,
+            at: RADAR_SHOWCASE_NOW,
+          },
+        ],
+      },
+    });
+    expect(
+      withFeedbackOnly.slice(0, 3).map((entry) => entry.item.id),
+    ).not.toContain(REALTIME_FIXTURE_ID);
+
+    const withCorrectionAndFeedback = rankWorldItems({
+      graph,
+      profile: correctedProfile,
+      items,
+      feedbackByItemId: {
+        [REALTIME_FIXTURE_ID]: [
+          {
+            kind: "not_interested",
+            worldItemId: REALTIME_FIXTURE_ID,
+            at: RADAR_SHOWCASE_NOW,
+          },
+        ],
+      },
+    });
+    const correctedIndex = rankIndex(
+      withCorrectionAndFeedback.map((entry) => entry.item.id),
+      REALTIME_FIXTURE_ID,
+    );
+    expect(correctedIndex).toBeGreaterThanOrEqual(0);
+    expect(correctedIndex).toBeLessThan(3);
+  });
 });

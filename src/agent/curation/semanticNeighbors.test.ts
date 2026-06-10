@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BrainGraphSnapshot } from "@/domain/graph";
+import type { BrainGraphSnapshot, ConceptNode } from "@/domain/graph";
 import { rankSemanticPeers } from "@/agent/curation/semanticNeighbors";
 import { createMockEmbeddingProvider } from "@/providers/embedding/mockEmbeddingProvider";
 
@@ -14,7 +14,7 @@ function node(
   id: string,
   title: string,
   intro = "",
-): BrainGraphSnapshot["nodes"][number] {
+): ConceptNode {
   return {
     id,
     title,

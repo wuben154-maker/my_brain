@@ -49,6 +49,8 @@ export const DOMAIN_TO_VISUAL_RELATION: Record<
   depends_on: "influence",
   replaces: "causal",
   related: "correlation",
+  used_in: "containment",
+  decided_for: "influence",
 };
 
 export function visualRelationForDomain(
@@ -243,3 +245,17 @@ export function invalidateGraphVisualTokenCache(): void {
   cachedClusterColors = null;
   cachedEdgeColor = null;
 }
+
+/** KP-10 — muted document-style token for Source nodes (hidden by default in star map). */
+export const SOURCE_NODE_VISUAL = {
+  fill: "#64748b",
+  emphasisFill: "#94a3b8",
+  radiusScale: 0.82,
+} as const;
+
+/** KP-11 — subdued token for Decision nodes (hidden from default star map). */
+export const DECISION_NODE_VISUAL = {
+  fill: "#78716c",
+  emphasisFill: "#a8a29e",
+  radiusScale: 0.78,
+} as const;

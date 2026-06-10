@@ -1,4 +1,5 @@
 import type { BrainGraphSnapshot } from "@/domain/graph";
+import { isConceptNode } from "@/domain/graph";
 import { migrateLegacySourceUrlToSourceRefs } from "@/domain/graph/sourceRef";
 import type { GraphExportOptions } from "@/export/graphExportSchema";
 import { sortGraphExportNodes, toGraphExportNode } from "@/export/graphExportSchema";
@@ -53,9 +54,10 @@ export function exportGraphMarkdown(
 
   const sections = exportNodes.map((exportNode) => {
     const fullNode = graph.nodes.find((node) => node.id === exportNode.id);
-    const sourceRefs = fullNode
-      ? migrateLegacySourceUrlToSourceRefs(fullNode)
-      : exportNode.sourceRefs;
+    const sourceRefs =
+      fullNode && isConceptNode(fullNode)
+        ? migrateLegacySourceUrlToSourceRefs(fullNode)
+        : exportNode.sourceRefs;
     return formatNodeSection(exportNode, sourceRefs);
   });
 

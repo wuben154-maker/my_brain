@@ -71,7 +71,7 @@ describe("dailyBriefing integration", () => {
     vi.useFakeTimers();
     resetLaunchSequenceGuard();
     stubNavigatorForBoot();
-    stubWindowSearch("?radar=1");
+    stubWindowSearch();
     useBriefingStore.getState().clear();
     useAppStore.setState({
       phase: "self_check",

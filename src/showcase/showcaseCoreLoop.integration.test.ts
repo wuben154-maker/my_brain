@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ConversationConductor } from "@/conversation/ConversationConductor";
 import { createShowcaseCompanionContext } from "@/conversation/mockConversationFixtures";
 import type { ConversationContext } from "@/conversation/types";
+import { isConceptNode } from "@/domain/graph";
 import { createTempStorage } from "@/invariants/testStorage";
 import { visibleGraph } from "@/lib/graphMutations";
 import { MockVoiceProvider } from "@/providers/voice/mockVoiceProvider";
@@ -172,14 +173,16 @@ describe("showcaseCoreLoop integration", () => {
     expect(useGraphStore.getState().focusNodeId).toBeNull();
 
     const fullGraph = await storage!.loadGraphForDisplay();
-    expect(fullGraph.nodes).toHaveLength(8);
+    expect(fullGraph.nodes).toHaveLength(10);
     const visible = visibleGraph(fullGraph);
-    expect(visible.nodes).toHaveLength(7);
+    expect(visible.nodes).toHaveLength(9);
 
     const ingested = fullGraph.nodes.find(
       (node) => node.id === SHOWCASE_INGEST_NODE_ID,
     );
-    expect(ingested?.sourceUrl).toBe("https://example.com/graphiti");
+    expect(
+      ingested && isConceptNode(ingested) ? ingested.sourceUrl : null,
+    ).toBe("https://example.com/graphiti");
 
     const goldenEdge = fullGraph.edges.find(
       (edge) =>

@@ -11,6 +11,7 @@ import { nextOnboardingAfterEvent } from "@/conversation/nextTurn";
 import { createTempStorage } from "@/invariants/testStorage";
 import { visibleGraph } from "@/lib/graphMutations";
 import { createMockLlmProvider } from "@/providers/llm/mockLlmProvider";
+import { isConceptNode, nodeSourceUrl } from "@/domain/graph";
 import { DEFAULT_USER_PROFILE } from "@/domain/profile";
 import { useGraphHistoryStore } from "@/stores/graphHistoryStore";
 import { useIngestStore } from "@/stores/ingestStore";
@@ -100,7 +101,7 @@ describe("ingestActions", () => {
       const graph = await storage.loadGraph();
       const node = graph.nodes.find((n) => n.id === nodeId);
       expect(node?.intro.length).toBeGreaterThan(0);
-      expect(node?.sourceUrl).toBe(newsItem.sourceUrl);
+      expect(node && isConceptNode(node) ? node.sourceUrl : null).toBe(newsItem.sourceUrl);
     } finally {
       cleanup();
     }
@@ -190,7 +191,7 @@ describe("ingestActions", () => {
       expect(graph.nodes).toHaveLength(1);
       const node = graph.nodes[0]!;
       expect(node.intro.length).toBeGreaterThan(0);
-      expect(node.sourceUrl).toBe(coldStartNews.sourceUrl);
+      expect(isConceptNode(node) && node.sourceUrl).toBe(coldStartNews.sourceUrl);
 
       const onboarding = nextOnboardingAfterEvent(ctx, {
         type: "ingestAnswer",
@@ -262,7 +263,7 @@ describe("ingestActions", () => {
       const nodeId = await persistProposalToGraph(storage, proposal);
       expect(nodeId).toBeTruthy();
       const graph = await storage.loadGraph();
-      expect(graph.nodes[0]?.sourceUrl).toBe("https://example.com/node");
+      expect(nodeSourceUrl(graph.nodes[0]!)).toBe("https://example.com/node");
     } finally {
       cleanup();
     }

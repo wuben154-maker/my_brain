@@ -7,6 +7,10 @@ export const EXPORT_MARKDOWN_GOLDEN = `# my_brain Graph Export
 
 Exported: ${SHOWCASE_NOW}
 
+## 沉浸式语音伴侣
+
+my_brain v2 主形态：全屏星图 + 可打断 Realtime 语音
+
 ## AI Agent
 
 工具调用与任务编排
@@ -16,6 +20,10 @@ Exported: ${SHOWCASE_NOW}
 双向编码器（已归档示例）
 
 _Archived_
+
+## Brain MCP 只读
+
+brain_search_nodes / brain_outline 只读工具面
 
 ## LLM
 
@@ -41,11 +49,20 @@ Query/Key/Value 注意力机制
 - Transformer (manual) — https://arxiv.org/abs/1706.03762
 `;
 
-/** F2 — deterministic JSON golden for A1 showcase graph. */
+/** F2 — deterministic JSON golden for A1 showcase graph (KP-08 includes Project nodes). */
 export const EXPORT_JSON_GOLDEN: GraphExportJson = {
   schemaVersion: GRAPH_EXPORT_SCHEMA_VERSION,
   exportedAt: SHOWCASE_NOW,
   nodes: [
+    {
+      id: "proj-voice-companion",
+      title: "沉浸式语音伴侣",
+      intro: "my_brain v2 主形态：全屏星图 + 可打断 Realtime 语音",
+      archived: false,
+      sourceRefs: [],
+      updatedAt: SHOWCASE_NOW,
+      nodeKind: "project",
+    },
     {
       id: "demo-agent",
       title: "AI Agent",
@@ -61,6 +78,15 @@ export const EXPORT_JSON_GOLDEN: GraphExportJson = {
       archived: true,
       sourceRefs: [],
       updatedAt: SHOWCASE_NOW,
+    },
+    {
+      id: "proj-brain-mcp",
+      title: "Brain MCP 只读",
+      intro: "brain_search_nodes / brain_outline 只读工具面",
+      archived: false,
+      sourceRefs: [],
+      updatedAt: SHOWCASE_NOW,
+      nodeKind: "project",
     },
     {
       id: "demo-llm",
@@ -111,6 +137,18 @@ export const EXPORT_JSON_GOLDEN: GraphExportJson = {
     },
   ],
   edges: [
+    {
+      id: "e-used-mcp",
+      sourceId: "demo-mcp",
+      targetId: "proj-brain-mcp",
+      relationType: "used_in",
+    },
+    {
+      id: "e-used-voice",
+      sourceId: "demo-agent",
+      targetId: "proj-voice-companion",
+      relationType: "used_in",
+    },
     {
       id: "e1",
       sourceId: "demo-attention",

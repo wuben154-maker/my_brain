@@ -18,7 +18,7 @@ import {
 } from "@/showcase/showcaseCompanionScript";
 import { isShowcaseDemoMode } from "@/showcase/showcaseDemoMode";
 import { formatPendingConceptRef } from "@/domain/learning/learningTrace";
-import type { ConceptNode } from "@/domain/graph";
+import { conceptNodes, type ConceptNode } from "@/domain/graph";
 import type {
   ConversationContext,
   ConversationEvent,
@@ -240,7 +240,7 @@ export class ConversationConductor {
       const reviewMatch = transcript.match(/复习\s*(.+)?/i);
       if (reviewMatch) {
         const hint = reviewMatch[1]?.trim() ?? "";
-        const node = resolveReviewNode(ctx.graph.nodes, hint);
+        const node = resolveReviewNode(conceptNodes(ctx.graph.nodes), hint);
         if (node) {
           await recordNodeReviewTrace(node.id, storage);
         }

@@ -1,4 +1,5 @@
 import type { BrainGraphSnapshot, ConceptNode } from "@/domain/graph";
+import { conceptNodes } from "@/domain/graph";
 import type { UserProfile } from "@/domain/profile";
 import type { ConversationState } from "@/conversation/types";
 import { planWalkthrough } from "@/lib/graphOutline";
@@ -236,13 +237,13 @@ export function pickSubgraphForTurn(input: {
       ...(input.highlightNodeIds ?? []).filter((id) => !walk.includes(id)),
     ];
     if (seedIds.length === 0 && query) {
-      seedIds = scoreAndPickSeeds(visible.nodes, query, 3);
+      seedIds = scoreAndPickSeeds(conceptNodes(visible.nodes), query, 3);
     }
   } else if (input.mode === "topic_single") {
-    seedIds = scoreAndPickSeeds(visible.nodes, query, 1);
+    seedIds = scoreAndPickSeeds(conceptNodes(visible.nodes), query, 1);
   } else {
     seedIds = scoreAndPickSeeds(
-      visible.nodes,
+      conceptNodes(visible.nodes),
       query,
       input.mode === "briefing" || input.mode === "ingest_decision" ? 4 : 3,
     );

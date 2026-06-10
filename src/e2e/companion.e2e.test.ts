@@ -15,6 +15,7 @@ import {
 } from "@/conversation/mockConversationFixtures";
 import { nextOnboardingAfterEvent, nextTurn } from "@/conversation/nextTurn";
 import type { ConversationContext, ConversationState } from "@/conversation/types";
+import { isConceptNode } from "@/domain/graph";
 import type { NewsItem } from "@/domain/news";
 import { DEFAULT_USER_PROFILE } from "@/domain/profile";
 import { createTempStorage } from "@/invariants/testStorage";
@@ -32,6 +33,7 @@ import { createAppProviders } from "@/providers";
 import { createMockLlmProvider } from "@/providers/llm/mockLlmProvider";
 import { MockMemoryProvider } from "@/providers/memory/mockMemoryProvider";
 import { MockVoiceProvider } from "@/providers/voice/mockVoiceProvider";
+import { RADAR_RANKING_GOLDEN } from "@/radar/radarRankingGolden";
 import {
   resetLaunchSequenceGuard,
   runLaunchSequence,
@@ -55,6 +57,7 @@ import { INITIAL_MIGRATION_SQL } from "@/storage/migrations";
 import type { StorageProvider } from "@/storage/types";
 import { useAppStore } from "@/stores/appStore";
 import { useGraphHistoryStore } from "@/stores/graphHistoryStore";
+import { useBriefingStore } from "@/stores/briefingStore";
 import { useIngestStore } from "@/stores/ingestStore";
 import { useProfileStore } from "@/stores/profileStore";
 
@@ -198,11 +201,14 @@ describe("companion e2e (V7 mock smoke)", () => {
     await launchPromise;
 
     const state = useAppStore.getState();
+    const briefing = useBriefingStore.getState().todayItems;
     expect(state.phase).toBe("companion");
-    expect(state.newsQueue.length).toBeGreaterThan(0);
-    expect(state.newsQueue.some((item) => item.id === mockNewsItems[0]!.id)).toBe(
-      true,
+    expect(state.newsQueue).toHaveLength(3);
+    expect(briefing).toHaveLength(3);
+    expect(briefing.map((item) => item.worldItem.id)).toEqual(
+      RADAR_RANKING_GOLDEN.top3Ids,
     );
+    expect(state.newsQueue.every((item) => item.id.startsWith("radar-wi-"))).toBe(true);
     expect(state.selfChecks.some((c) => c.id === "mic")).toBe(true);
     expect(state.selfChecks.some((c) => c.id === "storage")).toBe(true);
     expect(state.storage).toBe(fixture.storage);
@@ -240,7 +246,8 @@ describe("companion e2e (V7 mock smoke)", () => {
     });
     const graph = visibleGraph(await fixture.storage.loadGraph());
     expect(graph.nodes).toHaveLength(1);
-    expect(graph.nodes[0]?.sourceUrl).toBe(news.sourceUrl);
+    const first = graph.nodes[0];
+    expect(first && isConceptNode(first) && first.sourceUrl).toBe(news.sourceUrl);
     expect(useIngestStore.getState().ingestedIds).toContain(news.id);
 
     const onboarding = nextOnboardingAfterEvent(ctx, {
@@ -893,7 +900,9 @@ describe("companion e2e showcase core loop", () => {
     const ingested = fullGraph.nodes.find(
       (node) => node.id === SHOWCASE_INGEST_NODE_ID,
     );
-    expect(ingested?.sourceUrl).toBe("https://example.com/graphiti");
+    expect(
+      ingested && isConceptNode(ingested) ? ingested.sourceUrl : null,
+    ).toBe("https://example.com/graphiti");
 
     const goldenEdge = fullGraph.edges.find(
       (edge) =>

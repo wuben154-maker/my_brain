@@ -35,6 +35,8 @@ pnpm dev
 
 打开 [`http://localhost:1420/?showcase=1`](http://localhost:1420/?showcase=1)。
 
+**默认启动体验（KP-01）：** 无 query flag 时走 **Radar mock-first** 启动（今日 top 3 + `RadarSignal`，live 失败则 fixture 兜底）。`?showcase=1` 为固定演示脚本；旧版 RSS flatten 仅在 Radar 全空/失败时作为 legacy 兜底，**不是**默认主路径。
+
 体验步骤摘要：
 
 1. 启动自检进入沉浸式星图。
@@ -121,6 +123,7 @@ MY_BRAIN_MCP=1 pnpm brain:mcp   # 只读 MCP → docs/BRAIN_MCP.md
 | [`docs/SHOWCASE_MOCK_LIVE.md`](./docs/SHOWCASE_MOCK_LIVE.md) | Mock vs Live Provider 边界 |
 | [`docs/KNOWLEDGE_OS_VISION.md`](./docs/KNOWLEDGE_OS_VISION.md) | 长期产品蓝图 |
 | [`docs/PROJECT_STATUS.md`](./docs/PROJECT_STATUS.md) | 实现现状与差距 |
+| [`docs/evals/README.md`](./docs/evals/README.md) | 成熟度标签 + eval 验证命令（KP-06） |
 | [`specs/README.md`](./specs/README.md) | V0–V7 / A·B·C·M·H 里程碑 spec |
 
 **状态：** V 系列在 spec 与 harness 测试层面已实现；默认 mock-first 端到端可演示。
@@ -137,7 +140,7 @@ MY_BRAIN_MCP=1 pnpm brain:mcp   # 只读 MCP → docs/BRAIN_MCP.md
 
 ### Showcase In 3 Minutes
 
-Run `pnpm install && pnpm dev`, then open [`http://localhost:1420/?showcase=1`](http://localhost:1420/?showcase=1). The showcase path is mock-first and does not require API keys: the companion briefs three fixed AI/GitHub items, the user confirms ingest for Graphiti, the graph lights up `showcase-ingest-graphiti`, auto-curation links it to AI Agent with an explainable reason, and undo removes only that curation link. See [`docs/DEMO.md`](./docs/DEMO.md), [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md), [`docs/SHOWCASE_MOCK_LIVE.md`](./docs/SHOWCASE_MOCK_LIVE.md), and [`docs/KNOWLEDGE_OS_VISION.md`](./docs/KNOWLEDGE_OS_VISION.md).
+Run `pnpm install && pnpm dev`. **Default launch (KP-01):** no query flag → Radar mock-first briefing (top 3 + `RadarSignal`; fixture fallback when live sources fail). **`?showcase=1`** → fixed demo script (no API keys). Legacy RSS flatten runs only when Radar returns empty/fails — not the default path. For the showcase walkthrough open [`http://localhost:1420/?showcase=1`](http://localhost:1420/?showcase=1): the companion briefs three fixed AI/GitHub items, the user confirms ingest for Graphiti, the graph lights up `showcase-ingest-graphiti`, auto-curation links it to AI Agent with an explainable reason, and undo removes only that curation link. See [`docs/DEMO.md`](./docs/DEMO.md), [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md), [`docs/SHOWCASE_MOCK_LIVE.md`](./docs/SHOWCASE_MOCK_LIVE.md), and [`docs/KNOWLEDGE_OS_VISION.md`](./docs/KNOWLEDGE_OS_VISION.md).
 
 ### Key advantages
 
@@ -214,6 +217,7 @@ Env: copy `.env.example` to `.env`. Mock-first path and live API checklist: [`do
 | [`docs/SHOWCASE_MOCK_LIVE.md`](./docs/SHOWCASE_MOCK_LIVE.md) | Mock vs live provider boundary |
 | [`docs/KNOWLEDGE_OS_VISION.md`](./docs/KNOWLEDGE_OS_VISION.md) | Long-term product vision |
 | [`docs/PROJECT_STATUS.md`](./docs/PROJECT_STATUS.md) | Status & gaps |
+| [`docs/evals/README.md`](./docs/evals/README.md) | Maturity labels + eval verification commands (KP-06) |
 | [`specs/README.md`](./specs/README.md) | V0–V7 / A·B·C·M·H milestone specs |
 
 **Status:** V-series implemented at spec + harness level; mock-first end-to-end demo available.

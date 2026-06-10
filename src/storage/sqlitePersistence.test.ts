@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import type { GraphMutationProposal } from "@/domain/graph";
+import { isConceptNode, type GraphMutationProposal } from "@/domain/graph";
 import {
   createTempStorage,
   reopenStorage,
@@ -97,9 +97,12 @@ describe("SQLite persistence (better-sqlite3)", () => {
       let graph = await storage.loadGraph();
       expect(graph.nodes).toHaveLength(1);
       expect(graph.nodes[0]?.title).toBe("RAG");
-      expect(graph.nodes[0]?.sourceUrl).toBe("https://example.com/rag");
-      expect(graph.nodes[0]?.salience).toBe(1);
-      expect(graph.nodes[0]?.lastTouchedAt).toBeTruthy();
+      const created = graph.nodes[0];
+      expect(created && isConceptNode(created) && created.sourceUrl).toBe(
+        "https://example.com/rag",
+      );
+      expect(created && isConceptNode(created) && created.salience).toBe(1);
+      expect(created && isConceptNode(created) && created.lastTouchedAt).toBeTruthy();
 
       await storage.close();
 
@@ -207,7 +210,8 @@ describe("SQLite persistence (better-sqlite3)", () => {
       const reopened = reopenStorage(dbPath, "better-sqlite3");
       await reopened.init();
       const reloaded = await reopened.loadGraph();
-      expect(reloaded.nodes.find((node) => node.title === "节点A-更新")?.sourceUrl).toBe(
+      const updatedA = reloaded.nodes.find((node) => node.title === "节点A-更新");
+      expect(updatedA && isConceptNode(updatedA) && updatedA.sourceUrl).toBe(
         "https://example.com/a",
       );
       expect(reloaded.edges).toHaveLength(1);
@@ -222,7 +226,7 @@ describe("SQLite persistence (better-sqlite3)", () => {
 describe.each(STORAGE_BACKEND_KINDS)(
   "storage foreign keys (%s)",
   (kind: StorageBackendKind) => {
-    it("rejects saveEdge when concept endpoints are missing", async () => {
+    it("allows saveEdge without DB foreign keys after KP-08 (project endpoints)", async () => {
       const { storage, cleanup } = createTempStorage(kind);
       try {
         await storage.init();
@@ -233,7 +237,7 @@ describe.each(STORAGE_BACKEND_KINDS)(
             targetId: "no-such-target",
             relationType: "related",
           }),
-        ).rejects.toThrow();
+        ).resolves.toBeUndefined();
       } finally {
         cleanup();
       }

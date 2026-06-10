@@ -30,6 +30,12 @@ export interface VoiceProviderConfig {
   instructions?: string;
   /** Mock-only: skip scripted welcome on connect (companion proactive start owns first utterance). */
   skipWelcomeUtterance?: boolean;
+  /** Volcengine realtime — X-Api-App-ID */
+  volcAppId?: string;
+  /** Volcengine realtime — X-Api-Access-Key */
+  volcAccessKey?: string;
+  /** Volcengine realtime — optional X-Api-Connect-Id */
+  volcConnectId?: string;
 }
 
 export interface VoiceProvider {

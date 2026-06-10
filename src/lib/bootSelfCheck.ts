@@ -103,12 +103,18 @@ export function createBootCheckDefinitions(
   ];
 }
 
-/** Log OpenAI key presence without adding a sixth visible row. */
+/** Log provider key presence without adding a sixth visible row. */
 export function bootApiKeyLogLine(env: AppEnv): string | null {
-  if (env.openAiApiKey) {
-    return "Realtime / LLM 密钥已配置";
+  if (env.volcAppId && env.volcAccessKey) {
+    return "豆包实时语音凭证已配置";
   }
-  return "OpenAI 密钥未配置 · 语音与摘要功能将受限";
+  if (env.openAiApiKey) {
+    return "OpenAI Realtime / LLM 密钥已配置";
+  }
+  if (env.modelscopeApiKey) {
+    return "ModelScope 文本 LLM 密钥已配置";
+  }
+  return "Live API 密钥未配置 · 默认 mock 路径可完整演示";
 }
 
 export function toPendingChecks(defs: BootCheckDefinition[]): SelfCheckItem[] {

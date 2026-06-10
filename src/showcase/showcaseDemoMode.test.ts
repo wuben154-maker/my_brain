@@ -45,14 +45,14 @@ describe("showcaseDemoMode", () => {
     );
   });
 
-  it("bootstrapShowcaseGraph seeds graph snapshot with six visible nodes", async () => {
+  it("bootstrapShowcaseGraph seeds graph snapshot with eight visible nodes", async () => {
     const { storage, cleanup } = createTempStorage();
     try {
       await storage.init();
       await bootstrapShowcaseGraph(storage);
       const active = await storage.loadGraph();
-      expect(active.nodes).toHaveLength(6);
-      expect(visibleGraph(active).nodes).toHaveLength(6);
+      expect(active.nodes).toHaveLength(8);
+      expect(visibleGraph(active).nodes).toHaveLength(8);
 
       const full = await storage.loadGraphForDisplay();
       expect(full.nodes).toHaveLength(SHOWCASE_GRAPH_SNAPSHOT.nodes.length);

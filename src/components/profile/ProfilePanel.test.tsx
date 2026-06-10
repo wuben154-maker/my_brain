@@ -25,6 +25,7 @@ describe("ProfilePanel (KOS-C2)", () => {
   it("renders profile panel with default fields", () => {
     render(createElement(ProfilePanel));
     expect(screen.getByTestId("profile-panel")).toBeTruthy();
+    expect(screen.getByTestId("profile-teaching-rationale")).toBeTruthy();
     expect(screen.getByTestId("profile-interest-list")).toBeTruthy();
     expect(screen.getByTestId("profile-understanding-demo-rag")).toBeTruthy();
     expect(screen.getByTestId("profile-explain-prefs")).toBeTruthy();

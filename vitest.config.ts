@@ -10,6 +10,8 @@ export default defineConfig({
     },
   },
   test: {
+    // Windows dev machines OOM on default parallel forks; serial workers keep pnpm check reliable.
+    maxWorkers: 1,
     environment: "node",
     include: [
       "src/**/*.test.ts",

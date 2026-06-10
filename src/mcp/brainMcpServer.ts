@@ -1,5 +1,7 @@
-import type { ConceptNode, GraphEdge } from "@/domain/graph";
+import type { BrainNode, GraphEdge } from "@/domain/graph";
+import { isConceptNode, isDecisionNode, isProjectNode, isQuestionNode, isSkillNode, isSourceNode } from "@/domain/graph";
 import type { SourceRef } from "@/domain/graph/sourceRef";
+import { sourceNodeToSourceRef } from "@/domain/nodes/sourceNode";
 import {
   BrainMcpToolCatalog,
   listBrainMcpReadTools,
@@ -30,6 +32,7 @@ export interface BrainMcpNodeView {
   intro: string;
   sourceRefs: SourceRef[];
   archived: boolean;
+  nodeKind?: "concept" | "project" | "source" | "decision" | "question" | "skill";
 }
 
 export interface BrainMcpEdgeView {
@@ -65,13 +68,54 @@ export class BrainMcpToolNotFoundError extends Error {
   }
 }
 
-export function sanitizeMcpNode(node: ConceptNode): BrainMcpNodeView {
+export function sanitizeMcpNode(node: BrainNode): BrainMcpNodeView {
+  if (isSourceNode(node)) {
+    return {
+      id: node.id,
+      title: node.title,
+      intro: node.intro,
+      sourceRefs: [sourceNodeToSourceRef(node)],
+      archived: node.archived,
+      nodeKind: "source",
+    };
+  }
+  if (isDecisionNode(node)) {
+    return {
+      id: node.id,
+      title: node.title,
+      intro: node.rationale,
+      sourceRefs: node.sourceRefs,
+      archived: node.archived,
+      nodeKind: "decision",
+    };
+  }
+  if (isQuestionNode(node)) {
+    return {
+      id: node.id,
+      title: node.title,
+      intro: node.context,
+      sourceRefs: node.sourceRefs,
+      archived: node.archived,
+      nodeKind: "question",
+    };
+  }
+  if (isSkillNode(node)) {
+    return {
+      id: node.id,
+      title: node.title,
+      intro: node.intro,
+      sourceRefs: node.sourceRefs,
+      archived: node.archived,
+      nodeKind: "skill",
+    };
+  }
   return {
     id: node.id,
     title: node.title,
     intro: node.intro,
-    sourceRefs: node.sourceRefs ?? [],
+    sourceRefs: isConceptNode(node) ? (node.sourceRefs ?? []) : node.sourceRefs,
     archived: node.archived,
+    ...(isProjectNode(node) ? { nodeKind: "project" as const } : {}),
   };
 }
 

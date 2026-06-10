@@ -12,12 +12,14 @@ import {
 } from "@/hooks/useProfileDistillation";
 import { useWalkthroughHighlight } from "@/hooks/useWalkthroughHighlight";
 import { parseIngestCommand } from "@/lib/parseIngestCommand";
+import { finalizeVoiceSession } from "@/lib/voiceSessionFinalize";
 import { isVisualSnapshotMode } from "@/lib/visualSnapshotMode";
 import { isShowcaseDemoMode } from "@/showcase/showcaseDemoMode";
 import { DEFAULT_ONBOARDING } from "@/conversation/types";
 import type { TranscriptLineLike } from "@/lib/profileDistillation";
-import { finalizeVoiceSession } from "@/lib/voiceSessionFinalize";
+import { buildBriefingTopicKeyByItemId } from "@/radar/briefingElaboration";
 import { useAppStore } from "@/stores/appStore";
+import { useBriefingStore } from "@/stores/briefingStore";
 import { useConversationStore } from "@/stores/conversationStore";
 import { useGraphStore } from "@/stores/graphStore";
 import { useIngestStore } from "@/stores/ingestStore";
@@ -38,6 +40,8 @@ export function useConversationSession(options?: {
   const newsQueue = useAppStore((s) => s.newsQueue);
   const providers = useAppStore((s) => s.providers);
   const profile = useProfileStore((s) => s.profile);
+  const todayItems = useBriefingStore((s) => s.todayItems);
+  const briefingFeedbackByItemId = useBriefingStore((s) => s.feedbackByItemId);
 
   const graphNodes = useGraphStore((s) => s.nodes);
   const graphEdges = useGraphStore((s) => s.edges);
@@ -86,6 +90,11 @@ export function useConversationSession(options?: {
         ? { questions: interviewQuestions, cursor: interviewCursor }
         : undefined;
 
+    const briefingSignalsByItemId = Object.fromEntries(
+      todayItems.map((item) => [item.worldItem.id, item.signals]),
+    );
+    const topicKeyByItemId = buildBriefingTopicKeyByItemId(briefingSignalsByItemId);
+
     return buildConversationContext({
       newsQueue,
       newsCursor,
@@ -97,8 +106,12 @@ export function useConversationSession(options?: {
       highlightNodeIds:
         highlightNodeIds.length > 0 ? highlightNodeIds : undefined,
       interviewSession,
+      briefingFeedbackByItemId,
+      briefingSignalsByItemId,
+      topicKeyByItemId,
     });
   }, [
+    briefingFeedbackByItemId,
     currentState,
     graphEdges,
     graphNodes,
@@ -108,6 +121,7 @@ export function useConversationSession(options?: {
     newsQueue,
     onboarding,
     profile,
+    todayItems,
   ]);
 
   getContextRef.current = getContext();

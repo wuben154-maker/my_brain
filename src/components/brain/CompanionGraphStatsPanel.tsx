@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { isConceptNode } from "@/domain/graph";
 import { computeGraphDepth } from "@/lib/computeGraphDepth";
 import { useGraphStore } from "@/stores/graphStore";
 
@@ -9,7 +10,9 @@ export function CompanionGraphStatsPanel() {
 
   const rows = useMemo(() => {
     const activeNodes = nodes.filter((node) => !node.archived);
-    const sourceCount = nodes.filter((node) => node.sourceUrl).length;
+    const sourceCount = nodes.filter(
+      (node) => isConceptNode(node) && node.sourceUrl,
+    ).length;
     const depth = computeGraphDepth(
       activeNodes.map((node) => node.id),
       edges.map((edge) => ({ sourceId: edge.sourceId, targetId: edge.targetId })),

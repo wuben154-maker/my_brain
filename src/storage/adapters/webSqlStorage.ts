@@ -1,8 +1,14 @@
 import type { BrainGraphSnapshot, ConceptNode, GraphEdge } from "@/domain/graph";
+import type { DecisionNode } from "@/domain/nodes/decisionNode";
+import type { ProjectNode } from "@/domain/nodes/projectNode";
+import type { QuestionNode } from "@/domain/nodes/questionNode";
+import type { SkillNode } from "@/domain/nodes/skillNode";
+import type { SourceNode } from "@/domain/nodes/sourceNode";
 import type { GraphHistoryEntry } from "@/domain/graphHistory";
 import type { UserProfile } from "@/domain/profile";
 import type { ProposalEnvelope, ProposalStatus } from "@/agent/types";
 import type { CognitiveAction } from "@/domain/actions/cognitiveAction";
+import type { BriefingFeedback } from "@/domain/radar/briefingItem";
 import type { LearningTrace } from "@/domain/learning/learningTrace";
 import type { StorageProvider } from "../types";
 
@@ -56,10 +62,65 @@ export class WebSqlStorageProvider implements StorageProvider {
     return storageFetch("/concept", { body: node });
   }
 
+  saveProject(node: ProjectNode): Promise<void> {
+    return storageFetch("/project", { body: node });
+  }
+
+  saveSource(node: SourceNode): Promise<void> {
+    return storageFetch("/source", { body: node });
+  }
+
+  saveDecision(node: DecisionNode): Promise<void> {
+    return storageFetch("/decision", { body: node });
+  }
+
+  saveQuestion(node: QuestionNode): Promise<void> {
+    return storageFetch("/question", { body: node });
+  }
+
+  saveSkill(node: SkillNode): Promise<void> {
+    return storageFetch("/skill", { body: node });
+  }
+
   deleteConcept(conceptId: string): Promise<void> {
     return storageFetch("/concept/delete", {
       method: "POST",
       body: { id: conceptId },
+    });
+  }
+
+  deleteProject(projectId: string): Promise<void> {
+    return storageFetch("/project/delete", {
+      method: "POST",
+      body: { id: projectId },
+    });
+  }
+
+  deleteSource(sourceId: string): Promise<void> {
+    return storageFetch("/source/delete", {
+      method: "POST",
+      body: { id: sourceId },
+    });
+  }
+
+  deleteDecision(decisionId: string): Promise<void> {
+    return storageFetch("/decision/delete", {
+      method: "POST",
+      body: { id: decisionId },
+    });
+  }
+
+  deleteQuestion(questionId: string): Promise<void> {
+    return storageFetch("/question/delete", {
+      method: "POST",
+      body: { id: questionId },
+    });
+  }
+
+  deleteSkill(skillId: string): Promise<void> {
+    return storageFetch("/skill/delete", {
+      method: "POST",
+      body: { id: skillId },
     });
   }
 
@@ -137,5 +198,13 @@ export class WebSqlStorageProvider implements StorageProvider {
 
   saveCognitiveAction(action: CognitiveAction): Promise<void> {
     return storageFetch("/cognitive-actions/save", { body: action });
+  }
+
+  listBriefingFeedback(): Promise<BriefingFeedback[]> {
+    return storageFetch("/briefing-feedback");
+  }
+
+  saveBriefingFeedback(feedback: BriefingFeedback): Promise<void> {
+    return storageFetch("/briefing-feedback/save", { body: feedback });
   }
 }

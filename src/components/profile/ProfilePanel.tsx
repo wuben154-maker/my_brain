@@ -1,9 +1,12 @@
 import { useCallback, useState } from "react";
 import type { UnderstandingLevel } from "@/domain/profile";
 import { DEFAULT_USER_PROFILE } from "@/domain/profile";
+import { buildProfileTeachingRationale } from "@/conversation/teachingDepth";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { useAppStore } from "@/stores/appStore";
+import { useBriefingStore } from "@/stores/briefingStore";
 import { useProfileStore } from "@/stores/profileStore";
+import { primaryBriefingSignal } from "@/domain/radar/briefingItem";
 
 const UNDERSTANDING_OPTIONS: { value: UnderstandingLevel; label: string }[] = [
   { value: "unfamiliar", label: "未接触" },
@@ -20,6 +23,12 @@ export function ProfilePanel() {
   const undoLastCorrection = useProfileStore((state) => state.undoLastCorrection);
   const persistWarning = useProfileStore((state) => state.persistWarning);
   const lastCorrection = useProfileStore((state) => state.lastCorrection);
+  const todayItems = useBriefingStore((state) => state.todayItems);
+
+  const primarySignal = todayItems[0]
+    ? primaryBriefingSignal(todayItems[0])
+    : undefined;
+  const rationaleLines = buildProfileTeachingRationale(profile, primarySignal);
 
   const interestEntries =
     profile.interestEntries ?? DEFAULT_USER_PROFILE.interestEntries ?? [];
@@ -93,6 +102,18 @@ export function ProfilePanel() {
           画像已更新到内存，但未能写入本地存储。
         </p>
       ) : null}
+
+      <GlassCard
+        className="flex flex-col gap-2 p-4 text-sm"
+        data-testid="profile-teaching-rationale"
+      >
+        <h3 className="font-medium text-primary">为何推荐 / 讲解</h3>
+        <ul className="flex flex-col gap-1 text-secondary">
+          {rationaleLines.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      </GlassCard>
 
       <GlassCard className="flex flex-col gap-3 p-4">
         <h3 className="text-sm font-medium text-primary">兴趣权重</h3>
