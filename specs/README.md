@@ -72,6 +72,56 @@ KOS-A1 → KOS-A2 → KOS-A3 → KOS-A4
   →（KOS-F1、KOS-F2、KOS-F3）
 ```
 
+## KOS Productization（KP 系列 · planned）
+
+> 来源：[`docs/KOS_PRODUCTIZATION_PLAN.md`](../docs/KOS_PRODUCTIZATION_PLAN.md)  
+> **产品化执行层**：在 KOS A–F harness 之上，把能力收束为默认主闭环（Radar → 语音入库 → 自动整理 → Weekly Review），再按风险进入 Controlled Autonomy。  
+> **兼容说明**：本目录下已有平铺 `KOS-*.md`、`V*.md`、`A/B/C/M/N/G/H` spec **保持原位、不移动**；KP 系列集中在子目录 [`kos-productization/`](./kos-productization/README.md)，避免破坏历史链接。
+
+### 默认体验裁定（KP 全系列硬约束）
+
+| 路径 | 触发 | 定位 |
+|------|------|------|
+| **Radar 默认** | 无 query flag | mock-first top 3；source 成功增强，失败 fallback |
+| **Showcase** | `?showcase=1` | 固定演示流 |
+| **RSS flatten legacy** | 内部 fallback | 降级/遗留，**不是**主体验 |
+
+### Spec 索引
+
+| Spec | 代号 | 依赖 | 状态 | 一句话 |
+|------|------|------|------|--------|
+| [kos-productization/README.md](./kos-productization/README.md) | `kp-index` | — | planned | 总索引：执行顺序、并行性、总验收门 |
+| [KP-00-ui-contract](./kos-productization/KP-00-ui-contract.md) | `ui-contract` | V0–V7 | planned | UI contract；**第一步**，阻塞 KP-01+ |
+| [KP-01-default-radar-launch](./kos-productization/KP-01-default-radar-launch.md) | `default-radar-launch` | KP-00 | planned | 无 flag 默认 Radar；showcase/legacy 口径 |
+| [KP-02-radar-companion-ui](./kos-productization/KP-02-radar-companion-ui.md) | `radar-companion-ui` | KP-00, KP-01 | planned | RadarSignal 进 v2 companion shell |
+| [KP-03-weekly-review-mainflow](./kos-productization/KP-03-weekly-review-mainflow.md) | `weekly-review-mainflow` | KP-00, KOS-D3 | planned | Weekly Review 主路径 + graph history |
+| [KP-04-feedback-persistence](./kos-productization/KP-04-feedback-persistence.md) | `feedback-persistence` | KP-01 | planned | feedback 持久化 → 下轮 ranking |
+| [KP-05-profile-teaching-loop](./kos-productization/KP-05-profile-teaching-loop.md) | `profile-teaching-loop` | KP-04, KOS-C2 | planned | 画像修正 + teaching depth 闭环 |
+| [KP-06-evals-docs](./kos-productization/KP-06-evals-docs.md) | `evals-docs` | KP-01–05 | planned | `docs/evals/` + 成熟度文档口径 |
+| [KP-07-storage-transaction-gate](./kos-productization/KP-07-storage-transaction-gate.md) | `storage-transaction-gate` | H5 债务；可与 KP-06 并行 | planned | H5-storage-transactions gate；**阻塞 KP-08** |
+| [KP-08-project-node-minimal](./kos-productization/KP-08-project-node-minimal.md) | `project-node-minimal` | KP-07 | planned | 最小 Project；Phase 6 **不重复** |
+| [KP-09-phase-1-5-acceptance-gate](./kos-productization/KP-09-phase-1-5-acceptance-gate.md) | `phase-1-5-gate` | KP-00–08 | planned | 主路径 E2E 总 gate；PASS 才进 Phase 6–8 |
+| [KP-10-source-node](./kos-productization/KP-10-source-node.md) | `source-node` | KP-09 | planned | Phase 6.1 Source |
+| [KP-11-decision-node](./kos-productization/KP-11-decision-node.md) | `decision-node` | KP-10 | planned | Phase 6.2 Decision |
+| [KP-12-question-node](./kos-productization/KP-12-question-node.md) | `question-node` | KP-11 | planned | Phase 6.3 Question |
+| [KP-13-skill-node](./kos-productization/KP-13-skill-node.md) | `skill-node` | KP-12 | planned | Phase 6.4 Skill |
+| [KP-14-provisional-ai-ingest](./kos-productization/KP-14-provisional-ai-ingest.md) | `provisional-ingest` | KP-13 | planned | AI 候选隔离区；禁止直写永久图谱 |
+| [KP-15-controlled-action-agent](./kos-productization/KP-15-controlled-action-agent.md) | `controlled-action` | KP-14 | planned | 受控 action；外部写须 dry-run/确认/审计 |
+
+执行顺序速记（KP 系列）：
+```
+KP-00（第一步，阻塞后续）
+  → KP-01 → KP-02
+  → KP-03
+  → KP-04 → KP-05
+  → KP-06
+  → KP-07（H5 gate，可与 KP-06 并行；阻塞 KP-08）
+  → KP-08
+  → KP-09（总验收门：默认 E2E Radar→ingest→curation→undo→Review；FAIL 则停 KP-10+）
+  → KP-10 → KP-11 → KP-12 → KP-13（Phase 6 每次一种类型；Project 已在 KP-08）
+  → KP-14 → KP-15（信任边界 UI 必 design-review + qa）
+```
+
 ### 架构裁定索引（主控定稿，已写入对应 spec）
 
 | # | 裁定 | 落点 |
@@ -158,7 +208,7 @@ KOS-A1 → KOS-A2 → KOS-A3 → KOS-A4
 | 编号 | 描述 | 证据 (file:line) | 影响 / 与不变量关系 | 严重度 | 计划处置 |
 |---|---|---|---|---|---|
 | #4 | **newsQueue 仅内存**：启动抓取的资讯候选只存 Zustand、不落 SQLite；刷新或重启即丢。 | `src/stores/appStore.ts:28-55`、`src/lib/runLaunchSequence.ts:114-116` | 字面弱违背本地持久化预期，但非 DB 泄漏；会话级候选可丢、图谱/画像仍持久。 | 低 | V7 或后续评估会话级持久化。 |
-| H2-storage | **存储无事务**：`applyGraphMutation` 与 `persistGraphSnapshot` 分步落库，非原子。 | `src/lib/graphMutations.ts:105-235`、`237+`；调用例 `src/stores/proposalStore.ts:77` | 部分写/损坏风险；V4 undo 依赖快照兜底。 | 中 | 单列 **H5-storage-transactions** |
+| H5-storage-transactions | **存储无事务**：`applyGraphMutation` 与 `persistGraphSnapshot` 分步落库，非原子。 | `src/lib/graphMutations.ts:105-235`、`237+`；调用例 `src/stores/proposalStore.ts:77` | 部分写/损坏风险；V4 undo 依赖快照兜底。 | 中 | KP-07 收敛；含 schema versioning + 迁移框架 |
 | coverage-flake | **coverage 首跑偶发 exit 1**：复跑才过；CI 可能偶红。 | 见 `H0-coverage-ratchet` | 不影响产品不变量。 | 中 | 排查 Vitest coverage 根因 |
 | H4-openai-mode | **OpenAI 模式端到端缺口**：配 Key 时多项 fail-fast。 | `src/providers/llm/openaiLlmProvider.ts:34-44`、`53-76` | mock 默认路径不受影响。 | 中 | **V7** `docs/V2_REAL_API_ACCEPTANCE.md` 跟踪 |
 | bundle-size | **生产 bundle >500kB 警告** | 构建输出 | 无功能违背。 | 低 | 代码分割 / 懒加载 |

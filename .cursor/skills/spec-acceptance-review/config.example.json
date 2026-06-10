@@ -1,0 +1,10 @@
+{
+  "integrationBranch": "main",
+  "verifyMode": "scoped",
+  "defaultTestCommands": [
+    "go test ./...",
+    "cd web && npx tsc --noEmit"
+  ],
+  "contractsGlob": "docs/specs/**/01-contracts*.md",
+  "specRoots": ["docs/specs", "docs/Process"]
+}
