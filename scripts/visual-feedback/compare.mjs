@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { PATHS, VISUAL_TARGETS } from "./config.mjs";
+import { PATHS, resolveVisualTargets } from "./config.mjs";
 import { comparePngs, cropPng, readPng, writePng } from "./png-utils.mjs";
 import { writeHtmlReport } from "./report-html.mjs";
 
@@ -13,7 +13,7 @@ export function compareAllScreenshots() {
   const targets = [];
   let allPass = true;
 
-  for (const target of VISUAL_TARGETS) {
+  for (const target of resolveVisualTargets()) {
     const referencePath = path.join(PATHS.assets, target.referenceFile);
     const actualPath = path.join(PATHS.actualDir, `${target.id}.png`);
     const diffPath = path.join(PATHS.diffDir, `${target.id}.png`);
