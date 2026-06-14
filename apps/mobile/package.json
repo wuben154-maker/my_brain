@@ -12,6 +12,7 @@
     "test": "pnpm -w exec vitest run apps/mobile"
   },
   "dependencies": {
+    "@babel/runtime": "^7.25.0",
     "@my-brain/core": "workspace:*",
     "expo": "~52.0.46",
     "expo-asset": "~11.0.5",

@@ -117,6 +117,9 @@ importers:
 
   apps/mobile:
     dependencies:
+      '@babel/runtime':
+        specifier: ^7.25.0
+        version: 7.29.7
       '@my-brain/core':
         specifier: workspace:*
         version: link:../../packages/core
