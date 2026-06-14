@@ -65,22 +65,7 @@ jobs:
 
           echo "IOS_PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
           echo "IOS_TEAM_ID=$(security cms -D -i "$PROFILE" | plutil -extract TeamIdentifier.0 raw -)" >> "$GITHUB_ENV"
-          IOS_BUNDLE_ID=$(python3 - "$PROFILE" <<'PY'
-import plistlib, subprocess, sys
-profile = subprocess.check_output(["security", "cms", "-D", "-i", sys.argv[1]])
-data = plistlib.loads(profile)
-ent = data.get("Entitlements") or {}
-app_id = ent.get("application-identifier")
-if not app_id:
-    for value in ent.values():
-        if isinstance(value, str) and "." in value and value.count(".") >= 2:
-            app_id = value
-            break
-if not app_id:
-    raise SystemExit("Could not resolve application-identifier from profile")
-print(app_id.split(".", 1)[1])
-PY
-)
+          IOS_BUNDLE_ID=$(python3 apps/mobile/scripts/read-ios-profile-bundle-id.py "$PROFILE")
           echo "IOS_BUNDLE_ID=$IOS_BUNDLE_ID" >> "$GITHUB_ENV"
 
       - name: Verify bundle ID matches app.json
