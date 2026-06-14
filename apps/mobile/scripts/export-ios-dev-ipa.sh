@@ -16,14 +16,12 @@ if [[ -z "$WORKSPACE" ]]; then
   exit 1
 fi
 
-mapfile -t SCHEMES < <(xcodebuild -list -json -workspace "$WORKSPACE" | python3 -c "import json,sys; data=json.load(sys.stdin); [print(s) for s in data.get('workspace',{}).get('schemes',[]) if 'Pods' not in s]")
+SCHEME="$(xcodebuild -list -json -workspace "$WORKSPACE" | python3 -c "import json,sys; data=json.load(sys.stdin); schemes=[s for s in data.get('workspace',{}).get('schemes',[]) if 'Pods' not in s]; print(schemes[0] if schemes else '')")"
 
-if [[ ${#SCHEMES[@]} -eq 0 ]]; then
+if [[ -z "$SCHEME" ]]; then
   echo "No app scheme found in workspace"
   exit 1
 fi
-
-SCHEME="${SCHEMES[0]}"
 echo "Using workspace=$WORKSPACE scheme=$SCHEME"
 
 cat > "$EXPORT_PLIST" <<EOF
