@@ -1,0 +1,16 @@
+﻿Networking has been disabled
+Starting project at d:\my_brain\apps\mobile
+Starting Metro Bundler
+
+TypeScript: The tsconfig.json has been updated (Use EXPO_NO_TYPESCRIPT_SETUP to skip)
+
+鈥?Required modifications made to the tsconfig.json:
+
+  extends is now expo/tsconfig.base
+
+
+Waiting on http://localhost:8081
+Logs for your project will appear below.
+
+Skipping dependency validation in offline mode
+

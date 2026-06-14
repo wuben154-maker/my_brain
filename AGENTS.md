@@ -1,3 +1,7 @@
+> **M0 修订（2026-06-13）· 状态：merged**  
+> **移动 App-only / User Evolution-first** 以 [`docs/MOBILE_PRODUCT_PLAN.md`](docs/MOBILE_PRODUCT_PLAN.md) + [`specs/mobile-app/`](specs/mobile-app/) 为准。  
+> 产品第一入口：`apps/mobile`（Expo/RN）；共享逻辑：`packages/core`；legacy Web/Tauri：`src/` 不阻塞移动主线。
+
 # AGENTS.md — my_brain
 
 > Guidance for AI coding agents working in this repo. Keep it loaded. **New session / new window:** read `docs/handbook/PROJECT_HANDBOOK.md` first, then `PRODUCT.md` for full product spec.

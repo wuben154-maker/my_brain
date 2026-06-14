@@ -1,0 +1,267 @@
+{
+
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+
+  "$id": "https://my-brain.local/specs/mobile-app/execution-state.schema.json",
+
+  "title": "Mobile M-Series Execution State",
+
+  "description": "State lock for the GPT-5.5 parent agent supervising composer2.5 through M0-M6, M7A, M7B, and complete. M7-GATE = M7A + M7B aggregate acceptance (reports.M7 optional final report). This file defines the shape of specs/mobile-app/EXECUTION_STATE.json once M0 creates it.",
+
+  "type": "object",
+
+  "additionalProperties": false,
+
+  "required": [
+
+    "currentPhase",
+
+    "status",
+
+    "lastPassedPhase",
+
+    "allowedNextAction",
+
+    "reports",
+
+    "hardStop"
+
+  ],
+
+  "properties": {
+
+    "currentPhase": {
+
+      "type": "string",
+
+      "enum": ["M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7A", "M7B", "complete"]
+
+    },
+
+    "status": {
+
+      "type": "string",
+
+      "enum": ["not_started", "in_progress", "fixing", "blocked", "passed", "complete"]
+
+    },
+
+    "lastPassedPhase": {
+
+      "type": ["string", "null"],
+
+      "enum": ["M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7A", "M7B", null]
+
+    },
+
+    "allowedNextAction": {
+
+      "type": "string",
+
+      "description": "Human-readable lock used by parent agent prompts. Examples: run_M2_only, run_M7A_only, run_M7B_only, stop_hard_blocker, complete."
+
+    },
+
+    "reports": {
+
+      "type": "object",
+
+      "additionalProperties": false,
+
+      "properties": {
+
+        "M0": { "$ref": "#/$defs/reportStatus" },
+
+        "M1": { "$ref": "#/$defs/reportStatus" },
+
+        "M2": { "$ref": "#/$defs/reportStatus" },
+
+        "M3": { "$ref": "#/$defs/reportStatus" },
+
+        "M4": { "$ref": "#/$defs/reportStatus" },
+
+        "M5": { "$ref": "#/$defs/reportStatus" },
+
+        "M6": { "$ref": "#/$defs/reportStatus" },
+
+        "M7A": { "$ref": "#/$defs/reportStatus" },
+
+        "M7B": { "$ref": "#/$defs/reportStatus" },
+
+        "M7": { "$ref": "#/$defs/reportStatus" }
+
+      }
+
+    },
+
+    "hardStop": {
+
+      "type": ["object", "null"],
+
+      "additionalProperties": false,
+
+      "required": ["phase", "reason", "createdAt"],
+
+      "properties": {
+
+        "phase": {
+
+          "type": "string",
+
+          "enum": ["M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7A", "M7B"]
+
+        },
+
+        "reason": { "type": "string", "minLength": 1 },
+
+        "createdAt": { "type": "string", "format": "date-time" },
+
+        "nextRequiredAction": { "type": "string" }
+
+      }
+
+    }
+
+  },
+
+  "$defs": {
+
+    "reportStatus": {
+
+      "type": "object",
+
+      "additionalProperties": false,
+
+      "required": ["path", "verdict", "verifiedAt"],
+
+      "properties": {
+
+        "path": {
+
+          "type": "string",
+
+          "pattern": "^specs/mobile-app/reports/M(?:[0-6]|7(?:A|B)?)-GATE-report\\.md$"
+
+        },
+
+        "verdict": {
+
+          "type": "string",
+
+          "enum": ["PASS", "FAIL", "DEGRADED", "BLOCKED", "NEEDS_DEVICE_EVIDENCE"]
+
+        },
+
+        "verifiedAt": { "type": "string", "format": "date-time" },
+
+        "commit": { "type": "string" },
+
+        "notes": { "type": "string" }
+
+      }
+
+    }
+
+  },
+
+  "examples": [
+
+    {
+
+      "currentPhase": "M0",
+
+      "status": "not_started",
+
+      "lastPassedPhase": null,
+
+      "allowedNextAction": "run_M0_only",
+
+      "reports": {},
+
+      "hardStop": null
+
+    },
+
+    {
+
+      "currentPhase": "M7A",
+
+      "status": "not_started",
+
+      "lastPassedPhase": "M6",
+
+      "allowedNextAction": "run_M7A_only",
+
+      "reports": {
+
+        "M6": {
+
+          "path": "specs/mobile-app/reports/M6-GATE-report.md",
+
+          "verdict": "PASS",
+
+          "verifiedAt": "2026-06-12T10:00:00Z"
+
+        }
+
+      },
+
+      "hardStop": null
+
+    },
+
+    {
+
+      "currentPhase": "complete",
+
+      "status": "complete",
+
+      "lastPassedPhase": "M7B",
+
+      "allowedNextAction": "complete",
+
+      "reports": {
+
+        "M7A": {
+
+          "path": "specs/mobile-app/reports/M7A-GATE-report.md",
+
+          "verdict": "PASS",
+
+          "verifiedAt": "2026-06-12T14:00:00Z"
+
+        },
+
+        "M7B": {
+
+          "path": "specs/mobile-app/reports/M7B-GATE-report.md",
+
+          "verdict": "PASS",
+
+          "verifiedAt": "2026-06-12T16:00:00Z"
+
+        },
+
+        "M7": {
+
+          "path": "specs/mobile-app/reports/M7-GATE-report.md",
+
+          "verdict": "PASS",
+
+          "verifiedAt": "2026-06-12T16:30:00Z",
+
+          "notes": "Aggregate full acceptance: M7A + M7B + M0–M6 report chain"
+
+        }
+
+      },
+
+      "hardStop": null
+
+    }
+
+  ]
+
+}
+
+

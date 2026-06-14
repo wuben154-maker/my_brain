@@ -1,0 +1,340 @@
+/**
+ * Generate v2 adaptive_live home HTML per UserMode (twinkling star field).
+ * Usage: node specs/mobile-app/assets/ui/generate-v2-adaptive-screens.mjs
+ */
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/** @typedef {'ingest' | 'skip' | 'detail'} SuggestedIntent */
+
+/** @type {Array<{
+ *   slug: string;
+ *   modeName: string;
+ *   label: string;
+ *   cardTitle: string;
+ *   cardBody: string;
+ *   accent: string;
+ *   accentRgb: string;
+ *   suggested: SuggestedIntent;
+ *   ambient: string;
+ * }>} */
+const modes = [
+  {
+    slug: "tech",
+    modeName: "技术追踪者",
+    label: "技术追踪者 · 今天有一条对你有用的",
+    cardTitle: "今天值得你看的一条",
+    cardBody: "OpenAI 刚开了新模型通道，和你关注的推理成本有关。",
+    accent: "#6b9fff",
+    accentRgb: "107, 159, 255",
+    suggested: "detail",
+    ambient:
+      "radial-gradient(ellipse 85% 50% at 50% 18%, rgba(107, 159, 255, 0.14), transparent 68%), radial-gradient(ellipse 55% 40% at 20% 80%, rgba(123, 140, 255, 0.06), transparent 60%)",
+  },
+  {
+    slug: "learner",
+    modeName: "学习者",
+    label: "学习者 · 今天想接着聊",
+    cardTitle: "上次聊的概念",
+    cardBody: "Transformer 你还想继续吗？我可以从注意力机制讲起。",
+    accent: "#9b8cff",
+    accentRgb: "155, 140, 255",
+    suggested: "detail",
+    ambient:
+      "radial-gradient(ellipse 85% 50% at 50% 18%, rgba(155, 140, 255, 0.12), transparent 68%), radial-gradient(ellipse 60% 40% at 75% 75%, rgba(123, 140, 255, 0.07), transparent 60%)",
+  },
+  {
+    slug: "creator",
+    modeName: "创作者/研究者",
+    label: "创作者 · 有段素材等你理",
+    cardTitle: "待整理的素材",
+    cardBody: "你前天捕获的段落，要并入「写作系统」吗？",
+    accent: "#ffb87a",
+    accentRgb: "255, 184, 122",
+    suggested: "ingest",
+    ambient:
+      "radial-gradient(ellipse 80% 48% at 48% 20%, rgba(255, 184, 122, 0.12), transparent 65%), radial-gradient(ellipse 50% 38% at 82% 72%, rgba(123, 140, 255, 0.05), transparent 58%)",
+  },
+  {
+    slug: "founder",
+    modeName: "创业/项目型",
+    label: "项目型 · 有件事卡住了",
+    cardTitle: "项目里卡住的点",
+    cardBody: "竞品分析那节点三天没动了，要一起推进吗？",
+    accent: "#7bd4a8",
+    accentRgb: "123, 212, 168",
+    suggested: "detail",
+    ambient:
+      "radial-gradient(ellipse 82% 50% at 52% 18%, rgba(123, 212, 168, 0.11), transparent 66%), radial-gradient(ellipse 58% 42% at 78% 78%, rgba(123, 140, 255, 0.06), transparent 60%)",
+  },
+  {
+    slug: "memory",
+    modeName: "个人记忆/生活型",
+    label: "生活记忆 · 前几天你提过",
+    cardTitle: "前几天你说过",
+    cardBody: "周三你提到想早起跑步——要记成习惯节点吗？",
+    accent: "#ff9ec4",
+    accentRgb: "255, 158, 196",
+    suggested: "ingest",
+    ambient:
+      "radial-gradient(ellipse 84% 52% at 50% 20%, rgba(255, 158, 196, 0.13), transparent 67%), radial-gradient(ellipse 55% 40% at 18% 75%, rgba(255, 138, 122, 0.07), transparent 58%)",
+  },
+];
+
+const STAR_FIELD_CSS = `
+    .star-field-wrap {
+      position: relative; height: 368px; margin-top: 0; overflow: hidden;
+    }
+    .star-field-wrap::before, .star-field-wrap::after {
+      content: ""; position: absolute; top: 0; bottom: 0; width: 40px; z-index: 4; pointer-events: none;
+    }
+    .star-field-wrap::before { left: 0; background: linear-gradient(90deg, #14161c 0%, transparent 100%); }
+    .star-field-wrap::after { right: 0; background: linear-gradient(270deg, #14161c 0%, transparent 100%); }
+    .pan-hint {
+      position: absolute; top: 6px; right: 20px; z-index: 5;
+      font-size: 12px; color: #6b7280; display: flex; align-items: center; gap: 4px;
+    }
+    .star-canvas { position: absolute; left: -20px; top: 8px; width: 430px; height: 340px; }
+    .star-canvas svg.lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .star-node {
+      position: absolute; transform: translate(-50%, -50%);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .star-glow { position: absolute; border-radius: 50%; pointer-events: none; }
+    .star-shape {
+      position: relative; z-index: 1;
+      clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+      background: linear-gradient(135deg, #fff8f0 0%, #e8e4ff 100%);
+    }
+    .star-node.dim .star-shape {
+      background: linear-gradient(135deg, rgba(244,242,239,0.85) 0%, rgba(155,163,180,0.7) 100%);
+    }
+    .star-node.warm .star-shape {
+      background: linear-gradient(135deg, #ffd4cc 0%, #ff8a7a 100%);
+      animation: twinkleWarm 3.4s ease-in-out infinite;
+    }
+    .star-node.mode .star-shape {
+      background: linear-gradient(135deg, #fff 0%, rgba(var(--mode-accent-rgb),0.9) 100%);
+      filter: drop-shadow(0 0 6px rgba(var(--mode-accent-rgb), 0.55));
+    }
+    .star-node.s1 { left: 24%; top: 28%; }
+    .star-node.s1 .star-shape { width: 9px; height: 9px; animation: twinkle 3.2s ease-in-out infinite; }
+    .star-node.s2 { left: 40%; top: 20%; }
+    .star-node.s2.dim .star-shape { width: 7px; height: 7px; animation: twinkle 4.1s ease-in-out 0.5s infinite; }
+    .star-node.s3 { left: 56%; top: 36%; }
+    .star-node.s3.mode .star-shape { width: 12px; height: 12px; animation: twinkle 3.6s ease-in-out 0.2s infinite; }
+    .star-node.s3 .star-glow {
+      width: 40px; height: 40px;
+      background: radial-gradient(circle, rgba(var(--mode-accent-rgb), 0.28) 0%, transparent 70%);
+    }
+    .star-node.s4 { left: 72%; top: 26%; }
+    .star-node.s4 .star-shape { width: 8px; height: 8px; animation: twinkle 3.8s ease-in-out 1s infinite; }
+    .star-node.s5 { left: 50%; top: 56%; }
+    .star-node.s5.warm .star-shape { width: 11px; height: 11px; }
+    .star-node.s5 .star-glow { width: 30px; height: 30px; background: radial-gradient(circle, rgba(255,138,122,0.18) 0%, transparent 70%); }
+    .star-node.s6 { left: 30%; top: 62%; }
+    .star-node.s6.dim .star-shape { width: 7px; height: 7px; animation: twinkle 4.2s ease-in-out 0.8s infinite; }
+    .star-node.s7 { left: 76%; top: 60%; }
+    .star-node.s7.dim .star-shape { width: 6px; height: 6px; animation: twinkle 4.5s ease-in-out 1.2s infinite; }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.55; transform: scale(0.92); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+    @keyframes twinkleWarm {
+      0%, 100% { opacity: 0.7; transform: scale(0.94); }
+      50% { opacity: 1; transform: scale(1.05); }
+    }
+`;
+
+/**
+ * @param {string} accentRgb
+ */
+function starFieldHtml(accentRgb) {
+  return `
+    <section class="star-field-wrap" aria-label="可滑动的记忆星座">
+      <span class="pan-hint">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3"/></svg>
+        拖动逛逛
+      </span>
+      <div class="star-canvas">
+        <svg class="lines" aria-hidden="true">
+          <line x1="248" y1="130" x2="103" y2="95" stroke="rgba(${accentRgb},0.16)" stroke-width="1"/>
+          <line x1="248" y1="130" x2="172" y2="68" stroke="rgba(${accentRgb},0.12)" stroke-width="1"/>
+          <line x1="248" y1="130" x2="310" y2="88" stroke="rgba(${accentRgb},0.14)" stroke-width="1"/>
+          <line x1="248" y1="130" x2="215" y2="190" stroke="rgba(${accentRgb},0.2)" stroke-width="1"/>
+          <line x1="248" y1="130" x2="327" y2="204" stroke="rgba(${accentRgb},0.1)" stroke-width="1"/>
+          <line x1="215" y1="190" x2="129" y2="211" stroke="rgba(123,140,255,0.1)" stroke-width="1"/>
+        </svg>
+        <div class="star-node s1"><div class="star-glow"></div><div class="star-shape"></div></div>
+        <div class="star-node s2 dim"><div class="star-shape"></div></div>
+        <div class="star-node s3 mode"><div class="star-glow"></div><div class="star-shape"></div></div>
+        <div class="star-node s4"><div class="star-shape"></div></div>
+        <div class="star-node s5 warm"><div class="star-glow"></div><div class="star-shape"></div></div>
+        <div class="star-node s6 dim"><div class="star-shape"></div></div>
+        <div class="star-node s7 dim"><div class="star-shape"></div></div>
+      </div>
+    </section>`;
+}
+
+/**
+ * @param {typeof modes[number]} mode
+ */
+function buildHtml(mode) {
+  const ingestSuggested = mode.suggested === "ingest";
+  const detailSuggested = mode.suggested === "detail";
+
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>my_brain — Home v2 (adaptive_live · ${mode.modeName})</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: #0e1014; font-family: "Noto Sans SC", sans-serif;
+    }
+    .phone {
+      width: 390px; height: 844px; position: relative; overflow: hidden;
+      background: #14161c; color: #f4f2ef;
+      --mode-accent: ${mode.accent};
+      --mode-accent-rgb: ${mode.accentRgb};
+    }
+    .phone::before {
+      content: ""; position: absolute; inset: 0;
+      background: ${mode.ambient};
+      pointer-events: none;
+    }
+    .status-bar {
+      position: relative; z-index: 5; height: 54px; padding: 14px 24px 0;
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: "DM Sans", sans-serif; font-size: 15px; font-weight: 600;
+    }
+    .status-right { display: flex; gap: 6px; align-items: center; }
+    .settings-btn {
+      width: 36px; height: 36px; margin-left: 8px; border: none; border-radius: 50%;
+      background: rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center;
+    }
+    .settings-btn svg { opacity: 0.7; }
+    ${STAR_FIELD_CSS}
+    .context-zone { position: relative; z-index: 2; padding: 0 20px; margin-top: -8px; }
+    .context-card {
+      position: relative; background: #1e2129; border-radius: 24px;
+      padding: 16px 16px 16px 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.06);
+    }
+    .context-card::before {
+      content: ""; position: absolute; left: 0; top: 16px; bottom: 16px;
+      width: 4px; border-radius: 2px; background: var(--mode-accent);
+    }
+    .card-label { font-size: 13px; color: var(--mode-accent); font-weight: 500; margin-bottom: 6px; }
+    .card-title { font-size: 16px; font-weight: 500; line-height: 24px; color: #f4f2ef; margin-bottom: 6px; }
+    .card-body {
+      font-size: 14px; line-height: 22px; color: #9ba3b4;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .capture-chip {
+      position: absolute; right: 20px; bottom: 178px; z-index: 4;
+      height: 36px; padding: 0 14px; border-radius: 18px;
+      background: rgba(30,33,41,0.92); border: 1px solid rgba(255,255,255,0.08);
+      font-size: 13px; color: #9ba3b4; display: flex; align-items: center; gap: 6px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    }
+    .capture-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mode-accent); }
+    .bottom-zone { position: absolute; left: 0; right: 0; bottom: 0; padding-bottom: 34px; z-index: 3; }
+    .voice-orb-wrap {
+      position: absolute; left: 50%; transform: translateX(-50%); bottom: 118px;
+      width: 72px; height: 72px; display: flex; align-items: center; justify-content: center;
+    }
+    .voice-orb-glow {
+      position: absolute; inset: -14px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(123,140,255,0.32) 0%, transparent 70%);
+      animation: orbPulse 2.4s ease-in-out infinite;
+    }
+    @keyframes orbPulse {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.07); opacity: 1; }
+    }
+    .voice-orb {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: radial-gradient(circle at 38% 32%, #a8b4ff, #7b8cff 60%, #5a6fd4);
+      box-shadow: 0 0 36px rgba(123,140,255,0.45); position: relative; z-index: 1;
+    }
+    .voice-state {
+      position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
+      font-size: 13px; color: #9ba3b4; white-space: nowrap;
+    }
+    .intent-rail {
+      position: absolute; bottom: 34px; left: 16px; right: 16px; display: flex; gap: 8px;
+    }
+    .intent-pill {
+      flex: 1; height: 48px; border-radius: 24px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 500; color: #9ba3b4;
+    }
+    .intent-pill.suggested {
+      background: rgba(var(--mode-accent-rgb), 0.12);
+      border-color: rgba(var(--mode-accent-rgb), 0.28);
+      color: var(--mode-accent);
+    }
+    .intent-pill.suggested-primary {
+      background: rgba(123,140,255,0.08);
+      border-color: rgba(123,140,255,0.2);
+      color: #a8b4ff;
+    }
+  </style>
+</head>
+<body>
+  <div class="phone" data-screen="home-adaptive-live" data-user-mode="${mode.slug}">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-right">
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="none"><rect x="0" y="3" width="3" height="9" rx="1" fill="#F4F2EF"/><rect x="5" y="2" width="3" height="10" rx="1" fill="#F4F2EF"/><rect x="10" y="0" width="3" height="12" rx="1" fill="#F4F2EF"/><rect x="15" y="1" width="3" height="11" rx="1" fill="#F4F2EF" opacity="0.4"/></svg>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 10.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" fill="#F4F2EF"/><path d="M4.5 7.5a5 5 0 017 0" stroke="#F4F2EF" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <svg width="27" height="13" viewBox="0 0 27 13" fill="none"><rect x="0.5" y="0.5" width="22" height="12" rx="3" stroke="#F4F2EF" stroke-opacity="0.5"/><rect x="2" y="2" width="17" height="9" rx="2" fill="#F4F2EF"/></svg>
+        <button class="settings-btn" type="button" aria-label="设置">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F4F2EF" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+      </div>
+    </div>
+    ${starFieldHtml(mode.accentRgb)}
+    <section class="context-zone">
+      <article class="context-card">
+        <div class="card-label">${mode.label}</div>
+        <h3 class="card-title">${mode.cardTitle}</h3>
+        <p class="card-body">${mode.cardBody}</p>
+      </article>
+    </section>
+    <div class="capture-chip"><span class="dot"></span>记下来</div>
+    <div class="bottom-zone">
+      <div class="voice-orb-wrap">
+        <span class="voice-state">正在听你说</span>
+        <div class="voice-orb-glow"></div>
+        <div class="voice-orb" aria-hidden="true"></div>
+      </div>
+      <div class="intent-rail">
+        <button class="intent-pill${ingestSuggested ? " suggested" : ""}" type="button">记住这个</button>
+        <button class="intent-pill" type="button">先不用</button>
+        <button class="intent-pill${detailSuggested ? " suggested-primary" : ""}" type="button">多说点</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+`;
+}
+
+for (const mode of modes) {
+  const base = `v2-home-adaptive-${mode.slug}-reference`;
+  const htmlPath = path.join(__dirname, `${base}.html`);
+  fs.writeFileSync(htmlPath, buildHtml(mode), "utf8");
+  console.log("wrote", htmlPath);
+}

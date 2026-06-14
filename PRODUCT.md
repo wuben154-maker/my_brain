@@ -1,3 +1,7 @@
+> **M0 修订（2026-06-13）· 状态：merged**  
+> **移动 App-only / User Evolution-first** 以 [`docs/MOBILE_PRODUCT_PLAN.md`](docs/MOBILE_PRODUCT_PLAN.md) + [`specs/mobile-app/`](specs/mobile-app/) 为准。  
+> 第一入口为 iOS/Android App（非桌面/Web 优先）；M6-GATE ≠ 公开商店上线；M7-GATE = 完整成品验收。
+
 # my_brain — 产品设计文档 v2（沉浸式语音伴侣）
 
 > **v2 大换血**：从「多分区工具仪表盘 + 逐条审批」转向「**一个会说话的伴侣 + 一张自己长大的星图**」。其余繁杂、需手操作的 UI 全部砍掉。

@@ -1,0 +1,26 @@
+{
+  "currentPhase": "M2",
+  "status": "blocked",
+  "lastPassedPhase": "M1",
+  "allowedNextAction": "repair_current_phase_only",
+  "reports": {
+    "M0": {
+      "path": "specs/mobile-app/reports/M0-GATE-report.md",
+      "verdict": "PASS",
+      "verifiedAt": "2026-06-13T09:11:00Z",
+      "notes": "Parent agent reran MOBILE_GATE_EXECUTE=1 pnpm mobile:gate M0; exit 0; M0-GATE PASS."
+    },
+    "M1": {
+      "path": "specs/mobile-app/reports/M1-GATE-report.md",
+      "verdict": "PASS",
+      "verifiedAt": "2026-06-13T09:20:00Z",
+      "notes": "Parent agent reran MOBILE_GATE_EXECUTE=1 pnpm mobile:gate M1; exit 0; M1-GATE PASS."
+    }
+  },
+  "hardStop": {
+    "phase": "M2",
+    "reason": "M2-GATE is NEEDS_DEVICE_EVIDENCE: iOS file-level SQLite excluded-from-backup has code/config evidence, but no structured device evidence artifact.",
+    "createdAt": "2026-06-13T11:35:00Z",
+    "nextRequiredAction": "Collect iOS Dev Client device evidence for NSURLIsExcludedFromBackupKey on mybrain.db, -wal, and -shm, then rerun MOBILE_GATE_EXECUTE=1 pnpm mobile:gate M2."
+  }
+}

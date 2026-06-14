@@ -1,3 +1,7 @@
+> **M0 修订（2026-06-13）· 状态：merged**  
+> **移动 App-only / User Evolution-first** 以 [`MOBILE_PRODUCT_PLAN.md`](./MOBILE_PRODUCT_PLAN.md) + [`specs/mobile-app/`](../specs/mobile-app/) 为准。  
+> Monorepo：`apps/mobile`（壳）+ `packages/core`（纯 TS 内核）+ `src/`（legacy Web/Tauri）。Storage 三端：web / tauri / **mobile**（`expo-sqlite`，M2 实现）。
+
 # my_brain 架构：个人知识 OS
 
 my_brain 的目标是一个语音优先、local-first 的个人知识操作系统。它不是 RSS 阅读器，也不是普通 RAG 聊天框；核心循环是把外部世界变化讲给用户听，由用户决定哪些进入长期图谱，再由系统自动整理已确认知识，并保留 reason、history 和 undo。

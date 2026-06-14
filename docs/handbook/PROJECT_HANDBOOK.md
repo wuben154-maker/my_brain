@@ -1,3 +1,7 @@
+> **M0 修订（2026-06-13）· 状态：merged**  
+> **移动 App-only / User Evolution-first** 以 [`docs/MOBILE_PRODUCT_PLAN.md`](../MOBILE_PRODUCT_PLAN.md) + [`specs/mobile-app/`](../../specs/mobile-app/) 为准。  
+> 新增目录：`apps/mobile`、`packages/core`；移动 gate：`pnpm mobile:gate M{n}`。
+
 # my_brain 项目总览手册
 
 > **读者：** 换 Cursor 窗口、换 LLM、新 agent、或隔很久再回来改代码的人。  

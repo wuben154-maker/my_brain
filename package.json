@@ -21,6 +21,7 @@
     "visual:report": "node scripts/visual-feedback/report-html.mjs",
     "visual:loop": "node scripts/visual-feedback/loop.mjs",
     "visual:browser": "playwright install chromium",
+    "mobile:gate": "node tools/mobile-execution/verify-stage.mjs",
     "prepare": "husky"
   },
   "dependencies": {

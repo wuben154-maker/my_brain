@@ -1,0 +1,36 @@
+{
+  "fixtures": [
+    {
+      "id": "cold-tech-tracker",
+      "userUtterance": "我想跟进 AI 和开源",
+      "expectedPrimary": "tech_tracker",
+      "expectedSecondary": [],
+      "firstStarSource": "AI 新闻或 GitHub 趋势",
+      "adaptiveRadarExpect": "资讯/趋势 AdaptiveSignal"
+    },
+    {
+      "id": "cold-learner",
+      "userUtterance": "我在学 Rust 所有权",
+      "expectedPrimary": "learner",
+      "expectedSecondary": [],
+      "firstStarSource": "学习主题",
+      "adaptiveRadarExpect": "学习路径/概念"
+    },
+    {
+      "id": "cold-personal-capture",
+      "userUtterance": "记下这个创业想法",
+      "expectedPrimary": "personal_memory",
+      "expectedSecondary": [],
+      "firstStarSource": "用户想法",
+      "adaptiveRadarExpect": "捕获回顾/项目"
+    },
+    {
+      "id": "cold-mixed-learner-life",
+      "userUtterance": "学 Rust 也想记生活灵感",
+      "expectedPrimary": "learner",
+      "expectedSecondary": ["personal_memory"],
+      "firstStarSource": "学习+捕获混合",
+      "adaptiveRadarExpect": "混合模式入口"
+    }
+  ]
+}

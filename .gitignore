@@ -18,6 +18,10 @@ apps/mobile/credentials/
 
 # Expo prebuild outputs (generated locally or in CI)
 apps/mobile/ios/
+apps/mobile/build/
+
+# Accidental Expo scaffold; canonical mobile app lives in apps/mobile/
+my_brain_mobile/
 
 # Visual regression artifacts (references stay in assets/)
 artifacts/visual-feedback/*

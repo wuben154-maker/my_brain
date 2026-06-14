@@ -1,3 +1,7 @@
+> **M0 修订（2026-06-13）· 状态：merged**  
+> **移动 App-only / User Evolution-first** 以 [`docs/MOBILE_PRODUCT_PLAN.md`](./MOBILE_PRODUCT_PLAN.md) 与 [`specs/mobile-app/`](../specs/mobile-app/) 为准。  
+> iOS/Android App 为第一产品入口；桌面/Web/Tauri 为 legacy dev surface。主场景为 **LivingBrainHome + 冷启动对话 + AdaptiveRadar**，非固定 AI 资讯仪表盘。
+
 # my_brain 长期产品蓝图：个人知识操作系统
 
 ## 最终愿景

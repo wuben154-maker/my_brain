@@ -1,0 +1,22 @@
+{
+  "fixtures": [
+    {
+      "id": "capture-idea-mock",
+      "input": "记下创业想法：语音笔记 App",
+      "sourceType": "text",
+      "expectedPhase": "provisional_pending",
+      "expectedBeforeConfirm": "no permanent node",
+      "confirmIntent": "记住这个",
+      "expectedAfterConfirm": "graph_lit"
+    },
+    {
+      "id": "capture-link-fixture",
+      "input": "mock https 链接 fixture",
+      "sourceType": "link",
+      "linkUrl": "https://example.com/fixture",
+      "expectedPhase": "provisional_pending",
+      "rejectIntent": "先不用",
+      "expectedAfterReject": "candidate removed"
+    }
+  ]
+}

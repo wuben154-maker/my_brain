@@ -1,0 +1,10 @@
+{
+  "artifactType": "m2-ios-backup-exclusion-device-evidence",
+  "deviceEvidence": "absent",
+  "platform": "ios",
+  "checkedAt": "",
+  "dbBasePath": "",
+  "files": [],
+  "collector": "settings-dev-trigger",
+  "notes": "Template only. Copy real output from Settings → iOS 备份排除证据 on iPhone Dev Client. Do not hand-edit deviceEvidence to present."
+}
