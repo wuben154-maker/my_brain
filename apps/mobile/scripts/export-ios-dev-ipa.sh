@@ -16,13 +16,25 @@ if [[ -z "$WORKSPACE" ]]; then
   exit 1
 fi
 
-SCHEME="$(xcodebuild -list -json -workspace "$WORKSPACE" | python3 -c "import json,sys; data=json.load(sys.stdin); schemes=[s for s in data.get('workspace',{}).get('schemes',[]) if 'Pods' not in s]; print(schemes[0] if schemes else '')")"
+PREFERRED_SCHEME="$(node -p "require('$ROOT/app.json').expo.scheme")"
+SCHEME="$(xcodebuild -list -json -workspace "$WORKSPACE" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+schemes = data.get('workspace', {}).get('schemes', [])
+preferred = sys.argv[1] if len(sys.argv) > 1 else ''
+if preferred in schemes:
+    print(preferred)
+    sys.exit(0)
+pod_like = {'boost', 'RCT-Folly', 'DoubleConversion', 'fmt', 'glog', 'hermes-engine'}
+app_schemes = [s for s in schemes if 'Pods' not in s and s not in pod_like]
+print(app_schemes[0] if app_schemes else '')
+" "$PREFERRED_SCHEME")"
 
 if [[ -z "$SCHEME" ]]; then
-  echo "No app scheme found in workspace"
+  echo "No app scheme found in workspace (preferred=$PREFERRED_SCHEME)"
   exit 1
 fi
-echo "Using workspace=$WORKSPACE scheme=$SCHEME"
+echo "Using workspace=$WORKSPACE scheme=$SCHEME (preferred=$PREFERRED_SCHEME)"
 
 cat > "$EXPORT_PLIST" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
