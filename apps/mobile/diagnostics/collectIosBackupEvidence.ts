@@ -11,14 +11,6 @@ export type CollectIosBackupEvidenceResult =
   | { ok: true; json: string; message: string }
   | { ok: false; message: string };
 
-/** Touch SQLite so WAL/SHM sidecars exist before reading NSURLIsExcludedFromBackupKey. */
-function touchWalSidecars(): void {
-  const session = getStorageSession();
-  if (!session) {
-    return;
-  }
-  session.driver.exec("PRAGMA user_version;");
-}
 
 /**
  * Dev Client only: build M2 gate artifact JSON and open the system share sheet.
@@ -34,8 +26,10 @@ export async function collectAndShareIosBackupEvidence(): Promise<CollectIosBack
     return { ok: false, message: "存储尚未就绪，请等待 MigrationGate 完成后再试。" };
   }
 
-  touchWalSidecars();
-  const files = collectIosSqliteBackupExclusionReport(session.dbPath);
+  const files = collectIosSqliteBackupExclusionReport(
+    session.dbPath,
+    session.driver,
+  );
   if (!files) {
     return {
       ok: false,

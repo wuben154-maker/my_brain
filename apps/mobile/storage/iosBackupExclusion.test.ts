@@ -21,8 +21,10 @@ describe("ios sqlite backup exclusion evidence", () => {
   it("runtime hook applies exclusion and exposes report collector", () => {
     const hook = readFileSync(join(__dirname, "iosBackupExclusion.ts"), "utf8");
     expect(hook).toContain("applyIosSqliteBackupExclusion");
+    expect(hook).toContain("ensureIosSqliteWalSidecars");
     expect(hook).toContain("getIosSqliteBackupExclusionReport");
     expect(hook).toContain("collectIosSqliteBackupExclusionReport");
+    expect(hook).toContain("PRAGMA journal_mode=WAL");
     expect(hook).toContain("sqlite-backup-exclusion");
   });
 });

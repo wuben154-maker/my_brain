@@ -1,3 +1,4 @@
+import type { SqlDriver } from "@my-brain/core";
 import { Platform } from "react-native";
 
 import type { BackupExclusionFileEntry } from "../modules/sqlite-backup-exclusion";
@@ -35,6 +36,18 @@ export function sqliteBackupEvidenceSuffixes(dbPath: string): {
 }
 
 /**
+ * Force WAL journal mode and a tiny write so `-wal` / `-shm` sidecars exist on disk.
+ * M2 gate requires file-level backup exclusion on all three paths.
+ */
+export function ensureIosSqliteWalSidecars(driver: SqlDriver): void {
+  driver.exec("PRAGMA journal_mode=WAL;");
+  driver.exec(
+    "CREATE TABLE IF NOT EXISTS _m2_wal_touch (id INTEGER PRIMARY KEY CHECK (id = 1));",
+  );
+  driver.exec("INSERT OR REPLACE INTO _m2_wal_touch (id) VALUES (1);");
+}
+
+/**
  * Apply NSURLIsExcludedFromBackupKey to the SQLite DB path (and sidecars) on iOS.
  * Backed by local Expo module `sqlite-backup-exclusion` (requires Dev Client prebuild).
  */
@@ -65,7 +78,11 @@ export function getIosSqliteBackupExclusionReport(
  */
 export function collectIosSqliteBackupExclusionReport(
   dbPath: string,
+  driver?: SqlDriver,
 ): BackupExclusionFileEntry[] | null {
+  if (driver) {
+    ensureIosSqliteWalSidecars(driver);
+  }
   applyIosSqliteBackupExclusion(dbPath);
   return getIosSqliteBackupExclusionReport(dbPath);
 }
