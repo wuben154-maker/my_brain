@@ -28,7 +28,8 @@
         {
           "enableFTS": false
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "extra": {
       "eas": {
