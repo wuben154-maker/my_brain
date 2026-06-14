@@ -1,0 +1,99 @@
+# Manual iOS .ipa for personal device install (Development signing via GitHub Secrets).
+# Trigger: Actions → iOS Dev IPA → Run workflow → download artifact.
+name: iOS Dev IPA
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-dev-ipa
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Decode signing assets
+        env:
+          IOS_P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
+          IOS_MOBILEPROVISION_BASE64: ${{ secrets.IOS_MOBILEPROVISION_BASE64 }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/ios-signing"
+          echo "$IOS_P12_BASE64" | base64 --decode > "${RUNNER_TEMP}/ios-signing/cert.p12"
+          echo "$IOS_MOBILEPROVISION_BASE64" | base64 --decode > "${RUNNER_TEMP}/ios-signing/profile.mobileprovision"
+
+      - name: Install keychain, certificate, provisioning profile
+        env:
+          IOS_P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN="${RUNNER_TEMP}/app-signing.keychain-db"
+          KEYCHAIN_PASSWORD="gha-ios-signing"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "${RUNNER_TEMP}/ios-signing/cert.p12" \
+            -P "$IOS_P12_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security list-keychain -d user -s "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+
+          PROFILE="${RUNNER_TEMP}/ios-signing/profile.mobileprovision"
+          PROFILE_UUID=$(security cms -D -i "$PROFILE" | plutil -extract UUID raw -)
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$PROFILE" "$HOME/Library/MobileDevice/Provisioning Profiles/${PROFILE_UUID}.mobileprovision"
+
+          echo "IOS_PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
+          echo "IOS_TEAM_ID=$(security cms -D -i "$PROFILE" | plutil -extract TeamIdentifier.0 raw -)" >> "$GITHUB_ENV"
+          echo "IOS_BUNDLE_ID=$(security cms -D -i "$PROFILE" | plutil -extract Entitlements:application-identifier raw - | sed 's/^[A-Z0-9]*\.//')" >> "$GITHUB_ENV"
+
+      - name: Verify bundle ID matches app.json
+        working-directory: apps/mobile
+        run: |
+          set -euo pipefail
+          EXPECTED=$(node -p "require('./app.json').expo.ios.bundleIdentifier")
+          if [ "$EXPECTED" != "$IOS_BUNDLE_ID" ]; then
+            echo "Bundle ID mismatch: app.json=$EXPECTED profile=$IOS_BUNDLE_ID"
+            exit 1
+          fi
+
+      - name: Expo prebuild (iOS)
+        working-directory: apps/mobile
+        run: pnpm exec expo prebuild --platform ios --no-install
+
+      - name: Install CocoaPods
+        working-directory: apps/mobile/ios
+        run: pod install --repo-update
+
+      - name: Build and export IPA
+        working-directory: apps/mobile
+        env:
+          IOS_P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+        run: bash scripts/export-ios-dev-ipa.sh
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mybrain-ios-dev-ipa
+          path: apps/mobile/build/export/*.ipa
+          if-no-files-found: error

@@ -10,6 +10,15 @@ src-tauri/target
 !.env.example
 .data
 
+# iOS signing material (never commit)
+*.p12
+*.mobileprovision
+credentials.json
+apps/mobile/credentials/
+
+# Expo prebuild outputs (generated locally or in CI)
+apps/mobile/ios/
+
 # Visual regression artifacts (references stay in assets/)
 artifacts/visual-feedback/*
 !artifacts/visual-feedback/.gitkeep

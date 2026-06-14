@@ -1,0 +1,71 @@
+/**
+ * @vitest-environment happy-dom
+ */
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import React from "react";
+
+vi.mock("react-native", () => {
+  const RN = (tag: string) =>
+    function MockComponent({
+      children,
+      testID,
+      onPress,
+    }: {
+      children?: React.ReactNode;
+      testID?: string;
+      onPress?: () => void;
+    }) {
+      return React.createElement(
+        tag,
+        { "data-testid": testID, onClick: onPress },
+        children,
+      );
+    };
+  return {
+    View: RN("div"),
+    Text: RN("span"),
+    Pressable: RN("button"),
+    ScrollView: RN("div"),
+    StyleSheet: { create: (s: object) => s },
+    Platform: { OS: "web" },
+    Share: { share: vi.fn() },
+  };
+});
+
+import { PROVIDER_STATUS_TEST_IDS } from "@my-brain/core";
+import { SettingsScreen } from "./LivingBrainHome";
+import { useMobileAppStore } from "../stores/mobileAppStore";
+
+describe("Settings provider status panel", () => {
+  beforeEach(() => {
+    useMobileAppStore.setState({
+      settingsOpen: true,
+      providerStatus: {
+        llm: "mock",
+        radar: "fixture",
+        voice: "disconnected",
+        storage: "ready",
+        lastErrorCode: "ProviderConfigError",
+      },
+      persistWarnings: ["history_persist_warning"],
+      degraded: {
+        active: ["mock_llm", "fixture_radar", "voice_disconnected"],
+        providerMode: "mock",
+      },
+    });
+  });
+
+  afterEach(() => cleanup());
+
+  it("renders provider panel testIds and ProviderConfigError", () => {
+    render(<SettingsScreen />);
+    expect(screen.getByTestId("provider-status-panel")).toBeTruthy();
+    expect(screen.getByTestId(PROVIDER_STATUS_TEST_IDS.llm).textContent).toContain("mock");
+    expect(screen.getByTestId(PROVIDER_STATUS_TEST_IDS.voice).textContent).toContain(
+      "disconnected",
+    );
+    expect(screen.getByTestId("provider-config-error")).toBeTruthy();
+    expect(screen.getByTestId("persist-warning-banner")).toBeTruthy();
+  });
+});

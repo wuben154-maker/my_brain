@@ -1,0 +1,14 @@
+{
+  "name": "@my-brain/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint:boundaries": "node scripts/lint-boundaries.mjs",
+    "test": "pnpm -w exec vitest run packages/core"
+  }
+}

@@ -1,0 +1,9 @@
+appId: app.mybrain.personal
+---
+- launchApp
+- assertVisible:
+    id: "migration-gate-screen"
+- stopApp
+- launchApp
+- assertVisible:
+    id: "living-brain-home"

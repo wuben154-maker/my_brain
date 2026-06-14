@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "my_brain",
+    "slug": "my-brain",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "scheme": "mybrain",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#05070f"
+    },
+    "android": {
+      "package": "app.mybrain.personal",
+      "allowBackup": true,
+      "fullBackupContent": "@xml/backup_rules"
+    },
+    "ios": {
+      "bundleIdentifier": "app.mybrain.personal"
+    },
+    "plugins": [
+      [
+        "expo-sqlite",
+        {
+          "enableFTS": false
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "3b839cf3-3224-46b3-a62f-0805f301bd20"
+      }
+    },
+    "owner": "gogogogogo"
+  }
+}
