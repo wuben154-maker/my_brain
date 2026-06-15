@@ -30,14 +30,19 @@ describe("VoiceSession FSM", () => {
   });
 
   it("barge-in stops mock playback and returns to listening", async () => {
+    vi.useFakeTimers();
     const ctrl = createVoiceSessionController({ deviceId: "device-abc" });
     await ctrl.connect();
-    ctrl.simulateAssistantSpeak(3);
+    ctrl.simulateAssistantSpeak(1, 10_000);
+    expect(ctrl.isTransportPlaying()).toBe(true);
+    expect(ctrl.getFsmState()).toBe("speaking");
+    vi.advanceTimersByTime(5_000);
     expect(ctrl.isTransportPlaying()).toBe(true);
     expect(ctrl.getFsmState()).toBe("speaking");
     ctrl.bargeIn();
     expect(ctrl.isTransportPlaying()).toBe(false);
     expect(ctrl.getFsmState()).toBe("listening");
+    vi.useRealTimers();
   });
 
   it("token exchange failure sets error and degraded callback", async () => {

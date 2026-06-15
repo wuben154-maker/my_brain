@@ -41,7 +41,7 @@ export interface VoiceSessionController {
   connect: () => Promise<void>;
   disconnect: () => void;
   handleTranscript: (transcript: string, attempt: 1 | 2) => UserIntent | "reprompt" | null;
-  simulateAssistantSpeak: (chunkCount?: number) => void;
+  simulateAssistantSpeak: (chunkCount?: number, durationMsPerChunk?: number) => void;
   bargeIn: () => void;
   getFsmState: () => VoiceFsmState;
   isTransportPlaying: () => boolean;
@@ -125,7 +125,7 @@ export function createVoiceSessionController(deps: VoiceSessionDeps): VoiceSessi
       notify();
       return resolved.intent;
     },
-    simulateAssistantSpeak(chunkCount = 2) {
+    simulateAssistantSpeak(chunkCount = 2, durationMsPerChunk = 40) {
       if (!connected) {
         return;
       }
@@ -133,7 +133,7 @@ export function createVoiceSessionController(deps: VoiceSessionDeps): VoiceSessi
       playback.enqueueChunks(
         Array.from({ length: chunkCount }, (_, i) => ({
           id: `chunk-${i}`,
-          durationMs: 40,
+          durationMs: durationMsPerChunk,
         })),
       );
       notify();

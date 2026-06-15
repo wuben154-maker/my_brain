@@ -6,6 +6,8 @@ import { resetVoiceSessionSingleton, useVoiceSession } from "../voice/VoiceSessi
 import { colors } from "../theme/tokens";
 
 const M3_DIAG_DEVICE_ID = "m3-voice-diagnostics";
+/** Long mock playback window for on-device barge-in evidence capture. */
+export const M3_DIAG_LONG_SPEAK_DURATION_MS = 10_000;
 
 function resolveRuntimeBuildLabel(): string {
   const nativeBuild = Constants.nativeBuildVersion;
@@ -85,8 +87,8 @@ export function M3VoiceDiagnosticsPanel() {
     }
   }, [voice]);
 
-  const onSimulateSpeak = useCallback(() => {
-    voice.simulateAssistantSpeak(4);
+  const onStartLongSpeak = useCallback(() => {
+    voice.simulateAssistantSpeak(1, M3_DIAG_LONG_SPEAK_DURATION_MS);
     setLastBargeInResult("pending");
     setStopLatencyMs(null);
   }, [voice]);
@@ -149,7 +151,10 @@ export function M3VoiceDiagnosticsPanel() {
     <View testID="m3-voice-diagnostics-panel">
       <Text style={styles.section}>M3 语音插话诊断（Dev Client）</Text>
       <Text style={styles.mockBanner} testID="m3-voice-mock-banner">
-        mock transport · 真机诊断辅助，不等于 live Realtime provider
+        长播报采证模式 · mock transport · 真机诊断辅助，不等于 live Realtime provider
+      </Text>
+      <Text style={styles.hint} testID="m3-voice-long-speak-hint">
+        点击「开始长播报（10 秒）」后，FSM 应保持 speaking、播放中保持「是」约 10 秒，便于录屏后点「插话停止」。
       </Text>
 
       <Text style={styles.row} testID="m3-voice-platform">
@@ -196,12 +201,12 @@ export function M3VoiceDiagnosticsPanel() {
         <Text style={styles.buttonText}>连接语音（mock token）</Text>
       </Pressable>
       <Pressable
-        onPress={onSimulateSpeak}
+        onPress={onStartLongSpeak}
         style={styles.button}
-        testID="m3-voice-simulate-speak"
+        testID="m3-voice-long-speak"
         disabled={!connected}
       >
-        <Text style={styles.buttonText}>模拟助手播报</Text>
+        <Text style={styles.buttonText}>开始长播报（10 秒）</Text>
       </Pressable>
       <Pressable onPress={onBargeIn} style={styles.button} testID="m3-voice-barge-in">
         <Text style={styles.buttonText}>插话停止</Text>
@@ -237,6 +242,12 @@ const styles = StyleSheet.create({
   },
   mockBanner: {
     color: colors.accent,
+    fontSize: 12,
+    marginBottom: 8,
+    lineHeight: 18,
+  },
+  hint: {
+    color: colors.textMuted,
     fontSize: 12,
     marginBottom: 8,
     lineHeight: 18,

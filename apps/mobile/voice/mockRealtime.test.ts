@@ -3,6 +3,18 @@ import { describe, expect, it, vi } from "vitest";
 import { createMockRealtimePlaybackQueue } from "./mockRealtimeTransport";
 
 describe("mockRealtime barge-in", () => {
+  it("keeps playing until long chunk duration elapses", () => {
+    vi.useFakeTimers();
+    const transport = createMockRealtimePlaybackQueue();
+    transport.enqueueChunks([{ id: "long", durationMs: 10_000 }]);
+    expect(transport.isPlaying()).toBe(true);
+    vi.advanceTimersByTime(5_000);
+    expect(transport.isPlaying()).toBe(true);
+    vi.advanceTimersByTime(5_000);
+    expect(transport.isPlaying()).toBe(false);
+    vi.useRealTimers();
+  });
+
   it("clears playback queue immediately on interrupt", () => {
     vi.useFakeTimers();
     const transport = createMockRealtimePlaybackQueue();
