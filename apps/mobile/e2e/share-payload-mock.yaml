@@ -1,0 +1,28 @@
+# M4 prep — mock/local: share payload intake path (in-app mock hook → provisional queue).
+# NOT Android ACTION_SEND intent / iOS Share Extension device PASS.
+appId: app.mybrain.personal
+tags:
+  - m4-prep
+  - mock
+  - share-payload
+  - local
+---
+- launchApp
+- assertVisible:
+    id: "living-brain-home"
+# In-app mock link capture exercises same UrlFetchGuard + provisional path as share url payload
+- tapOn:
+    id: "quick-capture-fab"
+- tapOn:
+    id: "quick-capture-link-input"
+- inputText: "https://example.com/share-fixture"
+- tapOn:
+    id: "quick-capture-link-submit"
+- assertVisible:
+    id: "provisional-queue-sheet"
+- assertNotVisible:
+    id: "permanent-node-created-indicator"
+# M3 not PASS — voice share / voice note must stay disabled
+- assertVisible:
+    id: "voice-disconnected-banner"
+# TODO(device): Android ACTION_SEND + iOS Share Extension with m4-share-payload-fixtures.json

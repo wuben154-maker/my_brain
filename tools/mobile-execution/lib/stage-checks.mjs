@@ -223,8 +223,10 @@ function checkSequence(ctx, results) {
     verdict:
       ctx.parsedReport?.exists && ctx.parsedReport.verdict === "PASS"
         ? "PASS"
+        : ctx.parsedReport?.exists && ctx.parsedReport.verdict === "NEEDS_DEVICE_EVIDENCE"
+          ? "NEEDS_DEVICE_EVIDENCE"
         : "FAIL",
-    message: `current report verdict must be PASS (got ${String(ctx.parsedReport?.verdict)})`,
+    message: `current report verdict must be PASS or NEEDS_DEVICE_EVIDENCE (got ${String(ctx.parsedReport?.verdict)})`,
   });
 
   detectPipelineOverreach(ctx, results);

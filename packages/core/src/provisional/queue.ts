@@ -19,6 +19,9 @@ export function createProvisionalCandidate(input: {
   summary: string;
   evidenceRefs?: string[];
   linkUrl?: string;
+  ssrfRejectCode?: string;
+  fetchHint?: string;
+  fetchOk?: boolean;
 }): ProvisionalCandidate {
   return {
     id: nextCandidateId(),
@@ -28,6 +31,9 @@ export function createProvisionalCandidate(input: {
     createdAt: new Date().toISOString(),
     status: "pending",
     linkUrl: input.linkUrl,
+    ssrfRejectCode: input.ssrfRejectCode,
+    fetchHint: input.fetchHint,
+    fetchOk: input.fetchOk,
   };
 }
 

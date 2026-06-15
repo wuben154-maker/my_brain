@@ -1,8 +1,8 @@
 /**
  * @vitest-environment happy-dom
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
 import React from "react";
 
 import {
@@ -50,13 +50,17 @@ import { useMobileAppStore } from "../stores/mobileAppStore";
 import { useProvisionalStore } from "../stores/provisionalStore";
 
 describe("ProvisionalQueueSheet", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   beforeEach(() => {
     useMobileAppStore.setState({
       queueSheetOpen: true,
       graph: new InMemoryGraphRepository(),
       history: new InMemoryHistoryRepository(),
     });
-    useProvisionalStore.setState({ candidates: [], lastExplanation: null });
+    useProvisionalStore.setState({ candidates: [], lastExplanation: null, lastSsrfHint: null });
   });
 
   it("lists pending candidates", () => {

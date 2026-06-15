@@ -1,0 +1,31 @@
+{
+  "artifactType": "m2-ios-backup-exclusion-device-evidence",
+  "deviceEvidence": "present",
+  "platform": "ios",
+  "checkedAt": "2026-06-14T09:33:50.320Z",
+  "dbBasePath": "/var/mobile/Containers/Data/Application/0E3EE483-4A5D-40C3-B926-7A3413D1CBAB/Documents/SQLite/mybrain.db",
+  "files": [
+    {
+      "platform": "ios",
+      "exists": true,
+      "checkedAt": "2026-06-14T09:33:50.320Z",
+      "path": "/var/mobile/Containers/Data/Application/0E3EE483-4A5D-40C3-B926-7A3413D1CBAB/Documents/SQLite/mybrain.db",
+      "excludedFromBackup": true
+    },
+    {
+      "excludedFromBackup": true,
+      "path": "/var/mobile/Containers/Data/Application/0E3EE483-4A5D-40C3-B926-7A3413D1CBAB/Documents/SQLite/mybrain.db-wal",
+      "exists": true,
+      "checkedAt": "2026-06-14T09:33:50.320Z",
+      "platform": "ios"
+    },
+    {
+      "path": "/var/mobile/Containers/Data/Application/0E3EE483-4A5D-40C3-B926-7A3413D1CBAB/Documents/SQLite/mybrain.db-shm",
+      "exists": true,
+      "checkedAt": "2026-06-14T09:33:50.320Z",
+      "platform": "ios",
+      "excludedFromBackup": true
+    }
+  ],
+  "collector": "settings-dev-trigger"
+}

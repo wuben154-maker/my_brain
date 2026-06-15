@@ -177,6 +177,51 @@ export {
 
 export type { ConfirmResult, ProvisionalQueueDeps } from "./provisional/queue.js";
 
+export {
+  captureOcrFixture,
+  captureShareLink,
+  captureSyncImportFixture,
+  ssrfRejectUserHint,
+} from "./provisional/ingestGate.js";
+export type { CaptureIngestGateDeps, LinkCaptureResult } from "./provisional/ingestGate.js";
+
+export {
+  attemptOnDeviceOcr,
+  buildOcrProvisionalCandidate,
+  OCR_POLICY,
+} from "./provisional/ocrBoundary.js";
+export type { OcrAttemptResult, OcrAttemptStatus } from "./provisional/ocrBoundary.js";
+
+export {
+  sharePayloadRejectUserHint,
+  validateSharePayload,
+} from "./provisional/sharePayload.js";
+export type {
+  SharePayload,
+  SharePayloadKind,
+  SharePayloadRejectCode,
+  SharePayloadValidationResult,
+  SharePlatform,
+  ValidatedSharePayload,
+} from "./provisional/sharePayload.js";
+
+export {
+  DEFAULT_FETCH_TIMEOUT_MS,
+  DEFAULT_MAX_REDIRECTS,
+  DEFAULT_MAX_RESPONSE_BYTES,
+  guardedUrlFetch,
+  validateUrlAllowlist,
+} from "./provisional/urlFetchGuard.js";
+export type {
+  MockFetchResponse,
+  SsrfRejectCode,
+  UrlFetchFail,
+  UrlFetchGuardDeps,
+  UrlFetchGuardOptions,
+  UrlFetchOk,
+  UrlFetchResult,
+} from "./provisional/urlFetchGuard.js";
+
 
 
 export {
@@ -215,7 +260,16 @@ export {
 
 export type { IngestDeps, IngestInput, IngestResult } from "./conversation/ingest.js";
 
-
+export {
+  ingestCommandToUserIntent,
+  parseIngestCommand,
+  resolveVoiceTranscript,
+} from "./voice/ingestIntent.js";
+export type {
+  IngestCommand,
+  IngestParseResult,
+  VoiceIntentResolution,
+} from "./voice/ingestIntent.js";
 
 export {
 

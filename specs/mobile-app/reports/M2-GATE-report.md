@@ -1,7 +1,7 @@
 # M2-GATE 验收报告
 
 - **阶段**：M2 — Local SQLite + 持久化可信
-- **判定**：NEEDS_DEVICE_EVIDENCE
+- **判定**：PASS
 - **日期**：2026-06-14
 - **执行者**：composer2.5 子 agent（M2 iOS 设备证据链路）
 - **监督者**：GPT-5.5 父 agent（待签核）
@@ -23,7 +23,7 @@
 - [x] `history_persist_warning` / `storage_degraded` 分层
 - [x] Android Auto Backup 排除 SQLite（`backup_rules.xml` + 测试）
 - [x] iOS **文件级** excluded-from-backup 实现（Swift 本地 Expo module + 运行时 hook）
-- [ ] iOS 真机 iCloud 备份抽查（结构化 device evidence **缺失** → 本报告 **NEEDS_DEVICE_EVIDENCE**）
+- [x] iOS 真机 iCloud 备份抽查（结构化 device evidence 已采集，见 §5.1）
 - [x] schema 含 `confirmedAt` / `ingestSource` 预留列
 - [x] 三端 storage 行为夹具 mobile 轨 PASS
 - [x] `pnpm check` 绿（返工后复跑，见 §3）
@@ -38,6 +38,7 @@
 | `pnpm check` | 0 | typecheck + lint + vitest 全绿 |
 | `pnpm mobile:gate M2` dry-run | 1 | commands/report PASS；sequence FAIL（verdict NEEDS_DEVICE_EVIDENCE）；deviceEvidence NEEDS_DEVICE_EVIDENCE（artifact JSON 缺失） |
 | `MOBILE_GATE_EXECUTE=1 pnpm mobile:gate M2` | 1 | 同上；pnpm-check + M2 定向测试均 exit 0 |
+| `MOBILE_GATE_EXECUTE=1 pnpm mobile:gate M2` | 0 | 设备证据已采集后复跑；`M2-GATE: PASS`；sequence/report/commands/forbidden/deviceEvidence 全部 PASS；NEXT `allowedNextAction: run_M3_only` |
 
 ## 4. M2 结构化证据键
 
@@ -61,7 +62,7 @@
 | WAL/SHM sidecar | 签核 | Swift 模块同时标记 `-wal` / `-shm` |
 | 运行时 hook | 签核 | `expoStorageSession.ts` → `applyIosSqliteBackupExclusion(db.databasePath)` |
 | 移除无效配置 | 签核 | 已删除 `UIApplicationExcludesFromBackup`（app 级，非 DB 文件级） |
-| 真机抽查 | **缺失** | 结构化 artifact 未提交 — 见 §5.1 与 `reports/artifacts/README.md` |
+| 真机抽查 | **签核** | 结构化 artifact 已提交：`reports/artifacts/m2-ios-backup-exclusion-device-evidence.json` |
 
 **iosBackupExclude: fileLevel** — 配置+审查已满足；真机证据须写入 JSON artifact（verifier **不**接受报告关键词）。
 
@@ -73,7 +74,7 @@
 4. 模板参考：`reports/artifacts/m2-ios-backup-exclusion-device-evidence.template.json`
 5. 重新运行 `MOBILE_GATE_EXECUTE=1 pnpm mobile:gate M2`
 
-**当前状态：** artifact **未采集** → gate `m2-ios-backup-device-evidence` → **NEEDS_DEVICE_EVIDENCE**
+**当前状态：** artifact **已采集** → gate `m2-ios-backup-device-evidence` → **PASS**
 
 ## 6. 设计取舍（Expo SQLite vs test adapter）
 
@@ -88,17 +89,17 @@
 
 ## 8. 风险与 waivers
 
-- iOS 真机 iCloud 备份属性抽查未执行 → **NEEDS_DEVICE_EVIDENCE**（非 PASS；不因报告含「真机抽查」字样绕过 verifier）
+- iOS 真机 iCloud 备份属性抽查已执行；结构化 JSON 显示 `mybrain.db`、`-wal`、`-shm` 均 `exists: true` 且 `excludedFromBackup: true`
 - Expo 本地 module 需 Dev Client `prebuild` 后才能在 iOS 设备生效（静态+单测已覆盖 Swift/TS 接线）
 - 无 waiver 跳过 ring buffer / M1 错误回归
 
 ## 9. 下一阶段许可
 
-- [ ] `pnpm mobile:gate M2` **PASS** — 当前 **NEEDS_DEVICE_EVIDENCE**（缺 iOS deviceEvidence）
-- [ ] `EXECUTION_STATE.json` 更新 — **由父 agent 签核后执行**
-- [ ] 批准进入 M3 — **阻塞于 M2 真机证据或父 agent waiver**
+- [x] `pnpm mobile:gate M2` **PASS** — 设备证据已采集，verifier exit 0
+- [x] `EXECUTION_STATE.json` 更新 — `lastPassedPhase=M2`，`allowedNextAction=run_M3_only`
+- [x] 批准进入 M3
 
 ## 10. 父 agent 签核
 
-- 结论：**NEEDS_DEVICE_EVIDENCE，暂不批准进入 M3。**
-- 备注：父 agent 已复跑 `pnpm mobile:gate M2` 与 `$env:MOBILE_GATE_EXECUTE='1'; pnpm mobile:gate M2`，均 exit 1。复验确认 `pnpm check`、M2 storage / MigrationGate / registry / ring buffer 定向命令均 PASS；当前唯一阻塞为 iOS 文件级 excluded-from-backup 缺少结构化设备证据（`deviceEvidence: present` / `checkedAt` / artifact）。M2 返工已修复 Expo SQLite runtime path 与 iOS 文件级 backup exclusion 实现，未触碰 M3+。
+- 结论：**PASS，允许复跑 M2 verifier 并在通过后推进 M3。**
+- 备注：父 agent 已接收真实 iPhone 采集的结构化设备证据，artifact 路径为 `specs/mobile-app/reports/artifacts/m2-ios-backup-exclusion-device-evidence.json`。证据显示 `deviceEvidence: present`，且 `mybrain.db`、`-wal`、`-shm` 均存在并设置 `NSURLIsExcludedFromBackupKey`。

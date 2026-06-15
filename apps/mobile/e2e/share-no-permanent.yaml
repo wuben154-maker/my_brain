@@ -1,0 +1,19 @@
+# M4 prep — mock/local: provisional capture must not create permanent nodes before Conductor confirm.
+# NOT Android intent / iOS Share Extension device PASS.
+appId: app.mybrain.personal
+tags:
+  - m4-prep
+  - mock
+  - local
+---
+- launchApp
+- assertVisible:
+    id: "living-brain-home"
+- tapOn:
+    id: "quick-capture-fab"
+- tapOn:
+    id: "quick-capture-submit"
+# Candidate saved; graph still empty until user taps 入 via Conductor
+- assertNotVisible:
+    id: "permanent-node-created-indicator"
+# TODO(device): replace with real graph node count assertion after M4 native share paths

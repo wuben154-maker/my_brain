@@ -1,0 +1,25 @@
+# M4 prep — mock/local: SSRF-denied share must not fetch or create permanent nodes.
+# NOT Android intent / iOS Share Extension device PASS.
+# Payload validation (http) or UrlFetchGuard may both deny — user sees safe hint only.
+appId: app.mybrain.personal
+tags:
+  - m4-prep
+  - mock
+  - ssrf
+---
+- launchApp
+- assertVisible:
+    id: "living-brain-home"
+- tapOn:
+    id: "quick-capture-fab"
+- tapOn:
+    id: "quick-capture-link-input"
+- inputText: "http://example.com/insecure"
+- tapOn:
+    id: "quick-capture-link-submit"
+- tapOn:
+    id: "quick-capture-fab"
+# Open queue — expect SSRF hint, no permanent ingest
+- assertVisible:
+    id: "ssrf-hint-banner"
+# TODO(device): Android Chrome share + iOS Safari share with private IP fixtures

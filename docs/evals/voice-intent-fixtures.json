@@ -1,0 +1,42 @@
+{
+  "version": "m3-v1",
+  "description": "Voice ingest intent fixtures — same FSM as text IntentRail",
+  "fixtures": [
+    {
+      "id": "voice-ingest-clear",
+      "transcript": "入",
+      "attempt": 1,
+      "expectedIntent": "ingest"
+    },
+    {
+      "id": "voice-skip-clear",
+      "transcript": "不要",
+      "attempt": 1,
+      "expectedIntent": "skip"
+    },
+    {
+      "id": "voice-explain-clear",
+      "transcript": "讲细点",
+      "attempt": 1,
+      "expectedIntent": "explain_more"
+    },
+    {
+      "id": "voice-ambiguous-reprompt",
+      "transcript": "嗯",
+      "attempt": 1,
+      "expected": "reprompt"
+    },
+    {
+      "id": "voice-ambiguous-skip-second",
+      "transcript": "随便",
+      "attempt": 2,
+      "expectedIntent": "skip"
+    },
+    {
+      "id": "voice-dialect-ingest",
+      "transcript": "记下来吧",
+      "attempt": 1,
+      "expected": "reprompt"
+    }
+  ]
+}

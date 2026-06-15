@@ -19,7 +19,10 @@ interface Props {
 export function QuickCaptureFab({ testID = "quick-capture-fab" }: Props) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [capturing, setCapturing] = useState(false);
   const addTextCapture = useProvisionalStore((s) => s.addTextCapture);
+  const addLinkCapture = useProvisionalStore((s) => s.addLinkCapture);
   const addLinkFixture = useProvisionalStore((s) => s.addLinkFixture);
   const setQueueSheetOpen = useMobileAppStore((s) => s.setQueueSheetOpen);
 
@@ -32,6 +35,22 @@ export function QuickCaptureFab({ testID = "quick-capture-fab" }: Props) {
     setText("");
     setOpen(false);
     setQueueSheetOpen(true);
+  };
+
+  const submitLink = async () => {
+    const url = linkUrl.trim();
+    if (!url || capturing) {
+      return;
+    }
+    setCapturing(true);
+    try {
+      await addLinkCapture(url.slice(0, 48), url);
+      setLinkUrl("");
+      setOpen(false);
+      setQueueSheetOpen(true);
+    } finally {
+      setCapturing(false);
+    }
   };
 
   const addMockLink = () => {
@@ -59,6 +78,25 @@ export function QuickCaptureFab({ testID = "quick-capture-fab" }: Props) {
             />
             <Pressable style={styles.primaryBtn} onPress={submit} testID="quick-capture-submit">
               <Text style={styles.primaryBtnText}>加入待点亮星尘</Text>
+            </Pressable>
+            <TextInput
+              style={styles.input}
+              placeholder="https 链接（经 SSRF 校验）"
+              placeholderTextColor={colors.textMuted}
+              value={linkUrl}
+              onChangeText={setLinkUrl}
+              autoCapitalize="none"
+              testID="quick-capture-link-input"
+            />
+            <Pressable
+              style={styles.primaryBtn}
+              onPress={() => void submitLink()}
+              disabled={capturing}
+              testID="quick-capture-link-submit"
+            >
+              <Text style={styles.primaryBtnText}>
+                {capturing ? "校验中…" : "添加链接（mock guard）"}
+              </Text>
             </Pressable>
             <Pressable style={styles.secondaryBtn} onPress={addMockLink}>
               <Text style={styles.secondaryBtnText}>添加 mock 链接 fixture</Text>

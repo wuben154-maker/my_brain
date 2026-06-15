@@ -17,6 +17,7 @@
     "expo": "~52.0.46",
     "expo-asset": "~11.0.5",
     "expo-constants": "~17.0.8",
+    "expo-dev-client": "~5.0.20",
     "expo-file-system": "~18.0.12",
     "expo-modules-core": "~2.2.3",
     "expo-sqlite": "~15.1.4",

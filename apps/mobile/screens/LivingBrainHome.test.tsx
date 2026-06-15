@@ -38,8 +38,20 @@ vi.mock("react-native", () => {
       visible?: boolean;
     }) => (visible ? React.createElement("div", null, children) : null),
     StyleSheet: { create: (s: object) => s, hairlineWidth: 1 },
+    Platform: {
+      OS: "web",
+      Version: "0",
+      select: (o: Record<string, string>) => o.default ?? o.web ?? Object.values(o)[0],
+    },
+    Share: { share: vi.fn() },
   };
 });
+
+vi.mock("expo-constants", () => ({
+  default: {
+    nativeBuildVersion: null,
+  },
+}));
 
 import { LivingBrainHome } from "./LivingBrainHome";
 import { useMobileAppStore } from "../stores/mobileAppStore";

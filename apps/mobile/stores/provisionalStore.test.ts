@@ -15,7 +15,7 @@ describe("provisionalStore", () => {
       history: new InMemoryHistoryRepository(),
       visibleNodes: [],
     });
-    useProvisionalStore.setState({ candidates: [], lastExplanation: null });
+    useProvisionalStore.setState({ candidates: [], lastExplanation: null, lastSsrfHint: null });
   });
 
   it("capture adds candidate without permanent node", () => {

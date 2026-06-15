@@ -1,11 +1,12 @@
 import { useCallback, useState } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { userModeLabel, PROVIDER_STATUS_TEST_IDS } from "@my-brain/core";
+import { userModeLabel, PROVIDER_STATUS_TEST_IDS, DEGRADED_MODE_LABELS } from "@my-brain/core";
 
 import { collectAndShareIosBackupEvidence } from "../diagnostics/collectIosBackupEvidence";
 
 import { AdaptiveRadar } from "../components/AdaptiveRadar";
+import { M3VoiceDiagnosticsPanel } from "../components/M3VoiceDiagnosticsPanel";
 import { ColdStartDialogue } from "./ColdStartDialogue";
 import { DegradedModeBanner } from "../components/DegradedModeBanner";
 import { IntentRail } from "../components/IntentRail";
@@ -41,7 +42,7 @@ export function SettingsScreen() {
   }, []);
 
   return (
-    <View style={styles.settings} testID="settings-screen">
+    <ScrollView style={styles.settings} testID="settings-screen">
       <Text style={styles.settingsTitle}>设置</Text>
       <Text style={styles.settingsSection}>Provider 状态面板</Text>
       <View testID="provider-status-panel">
@@ -54,6 +55,11 @@ export function SettingsScreen() {
         <Text style={styles.settingsRow} testID={PROVIDER_STATUS_TEST_IDS.voice}>
           Voice：{providerStatus.voice}
         </Text>
+        {degraded.active.includes("voice_disconnected") ? (
+          <Text style={styles.settingsRow} testID="settings-voice-disconnected">
+            {DEGRADED_MODE_LABELS.voice_disconnected}
+          </Text>
+        ) : null}
         <Text style={styles.settingsRow} testID={PROVIDER_STATUS_TEST_IDS.storage}>
           Storage：{providerStatus.storage}
         </Text>
@@ -90,6 +96,7 @@ export function SettingsScreen() {
         <Text style={styles.link}>画像与纠偏</Text>
       </Pressable>
       {profileReviewOpen ? <ProfileReview /> : null}
+      <M3VoiceDiagnosticsPanel />
       {Platform.OS === "ios" ? (
         <>
           <Text style={styles.settingsSection}>M2 诊断（Dev Client）</Text>
@@ -115,7 +122,7 @@ export function SettingsScreen() {
       <Pressable onPress={closeSettings} style={styles.closeSettings}>
         <Text style={styles.closeSettingsText}>返回</Text>
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 

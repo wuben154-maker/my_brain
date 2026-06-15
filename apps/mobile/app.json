@@ -20,9 +20,13 @@
       "fullBackupContent": "@xml/backup_rules"
     },
     "ios": {
-      "bundleIdentifier": "app.mybrain.personal"
+      "bundleIdentifier": "app.mybrain.personal",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "plugins": [
+      "expo-dev-client",
       [
         "expo-sqlite",
         {

@@ -45,12 +45,13 @@ export function useConversationSession() {
 
   const dispatchIntent = useCallback(
     (intent: UserIntent) => {
+      const provisionalIdBefore = conversation.activeProvisionalId;
       const { state: next, assistantReply } = applyUserIntent(conversation, intent);
       setConversation(next);
 
       if (intent === "ingest") {
-        if (next.activeProvisionalId) {
-          const result = confirmProvisional(next.activeProvisionalId);
+        if (provisionalIdBefore) {
+          const result = confirmProvisional(provisionalIdBefore);
           if (result) {
             setLastIngestSummary(result.autoCurateSummary);
             syncGraphView();
@@ -76,12 +77,12 @@ export function useConversationSession() {
         }
       }
 
-      if (intent === "skip" && next.activeProvisionalId) {
-        rejectProvisional(next.activeProvisionalId);
+      if (intent === "skip" && provisionalIdBefore) {
+        rejectProvisional(provisionalIdBefore);
       }
 
-      if (intent === "explain_more" && next.activeProvisionalId) {
-        explainProvisional(next.activeProvisionalId);
+      if (intent === "explain_more" && provisionalIdBefore) {
+        explainProvisional(provisionalIdBefore);
       }
 
       return assistantReply;

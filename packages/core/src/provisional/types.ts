@@ -1,4 +1,12 @@
-export type ProvisionalSourceType = "text" | "link" | "voice_note_mock";
+export type ProvisionalSourceType =
+  | "text"
+  | "link"
+  | "learning"
+  | "project"
+  | "life"
+  | "image_mock"
+  /** Mock/disabled until M3-GATE PASS — must not enable voice capture path. */
+  | "voice_note_mock";
 
 export type ProvisionalStatus = "pending" | "explaining" | "confirmed" | "rejected";
 
@@ -10,6 +18,10 @@ export interface ProvisionalCandidate {
   evidenceRefs: string[];
   createdAt: string;
   status: ProvisionalStatus;
-  /** Optional mock link — no SSRF fetch in M1 */
   linkUrl?: string;
+  /** Set when UrlFetchGuard rejects outbound fetch — raw link may still be kept. */
+  ssrfRejectCode?: string;
+  fetchHint?: string;
+  /** true when allowlist + mock fetch succeeded. */
+  fetchOk?: boolean;
 }

@@ -22,6 +22,8 @@
     "visual:loop": "node scripts/visual-feedback/loop.mjs",
     "visual:browser": "playwright install chromium",
     "mobile:gate": "node tools/mobile-execution/verify-stage.mjs",
+    "scan:secrets": "node tools/scan-secrets.mjs",
+    "scan:bundle-secrets": "node tools/scan-bundle-secrets.mjs",
     "prepare": "husky"
   },
   "dependencies": {
