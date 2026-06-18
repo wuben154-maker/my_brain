@@ -1,0 +1,51 @@
+# Manual iOS Simulator .app zip for Appetize.io (no signing).
+# Trigger: Actions -> iOS Appetize Simulator -> Run workflow -> download artifact.
+name: iOS Appetize Simulator
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-appetize-simulator
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Expo prebuild (iOS)
+        working-directory: apps/mobile
+        run: pnpm exec expo prebuild --platform ios --no-install
+
+      - name: Install CocoaPods
+        working-directory: apps/mobile/ios
+        run: pod install --repo-update
+
+      - name: Build simulator .app and zip
+        working-directory: apps/mobile
+        run: bash scripts/build-ios-simulator-app.sh
+
+      - name: Upload Appetize artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-brain-ios-simulator-app
+          path: apps/mobile/build/simulator/my-brain-ios-simulator-app.zip
+          if-no-files-found: error
