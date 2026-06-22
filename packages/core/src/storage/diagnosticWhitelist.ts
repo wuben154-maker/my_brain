@@ -9,7 +9,32 @@ export interface DiagnosticEvent {
   ts?: string;
   schemaVersion?: number;
   appVersion?: string;
+  buildNumber?: string;
   platform?: string;
+  /** Non-sensitive screen/route slug for crash localization — no PII. */
+  route?: string;
+  screen?: string;
+}
+
+export const DIAGNOSTIC_EXPORT_SCHEMA_VERSION = 1;
+
+export interface DiagnosticExportContext {
+  appVersion: string;
+  buildNumber?: string;
+  platform: string;
+  route?: string;
+  screen?: string;
+}
+
+export interface DiagnosticExportDocument {
+  schemaVersion: number;
+  exportedAt: string;
+  appVersion: string;
+  buildNumber?: string;
+  platform: string;
+  route?: string;
+  screen?: string;
+  events: DiagnosticEvent[];
 }
 
 const FORBIDDEN_EXPORT_KEYS = [
@@ -17,14 +42,25 @@ const FORBIDDEN_EXPORT_KEYS = [
   "title",
   "body",
   "transcript",
+  "article",
+  "articleText",
+  "article_text",
+  "rawArticle",
+  "raw_audio",
+  "rawAudio",
+  "audio",
   "apiKey",
   "api_key",
   "token",
   "secret",
   "correctionNote",
   "correction_note",
+  "profileProse",
+  "profile_prose",
   "concept",
   "summary",
+  "nodeIntro",
+  "nodeTitle",
 ] as const;
 
 const ALLOWED_EXPORT_KEYS = new Set([
@@ -35,7 +71,10 @@ const ALLOWED_EXPORT_KEYS = new Set([
   "ts",
   "schemaVersion",
   "appVersion",
+  "buildNumber",
   "platform",
+  "route",
+  "screen",
 ]);
 
 export function isWhitelistedDiagnosticEvent(
@@ -93,5 +132,47 @@ export function scanExportPayloadForViolations(payload: string): string[] {
   if (/sk-[a-zA-Z0-9]{10,}/.test(payload)) {
     violations.push("api_key_pattern");
   }
+  if (/Bearer\s+[a-zA-Z0-9._-]{8,}/i.test(payload)) {
+    violations.push("bearer_token_pattern");
+  }
   return violations;
+}
+
+/** Attach non-sensitive crash/export metadata without widening event payloads. */
+export function enrichDiagnosticEventsForExport(
+  events: DiagnosticEvent[],
+  context: DiagnosticExportContext,
+): DiagnosticEvent[] {
+  return sanitizeDiagnosticExport(events).map((event) => ({
+    ...event,
+    schemaVersion: event.schemaVersion ?? DIAGNOSTIC_EXPORT_SCHEMA_VERSION,
+    appVersion: context.appVersion,
+    buildNumber: context.buildNumber,
+    platform: context.platform,
+    route: event.route ?? context.route,
+    screen: event.screen ?? context.screen,
+  }));
+}
+
+export function buildDiagnosticExportDocument(
+  events: DiagnosticEvent[],
+  context: DiagnosticExportContext,
+): DiagnosticExportDocument {
+  const exportedAt = new Date().toISOString();
+  return {
+    schemaVersion: DIAGNOSTIC_EXPORT_SCHEMA_VERSION,
+    exportedAt,
+    appVersion: context.appVersion,
+    buildNumber: context.buildNumber,
+    platform: context.platform,
+    route: context.route,
+    screen: context.screen,
+    events: enrichDiagnosticEventsForExport(events, context),
+  };
+}
+
+export function serializeDiagnosticExportDocument(
+  document: DiagnosticExportDocument,
+): string {
+  return JSON.stringify(document, null, 2);
 }

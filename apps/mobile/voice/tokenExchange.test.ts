@@ -1,12 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { TokenExchangeError } from "@my-brain/core";
 
+import { readMobileAppEnv } from "../env/readAppEnv";
 import {
   createMockTokenExchangeClient,
   createStagingTokenExchangeClient,
+  createTokenExchangeClient,
 } from "./tokenExchangeClient";
 import { createMemorySecureTokenStore, voiceTokenStorageKey } from "./secureTokenStore";
+
+vi.mock("../env/readAppEnv", () => ({
+  readMobileAppEnv: vi.fn(() => ({
+    runtime: "mobile",
+    providerModes: { voice: "mock", llm: "mock", newsRadar: "mock" },
+    tokenExchangeUrl: "https://staging.example/token",
+  })),
+}));
 
 describe("token exchange client", () => {
   it("mock client returns short-lived token without long-term key", async () => {
@@ -20,6 +30,15 @@ describe("token exchange client", () => {
   it("staging client fails closed without URL", async () => {
     const client = createStagingTokenExchangeClient(undefined);
     await expect(client.exchange("device-xyz")).rejects.toThrow(TokenExchangeError);
+  });
+
+  it("createTokenExchangeClient uses shell-injected staging URL", () => {
+    const env = readMobileAppEnv();
+    const client = createTokenExchangeClient({
+      mode: "staging",
+      stagingUrl: env.tokenExchangeUrl,
+    });
+    expect(client.exchange).toBeTypeOf("function");
   });
 
   it("secure store holds token ephemerally in memory adapter", async () => {

@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "screens/LivingBrainHome.tsx",
+    "screens/ColdStartDialogue.tsx",
+    "components/ConstellationField.tsx",
+    "components/AdaptiveRadar.tsx",
+    "components/IntentRail.tsx",
+    "components/MemoryCore.tsx",
+    "components/QuickCaptureFab.tsx",
+    "components/ui/VoiceOrb.tsx",
+    "components/ui/PrimaryPill.tsx",
+    "components/ui/ConstellationStar.tsx",
+    "components/DegradedModeBanner.tsx",
+    "components/ProvisionalQueueSheet.tsx",
+    "theme/ThemeProvider.tsx",
+    "theme/tokens.ts",
+    "hooks/useConversationSession.ts",
+    "hooks/useUserModeProfile.ts",
+    "navigation/NavigationContext.tsx",
+    "navigation/routes.ts",
+    "stores/mobileAppStore.ts",
+    "stores/provisionalStore.ts",
+    "stores/persistHydrate.ts",
+    "config/m5FeatureFlags.ts"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "sqliteEntrypoint": "apps/mobile/fixtures/m5-evidence.sqlite",
+  "fixtures": [
+    {
+      "id": "m5-tech-tracker",
+      "profilePath": "apps/mobile/fixtures/m5-modes/m5-tech-tracker/profile.json",
+      "seedPath": "apps/mobile/fixtures/m5-modes/m5-tech-tracker/seed.json",
+      "actualOutputPath": "apps/mobile/fixtures/m5-modes/m5-tech-tracker/actual-output.json"
+    },
+    {
+      "id": "m5-learner",
+      "profilePath": "apps/mobile/fixtures/m5-modes/m5-learner/profile.json",
+      "seedPath": "apps/mobile/fixtures/m5-modes/m5-learner/seed.json",
+      "actualOutputPath": "apps/mobile/fixtures/m5-modes/m5-learner/actual-output.json"
+    },
+    {
+      "id": "m5-creator-researcher",
+      "profilePath": "apps/mobile/fixtures/m5-modes/m5-creator-researcher/profile.json",
+      "seedPath": "apps/mobile/fixtures/m5-modes/m5-creator-researcher/seed.json",
+      "actualOutputPath": "apps/mobile/fixtures/m5-modes/m5-creator-researcher/actual-output.json"
+    },
+    {
+      "id": "m5-entrepreneur-project",
+      "profilePath": "apps/mobile/fixtures/m5-modes/m5-entrepreneur-project/profile.json",
+      "seedPath": "apps/mobile/fixtures/m5-modes/m5-entrepreneur-project/seed.json",
+      "actualOutputPath": "apps/mobile/fixtures/m5-modes/m5-entrepreneur-project/actual-output.json"
+    },
+    {
+      "id": "m5-personal-life",
+      "profilePath": "apps/mobile/fixtures/m5-modes/m5-personal-life/profile.json",
+      "seedPath": "apps/mobile/fixtures/m5-modes/m5-personal-life/seed.json",
+      "actualOutputPath": "apps/mobile/fixtures/m5-modes/m5-personal-life/actual-output.json"
+    },
+    {
+      "id": "m5-mixed-learner-life",
+      "profilePath": "apps/mobile/fixtures/m5-modes/m5-mixed-learner-life/profile.json",
+      "seedPath": "apps/mobile/fixtures/m5-modes/m5-mixed-learner-life/seed.json",
+      "actualOutputPath": "apps/mobile/fixtures/m5-modes/m5-mixed-learner-life/actual-output.json"
+    }
+  ]
+}

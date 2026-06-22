@@ -1,0 +1,35 @@
+# M4 — Android ACTION_SEND share capture (template E2E)
+# PENDING_DEVICE: requires dev/preview build with intent filters from app.json prebuild.
+# Machine/mock path uses Settings → M4 diagnostics fixture injection instead.
+appId: app.mybrain.personal
+tags:
+  - m4
+  - android
+  - share-capture
+  - PENDING_DEVICE
+---
+# PENDING_DEVICE: launch from Chrome "Share to my_brain" with https link
+- launchApp
+- assertVisible:
+    id: "living-brain-home"
+# Mock/prep fallback — in-app fixture simulates intent JSON handoff
+- tapOn:
+    id: "settings-entry"
+- assertVisible:
+    id: "m4-share-payload-diagnostics-panel"
+- tapOn:
+    id: "m4-share-fixture-share-android-url-ok"
+- assertVisible:
+    id: "provisional-queue-sheet"
+- assertNotVisible:
+    id: "permanent-node-created-indicator"
+# Conductor confirm path — user must tap 入; no auto permanent
+- tapOn:
+    id: "intent-ingest"
+# PENDING_DEVICE: after real Chrome ACTION_SEND + kill-process, verify candidate persists on device
+- stopApp
+- launchApp
+- assertVisible:
+    id: "living-brain-home"
+# TODO(device): tap provisional-queue-open after native handoff UI wired on device build
+# TODO(device): record Android model + OS + Chrome ACTION_SEND video evidence

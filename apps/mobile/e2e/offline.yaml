@@ -1,0 +1,20 @@
+# M6 — offline: graph readable without network (mock/local)
+appId: app.mybrain.personal
+tags:
+  - m6
+  - m2
+  - offline
+  - machine
+---
+- launchApp
+- assertVisible:
+    id: "living-brain-home"
+- assertVisible:
+    id: "memory-core-count"
+# TODO(simulator): toggle airplane mode when Maestro network hooks available
+- tapOn:
+    id: "settings-entry"
+- assertVisible:
+    id: "settings-screen"
+- assertVisible:
+    id: "provider-status-panel"

@@ -1,0 +1,21 @@
+{
+  "fixtureId": "m5-personal-life",
+  "generatedAt": "2026-06-15T08:00:00Z",
+  "experiences": {
+    "memoryWeather": {
+      "visible": true,
+      "outputKind": "recall_mood",
+      "evidenceRefsMin": 1
+    },
+    "memoryReplay": {
+      "visible": true,
+      "outputKind": "life_capture",
+      "evidenceRefsMin": 1
+    },
+    "reverseQuestion": {
+      "visible": true,
+      "outputKind": "recall_day",
+      "evidenceRefsMin": 1
+    }
+  }
+}

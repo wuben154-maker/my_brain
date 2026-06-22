@@ -1,0 +1,115 @@
+{
+  "track": "COMPANION_KNOWLEDGE_OS",
+  "version": 2,
+  "description": "Maestro/adb visual capture routes for companion-ui-parity (capture-only deep links)",
+  "screens": [
+    {
+      "screenId": "ui-01-icon",
+      "captureRoute": "LaunchAssets",
+      "testID": null,
+      "note": "native launcher icon — no RN testID"
+    },
+    {
+      "screenId": "ui-02-splash",
+      "captureRoute": "LaunchScreen",
+      "testID": "launch-screen",
+      "deepLink": "mybrain://visual-fixture/LaunchScreen"
+    },
+    {
+      "screenId": "ui-03-home",
+      "captureRoute": "LivingBrainHome",
+      "testID": "living-brain-home",
+      "deepLink": "mybrain://visual-fixture/LivingBrainHome"
+    },
+    {
+      "screenId": "ui-04-today",
+      "captureRoute": "TodayScreen",
+      "testID": "today-screen",
+      "deepLink": "mybrain://visual-fixture/TodayScreen"
+    },
+    {
+      "screenId": "ui-05-inbox",
+      "captureRoute": "CaptureInboxScreen",
+      "testID": "capture-inbox-screen",
+      "deepLink": "mybrain://visual-fixture/CaptureInboxScreen"
+    },
+    {
+      "screenId": "ui-06-map",
+      "captureRoute": "BrainMapScreen",
+      "testID": "brain-map-screen",
+      "deepLink": "mybrain://visual-fixture/BrainMapScreen"
+    },
+    {
+      "screenId": "ui-07-memory",
+      "captureRoute": "MemoryReviewScreen",
+      "testID": "memory-review-screen",
+      "deepLink": "mybrain://visual-fixture/MemoryReviewScreen"
+    },
+    {
+      "screenId": "ui-08-settings",
+      "captureRoute": "SettingsScreen",
+      "testID": "settings-screen",
+      "deepLink": "mybrain://visual-fixture/SettingsScreen"
+    },
+    {
+      "screenId": "ui-09-context",
+      "captureRoute": "ContextDecisionSheet",
+      "testID": "context-decision-sheet",
+      "deepLink": "mybrain://visual-fixture/ContextDecisionSheet"
+    },
+    {
+      "screenId": "ui-10-cold-start",
+      "captureRoute": "ColdStartDialogue",
+      "testID": "screen-cold-start",
+      "deepLink": "mybrain://visual-fixture/ColdStartDialogue"
+    },
+    {
+      "screenId": "ui-11-provider",
+      "captureRoute": "ProviderSettings",
+      "testID": "screen-provider-settings",
+      "deepLink": "mybrain://visual-fixture/ProviderSettings"
+    },
+    {
+      "screenId": "ui-12-voice",
+      "captureRoute": "VoiceSession",
+      "testID": "screen-voice-session",
+      "deepLink": "mybrain://visual-fixture/VoiceSession"
+    },
+    {
+      "screenId": "ui-13-chat",
+      "captureRoute": "CompanionChat",
+      "testID": "screen-companion-chat",
+      "deepLink": "mybrain://visual-fixture/CompanionChat"
+    },
+    {
+      "screenId": "ui-14-profile-review",
+      "captureRoute": "ProfileReview",
+      "testID": "screen-profile-review",
+      "deepLink": "mybrain://visual-fixture/ProfileReview"
+    },
+    {
+      "screenId": "ui-15-world",
+      "captureRoute": "WorldObserver",
+      "testID": "screen-world-observer",
+      "deepLink": "mybrain://visual-fixture/WorldObserver"
+    },
+    {
+      "screenId": "ui-16-personal",
+      "captureRoute": "PersonalObserver",
+      "testID": "screen-personal-observer",
+      "deepLink": "mybrain://visual-fixture/PersonalObserver"
+    },
+    {
+      "screenId": "ui-17-asset",
+      "captureRoute": "AssetCandidate",
+      "testID": "screen-asset-candidate",
+      "deepLink": "mybrain://visual-fixture/AssetCandidate"
+    },
+    {
+      "screenId": "ui-18-review",
+      "captureRoute": "ReviewAction",
+      "testID": "screen-review-action",
+      "deepLink": "mybrain://visual-fixture/ReviewAction"
+    }
+  ]
+}

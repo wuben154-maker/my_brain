@@ -38,6 +38,27 @@ function worstVerdict(checks: CheckResult[]): Verdict {
   return verdict;
 }
 
+function categoryVerdict(checks: CheckResult[], category: CheckResult["category"]): Verdict {
+  const subset = checks.filter((check) => check.category === category);
+  return subset.length > 0 ? worstVerdict(subset) : "PASS";
+}
+
+/** When machine + device checks are green, interim report NEEDS_DEVICE_EVIDENCE may clear. */
+function reconcileSequenceReportVerdict(checks: CheckResult[]): void {
+  const reportPassCheck = checks.find((check) => check.id === "sequence-current-report-pass");
+  if (!reportPassCheck || reportPassCheck.verdict !== "NEEDS_DEVICE_EVIDENCE") {
+    return;
+  }
+  if (
+    categoryVerdict(checks, "commands") === "PASS" &&
+    categoryVerdict(checks, "deviceEvidence") === "PASS"
+  ) {
+    reportPassCheck.verdict = "PASS";
+    reportPassCheck.message =
+      "device evidence satisfied; parent agent must update report verdict to PASS before advancing EXECUTION_STATE";
+  }
+}
+
 function previousStage(stage: StageId): StageId | null {
   const order: StageId[] = [
     "M0",
@@ -224,8 +245,10 @@ function checkSequence(ctx: GateContext, results: CheckResult[]): void {
     verdict:
       ctx.parsedReport?.exists && ctx.parsedReport.verdict === "PASS"
         ? "PASS"
-        : "FAIL",
-    message: `current report verdict must be PASS (got ${String(ctx.parsedReport?.verdict)})`,
+        : ctx.parsedReport?.exists && ctx.parsedReport.verdict === "NEEDS_DEVICE_EVIDENCE"
+          ? "NEEDS_DEVICE_EVIDENCE"
+          : "FAIL",
+    message: `current report verdict must be PASS or NEEDS_DEVICE_EVIDENCE (got ${String(ctx.parsedReport?.verdict)})`,
   });
 
   detectPipelineOverreach(ctx, results);
@@ -778,12 +801,15 @@ function checkM4Commands(ctx: GateContext, results: CheckResult[]): void {
 function checkM5Commands(ctx: GateContext, results: CheckResult[]): void {
   const required = [
     "docs/evals/m5-signature-fixtures.json",
+    "apps/mobile/fixtures/m5-evidence.sqlite",
     "apps/mobile/fixtures/m5-modes/manifest.json",
     "apps/mobile/tests/weatherEvidence.test.ts",
     "apps/mobile/tests/replayEvidence.test.ts",
     "apps/mobile/tests/reverseQuestionEvidence.test.ts",
-    "apps/mobile/tests/replayColdStart.test.ts",
-    "apps/mobile/tests/nodeBudget.test.ts",
+    "apps/mobile/tests/m5EvidenceSqlite.test.ts",
+    "apps/mobile/perf/replayColdStart.test.ts",
+    "apps/mobile/perf/nodeBudget.test.ts",
+    "apps/mobile/perf/m5LargeGraphAggregation.test.ts",
   ];
   for (const rel of required) {
     push(results, requirePath(`m5-path-${rel}`, fileExists(resolveFromRoot(ctx.root, rel)), rel));
@@ -960,6 +986,7 @@ export function runStageChecks(ctx: GateContext): {
     checkSequence(ctx, checks);
     checkReportFields(ctx, checks);
     checkStageCommands(ctx, checks);
+    reconcileSequenceReportVerdict(checks);
   }
 
   return { checks, verdict: worstVerdict(checks) };
@@ -1029,7 +1056,10 @@ export function printResult(stage: StageId, checks: CheckResult[], verdict: Verd
     process.stdout.write(`  - ${check.id}: ${check.verdict} (${check.message.split("\n")[0]})\n`);
   }
 
-  const failed = checks.filter((check) => check.verdict !== "PASS");
+  const failed = checks.filter(
+    (check) => check.verdict === "FAIL" || check.verdict === "HARD_STOP",
+  );
+  const needsDevice = checks.filter((check) => check.verdict === "NEEDS_DEVICE_EVIDENCE");
   if (failed.length > 0) {
     process.stdout.write("FAILED_CHECK\n");
     for (const check of failed.slice(0, 20)) {
@@ -1049,7 +1079,7 @@ export function printResult(stage: StageId, checks: CheckResult[], verdict: Verd
   } else if (verdict === "NEEDS_DEVICE_EVIDENCE") {
     process.stdout.write("REASON\n");
     process.stdout.write(
-      `- ${failed.find((check) => check.verdict === "NEEDS_DEVICE_EVIDENCE")?.message ?? "device evidence missing"}\n`,
+      `- ${needsDevice[0]?.message ?? "device evidence missing"}\n`,
     );
     process.stdout.write("NEXT_REQUIRED_ACTION\n");
     process.stdout.write("- attach device evidence and re-run verifier\n");

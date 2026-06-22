@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.s05.json",
+  "include": [
+    "screens/CaptureInboxScreen.tsx",
+    "screens/CaptureInboxScreen.test.tsx",
+    "components/CaptureInboxList.tsx",
+    "components/captureInboxModel.ts",
+    "components/ProvisionalActionStubSheet.tsx",
+    "components/QuickCaptureFab.tsx",
+    "capture/provisionalQueue.test.tsx"
+  ]
+}

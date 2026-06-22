@@ -1,0 +1,12 @@
+appId: com.mybrain.app
+---
+# Visual capture for companion-ui-parity
+# Env: SCREEN_ID, CAPTURE_ROUTE
+
+- launchApp
+- runScript:
+    file: ../scripts/visual-fixture-route.js
+    env:
+      CAPTURE_ROUTE: ${CAPTURE_ROUTE}
+- takeScreenshot:
+    path: ../../../app-development/specs/reports/artifacts/visual/${SCREEN_ID}/capture.png

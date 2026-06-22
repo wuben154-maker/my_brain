@@ -1,0 +1,28 @@
+# M6 — main path: cold start → AdaptiveRadar → ingest → undo (simulator/mock)
+appId: app.mybrain.personal
+tags:
+  - m6
+  - m0-m5
+  - mainpath
+  - machine
+---
+- launchApp
+- assertVisible:
+    id: "living-brain-home"
+- tapOn:
+    id: "start-cold-start"
+- assertVisible:
+    id: "cold-start-dialogue"
+- tapOn:
+    id: "cold-fixture-cold-learner"
+- tapOn:
+    id: "cold-start-send"
+# Adaptive live home
+- assertVisible:
+    id: "adaptive-radar-primary"
+- tapOn:
+    id: "intent-ingest"
+- assertVisible:
+    id: "ingest-summary"
+- tapOn:
+    id: "graph-undo"

@@ -89,7 +89,7 @@ export async function intakeSharePayload(
     const imageRef =
       payload.url ??
       `share-image://${payload.platform}/${payload.mime ?? "image"}/${payload.capturedAt ?? "now"}`;
-    const candidate = intakeShareImage(
+    const candidate = await intakeShareImage(
       {
         imageRef,
         title: payload.title,

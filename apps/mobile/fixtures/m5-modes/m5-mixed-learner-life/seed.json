@@ -1,0 +1,54 @@
+{
+  "graphChanges": [
+    {
+      "id": "chg-mixed-1",
+      "kind": "node_created",
+      "summary": "学习笔记入库",
+      "before": { "nodes": [], "edges": [] },
+      "after": {
+        "nodes": [
+          {
+            "id": "node-mixed-1",
+            "concept": "Rust 生命周期",
+            "intro": "与日常灵感并列",
+            "sourceLinks": [],
+            "archived": false,
+            "createdAt": "2026-06-10T12:00:00Z"
+          }
+        ],
+        "edges": []
+      },
+      "createdAt": "2026-06-10T12:00:00Z",
+      "undone": false
+    }
+  ],
+  "learningTraces": [
+    {
+      "id": "lt-mixed-1",
+      "topic": "Rust 生命周期",
+      "note": "混合模式学习轨迹",
+      "createdAt": "2026-06-10T13:00:00Z"
+    }
+  ],
+  "captures": [
+    {
+      "id": "cap-mixed-1",
+      "sourceType": "text",
+      "summary": "路边花朵配色",
+      "evidenceRefs": ["capture:cap-mixed-1"],
+      "createdAt": "2026-06-10T14:00:00Z",
+      "status": "pending"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "node-mixed-1",
+      "concept": "Rust 生命周期",
+      "intro": "与日常灵感并列",
+      "sourceLinks": [],
+      "archived": false,
+      "createdAt": "2026-06-10T12:00:00Z"
+    }
+  ],
+  "edges": []
+}

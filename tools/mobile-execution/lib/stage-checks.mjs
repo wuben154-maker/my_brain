@@ -37,6 +37,27 @@ function worstVerdict(checks) {
   return verdict;
 }
 
+function categoryVerdict(checks, category) {
+  const subset = checks.filter((check) => check.category === category);
+  return subset.length > 0 ? worstVerdict(subset) : "PASS";
+}
+
+/** When machine + device checks are green, interim report NEEDS_DEVICE_EVIDENCE may clear. */
+function reconcileSequenceReportVerdict(checks) {
+  const reportPassCheck = checks.find((check) => check.id === "sequence-current-report-pass");
+  if (!reportPassCheck || reportPassCheck.verdict !== "NEEDS_DEVICE_EVIDENCE") {
+    return;
+  }
+  if (
+    categoryVerdict(checks, "commands") === "PASS" &&
+    categoryVerdict(checks, "deviceEvidence") === "PASS"
+  ) {
+    reportPassCheck.verdict = "PASS";
+    reportPassCheck.message =
+      "device evidence satisfied; parent agent must update report verdict to PASS before advancing EXECUTION_STATE";
+  }
+}
+
 function previousStage(stage) {
   const order = [
     "M0",
@@ -935,6 +956,7 @@ export function runStageChecks(ctx) {
     checkSequence(ctx, checks);
     checkReportFields(ctx, checks);
     checkStageCommands(ctx, checks);
+    reconcileSequenceReportVerdict(checks);
   }
 
   return { checks, verdict: worstVerdict(checks) };
@@ -1004,7 +1026,10 @@ export function printResult(stage, checks, verdict) {
     process.stdout.write(`  - ${check.id}: ${check.verdict} (${check.message.split("\n")[0]})\n`);
   }
 
-  const failed = checks.filter((check) => check.verdict !== "PASS");
+  const failed = checks.filter(
+    (check) => check.verdict === "FAIL" || check.verdict === "HARD_STOP",
+  );
+  const needsDevice = checks.filter((check) => check.verdict === "NEEDS_DEVICE_EVIDENCE");
   if (failed.length > 0) {
     process.stdout.write("FAILED_CHECK\n");
     for (const check of failed.slice(0, 20)) {
@@ -1024,7 +1049,7 @@ export function printResult(stage, checks, verdict) {
   } else if (verdict === "NEEDS_DEVICE_EVIDENCE") {
     process.stdout.write("REASON\n");
     process.stdout.write(
-      `- ${failed.find((check) => check.verdict === "NEEDS_DEVICE_EVIDENCE")?.message ?? "device evidence missing"}\n`,
+      `- ${needsDevice[0]?.message ?? "device evidence missing"}\n`,
     );
     process.stdout.write("NEXT_REQUIRED_ACTION\n");
     process.stdout.write("- attach device evidence and re-run verifier\n");

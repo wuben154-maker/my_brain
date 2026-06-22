@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
+  <!-- expo-secure-store: SecureStore prefs cannot be restored after backup -->
+  <include domain="sharedpref" path="." />
+  <exclude domain="sharedpref" path="SecureStore" />
   <!-- M2: exclude plaintext SQLite DB from Android Auto Backup -->
   <exclude domain="database" path="." />
   <exclude domain="file" path="SQLite" />

@@ -1,0 +1,59 @@
+{
+  "graphChanges": [
+    {
+      "id": "chg-tech-1",
+      "kind": "node_created",
+      "summary": "Realtime API 趋势入库",
+      "before": { "nodes": [], "edges": [] },
+      "after": {
+        "nodes": [
+          {
+            "id": "node-tech-1",
+            "concept": "Realtime API",
+            "intro": "语音打断原生支持",
+            "sourceLinks": ["https://example.com/realtime"],
+            "archived": false,
+            "createdAt": "2026-06-15T08:00:00Z"
+          }
+        ],
+        "edges": []
+      },
+      "createdAt": "2026-06-15T08:00:00Z",
+      "undone": false
+    }
+  ],
+  "radarSignals": [
+    {
+      "id": "radar-tech-1",
+      "title": "GitHub 星标增速",
+      "freshness": 0.92,
+      "updatedAt": "2026-06-15T08:30:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "node-tech-1",
+      "concept": "Realtime API",
+      "intro": "语音打断原生支持",
+      "sourceLinks": ["https://example.com/realtime"],
+      "archived": false,
+      "createdAt": "2026-06-15T08:00:00Z"
+    },
+    {
+      "id": "node-tech-2",
+      "concept": "OpenAI Agents",
+      "intro": "多工具编排",
+      "sourceLinks": [],
+      "archived": false,
+      "createdAt": "2026-06-15T09:00:00Z"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-tech-1",
+      "fromId": "node-tech-1",
+      "toId": "node-tech-2",
+      "relation": "feeds"
+    }
+  ]
+}

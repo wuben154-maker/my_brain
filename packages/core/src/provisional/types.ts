@@ -24,4 +24,7 @@ export interface ProvisionalCandidate {
   fetchHint?: string;
   /** true when allowlist + mock fetch succeeded. */
   fetchOk?: boolean;
+  /** M7 sync/backup gate metadata — provisional stays provisional until confirm. */
+  confirmedAt?: string;
+  ingestSource?: string;
 }

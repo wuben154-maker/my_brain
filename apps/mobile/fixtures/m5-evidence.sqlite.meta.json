@@ -1,0 +1,4 @@
+{
+  "entrypoint": "apps/mobile/fixtures/m5-evidence.sqlite",
+  "schemaVersion": 1
+}

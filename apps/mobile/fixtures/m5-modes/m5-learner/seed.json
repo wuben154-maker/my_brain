@@ -1,0 +1,44 @@
+{
+  "graphChanges": [
+    {
+      "id": "chg-learn-1",
+      "kind": "node_created",
+      "summary": "Rust 所有权概念入库",
+      "before": { "nodes": [], "edges": [] },
+      "after": {
+        "nodes": [
+          {
+            "id": "node-learn-1",
+            "concept": "Rust 所有权",
+            "intro": "借用与移动语义",
+            "sourceLinks": [],
+            "archived": false,
+            "createdAt": "2026-06-14T10:00:00Z"
+          }
+        ],
+        "edges": []
+      },
+      "createdAt": "2026-06-14T10:00:00Z",
+      "undone": false
+    }
+  ],
+  "learningTraces": [
+    {
+      "id": "lt-learn-1",
+      "topic": "Rust 所有权",
+      "note": "完成第一轮巩固",
+      "createdAt": "2026-06-14T11:00:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "node-learn-1",
+      "concept": "Rust 所有权",
+      "intro": "借用与移动语义",
+      "sourceLinks": [],
+      "archived": false,
+      "createdAt": "2026-06-14T10:00:00Z"
+    }
+  ],
+  "edges": []
+}

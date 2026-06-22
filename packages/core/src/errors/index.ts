@@ -69,9 +69,4 @@ export class UserModeRoutingError extends Error {
   }
 }
 
-export class SyncConflictError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "SyncConflictError";
-  }
-}
+export { SyncConflictError } from "../sync/errors.js";

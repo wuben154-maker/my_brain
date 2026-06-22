@@ -10,4 +10,11 @@ describe("android backup_rules", () => {
     expect(xml).toContain('path="."');
     expect(xml).toContain("exclude");
   });
+
+  it("excludes SecureStore shared preferences from Auto Backup", () => {
+    const xmlPath = join(__dirname, "backup_rules.xml");
+    const xml = readFileSync(xmlPath, "utf8");
+    expect(xml).toContain('domain="sharedpref"');
+    expect(xml).toContain('path="SecureStore"');
+  });
 });

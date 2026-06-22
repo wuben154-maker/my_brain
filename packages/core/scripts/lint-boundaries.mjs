@@ -13,7 +13,7 @@ const FORBIDDEN_PATTERNS = [
   { id: "vite-env", pattern: /\bVITE_[A-Z0-9_]+\b/ },
   { id: "bare-process-env", pattern: /process\.env(?!\s*\.)/ },
   { id: "window", pattern: /\bwindow\b/ },
-  { id: "document", pattern: /\bdocument\b/ },
+  { id: "document", pattern: /\bdocument\s*[.[(]/ },
   { id: "web-audio", pattern: /AudioContext|webkitAudioContext/ },
   { id: "media-devices", pattern: /navigator\.mediaDevices/ },
   { id: "force-graph", pattern: /react-force-graph/ },

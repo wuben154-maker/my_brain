@@ -5,6 +5,13 @@ import { userModeLabel } from "@my-brain/core";
 
 import { colors } from "../theme/tokens";
 
+export {
+  buildTodayEntryViewModels,
+  TODAY_CARD_ACTION_LABELS,
+  TODAY_PAGE_COPY,
+  type TodayEntryViewModel,
+} from "./todayEntryModel";
+
 interface Props {
   signals: AdaptiveSignal[];
   onSelect: (index: number) => void;

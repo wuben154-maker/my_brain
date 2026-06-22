@@ -1,5 +1,5 @@
 /**
- * Image share intake helper — delegates to core OCR mock boundary.
+ * Image share intake helper — native OCR when stable, else metadata + editable placeholder.
  */
 
 import {
@@ -9,21 +9,29 @@ import {
   type ProvisionalCandidate,
 } from "@my-brain/core";
 
+import { imageMetadataFromShare, recognizeImageText } from "./ocrCapture";
+
 export interface ShareImageIntakeInput {
   imageRef: string;
   title?: string;
   mime?: string;
-  /** Test hook for deterministic OCR outcomes. */
+  /** Test hook for deterministic OCR outcomes — not used on production paths. */
   mockOcrText?: string | null;
 }
 
-export function intakeShareImage(
+export async function intakeShareImage(
   input: ShareImageIntakeInput,
   deps: CaptureIngestGateDeps,
-): ProvisionalCandidate {
+): Promise<ProvisionalCandidate> {
+  const metadata = imageMetadataFromShare(input);
+  const native = input.mockOcrText
+    ? { recognizedText: null as string | null }
+    : await recognizeImageText(input.imageRef, metadata);
+
   const ocr = attemptOnDeviceOcr({
     imageRef: input.imageRef,
-    mockOcrText: input.mockOcrText ?? null,
+    recognizedText: input.mockOcrText ?? native.recognizedText,
+    metadata,
   });
   const candidate = buildOcrProvisionalCandidate(ocr, deps);
   if (input.title?.trim() && ocr.editablePlaceholder) {

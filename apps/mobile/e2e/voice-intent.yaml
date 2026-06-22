@@ -1,0 +1,22 @@
+# M6 — M3 voice three-intent path via Settings diagnostics (mock transport)
+appId: app.mybrain.personal
+tags:
+  - m6
+  - m3
+  - voice-intent
+  - machine
+---
+- launchApp
+- tapOn:
+    id: "settings-entry"
+- assertVisible:
+    id: "m3-voice-diagnostics-panel"
+- assertVisible:
+    id: "m3-voice-mock-banner"
+- tapOn:
+    id: "m3-voice-connect"
+- tapOn:
+    id: "m3-voice-barge-in"
+- assertVisible:
+    id: "m3-voice-barge-in-result"
+# PENDING_DEVICE: replace with live Realtime barge-in on dev/preview build

@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.s09.json",
+  "include": [
+    "components/ContextDecisionSheet.tsx",
+    "components/ContextDecisionBar.test.tsx",
+    "components/ui/ContextDecisionBar.tsx",
+    "components/CaptureInboxList.tsx",
+    "components/captureInboxModel.ts",
+    "components/ProvisionalQueueSheet.tsx",
+    "components/TodayFocusCard.tsx",
+    "hooks/useContextCandidate.ts",
+    "hooks/useConversationSession.ts",
+    "screens/LivingBrainHome.tsx",
+    "screens/TodayScreen.tsx",
+    "screens/CaptureInboxScreen.tsx",
+    "theme/contextDecisionLabels.ts"
+  ]
+}

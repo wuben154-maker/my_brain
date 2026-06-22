@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   InMemoryGraphRepository,
   InMemoryHistoryRepository,
 } from "../graph/memoryRepository.js";
+import * as cognitiveAssetModule from "../asset/cognitiveAsset.js";
 import {
   addCandidate,
   confirmCandidate,
@@ -45,6 +46,24 @@ describe("provisional queue", () => {
     expect(graph.countVisibleNodes()).toBe(1);
     expect(result.nodeId).toMatch(/^node-/);
     expect(result.queue.find((c) => c.id === id)?.status).toBe("confirmed");
+  });
+
+  it("confirm routes through confirmUserIngest gate", () => {
+    const graph = new InMemoryGraphRepository();
+    const history = new InMemoryHistoryRepository();
+    const spy = vi.spyOn(cognitiveAssetModule, "confirmUserIngest");
+    const queue = addCandidate(
+      [],
+      createProvisionalCandidate({
+        sourceType: "project",
+        summary: "陪伴型知识 OS",
+      }),
+    );
+
+    confirmCandidate(queue, queue[0]!.id, { graph, history });
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
   });
 
   it("reject clears candidate without graph change", () => {

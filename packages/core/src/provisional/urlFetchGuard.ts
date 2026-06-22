@@ -247,3 +247,103 @@ export async function guardedUrlFetch(
     return { ok: true, finalUrl: currentUrl, body: response.body };
   }
 }
+
+type FetchLike = (
+  input: string,
+  init?: {
+    method?: string;
+    signal?: AbortSignal;
+    headers?: Record<string, string>;
+    redirect?: "follow" | "manual" | "error";
+  },
+) => Promise<{
+  ok: boolean;
+  status: number;
+  headers: { get(name: string): string | null };
+  json(): Promise<unknown>;
+  arrayBuffer(): Promise<ArrayBuffer>;
+}>;
+
+const DOH_ENDPOINT = "https://cloudflare-dns.com/dns-query";
+
+interface DohAnswer {
+  type?: number;
+  data?: string;
+}
+
+interface DohResponse {
+  Answer?: DohAnswer[];
+}
+
+/** Resolve public A/AAAA records via DNS-over-HTTPS (RN-safe, no Node dns). */
+export async function resolvePublicDnsViaDoh(
+  host: string,
+  fetchFn: FetchLike = globalThis.fetch.bind(globalThis),
+): Promise<string[]> {
+  const addresses: string[] = [];
+  for (const type of ["A", "AAAA"] as const) {
+    const query = `${DOH_ENDPOINT}?name=${encodeURIComponent(host)}&type=${type}`;
+    const response = await fetchFn(query, {
+      headers: { Accept: "application/dns-json" },
+      redirect: "follow",
+    });
+    if (!response.ok) {
+      continue;
+    }
+    const payload = (await response.json()) as DohResponse;
+    for (const answer of payload.Answer ?? []) {
+      if (answer.data) {
+        addresses.push(answer.data);
+      }
+    }
+  }
+  if (addresses.length === 0) {
+    throw new Error(`No public DNS records for ${host}`);
+  }
+  return addresses;
+}
+
+async function adaptFetchResponse(
+  url: string,
+  init: { signal?: AbortSignal } | undefined,
+  fetchFn: FetchLike,
+): Promise<MockFetchResponse> {
+  const response = await fetchFn(url, {
+    method: "GET",
+    redirect: "manual",
+    signal: init?.signal,
+    headers: { Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8" },
+  });
+
+  if (response.status >= 300 && response.status < 400) {
+    const location = response.headers.get("location");
+    if (location) {
+      return {
+        status: response.status,
+        body: new Uint8Array(),
+        redirectUrl: new URL(location, url).href,
+      };
+    }
+  }
+
+  const buffer = await response.arrayBuffer();
+  return { status: response.status, body: new Uint8Array(buffer) };
+}
+
+export interface LiveUrlFetchGuardOptions {
+  fetchFn?: FetchLike;
+  resolveDns?: UrlFetchGuardDeps["resolveDns"];
+}
+
+/** Production/live deps: real fetch + DoH DNS, both injectable for tests. */
+export function createLiveUrlFetchGuardDeps(
+  options: LiveUrlFetchGuardOptions = {},
+): UrlFetchGuardDeps {
+  const fetchFn = options.fetchFn ?? globalThis.fetch.bind(globalThis);
+  return {
+    resolveDns:
+      options.resolveDns ??
+      ((host) => resolvePublicDnsViaDoh(host, fetchFn)),
+    fetch: (url, init) => adaptFetchResponse(url, init, fetchFn),
+  };
+}

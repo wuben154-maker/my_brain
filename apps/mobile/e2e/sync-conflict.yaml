@@ -1,0 +1,20 @@
+# M7B sync-conflict — machine/mock template (PENDING_DEVICE for two-device UI)
+# Evidence target: docs/evals/m7b-sync-evidence.md (deferred)
+appId: app.mybrain.personal
+tags:
+  - M7B
+  - PENDING_DEVICE
+  - sync-conflict
+  - machine
+---
+- launchApp
+- tapOn:
+    id: "settings-entry"
+- tapOn:
+    id: "m7b-sync-merge"
+- assertVisible:
+    id: "m7b-sync-conflict-panel"
+- tapOn:
+    id: "m7b-keep-local-correction"
+- assertVisible:
+    id: "m7b-sync-status"

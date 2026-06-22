@@ -1,0 +1,21 @@
+{
+  "fixtureId": "m5-creator-researcher",
+  "generatedAt": "2026-06-15T08:00:00Z",
+  "experiences": {
+    "memoryWeather": {
+      "visible": true,
+      "outputKind": "material_aggregate",
+      "evidenceRefsMin": 1
+    },
+    "memoryReplay": {
+      "visible": true,
+      "outputKind": "capture_to_ingest",
+      "evidenceRefsMin": 1
+    },
+    "reverseQuestion": {
+      "visible": true,
+      "outputKind": "systemize_material",
+      "evidenceRefsMin": 1
+    }
+  }
+}

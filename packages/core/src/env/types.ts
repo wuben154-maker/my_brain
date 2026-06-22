@@ -10,4 +10,6 @@ export interface AppEnv {
     llm: ProviderMode;
     newsRadar: ProviderMode;
   };
+  /** Staging token exchange BFF URL — shell-injected, never a provider secret. */
+  tokenExchangeUrl?: string;
 }

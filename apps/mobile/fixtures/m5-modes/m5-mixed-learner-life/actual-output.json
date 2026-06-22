@@ -1,0 +1,21 @@
+{
+  "fixtureId": "m5-mixed-learner-life",
+  "generatedAt": "2026-06-15T08:00:00Z",
+  "experiences": {
+    "memoryWeather": {
+      "visible": true,
+      "outputKind": "consolidation",
+      "evidenceRefsMin": 1
+    },
+    "memoryReplay": {
+      "visible": true,
+      "outputKind": "learning_trace",
+      "evidenceRefsMin": 1
+    },
+    "reverseQuestion": {
+      "visible": true,
+      "outputKind": "deepen_concept",
+      "evidenceRefsMin": 1
+    }
+  }
+}

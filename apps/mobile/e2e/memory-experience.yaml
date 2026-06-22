@@ -1,0 +1,26 @@
+# M6 — M5 MemoryWeather / MemoryReplay evidence experience (fixture-backed)
+appId: app.mybrain.personal
+tags:
+  - m6
+  - m5
+  - memory-experience
+  - machine
+---
+- launchApp
+- assertVisible:
+    id: "living-brain-home"
+- tapOn:
+    id: "start-cold-start"
+- tapOn:
+    id: "cold-fixture-cold-mixed-learner-life"
+- tapOn:
+    id: "cold-start-send"
+- assertVisible:
+    id: "memory-weather"
+- assertVisible:
+    id: "memory-weather-evidence-count"
+- assertVisible:
+    id: "memory-replay"
+- assertVisible:
+    id: "memory-replay-frame-count"
+# PENDING_DEVICE: real-device Replay cold-start perf in docs/evals/m5-replay-perf.md

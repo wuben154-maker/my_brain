@@ -1,5 +1,5 @@
+import { confirmUserIngest } from "../asset/cognitiveAsset.js";
 import type { GraphRepository, HistoryRepository } from "../graph/types.js";
-import { applyIngestCreate } from "../conversation/ingest.js";
 import type { ProvisionalCandidate, ProvisionalSourceType } from "./types.js";
 
 export interface ProvisionalQueueDeps {
@@ -96,8 +96,7 @@ export function confirmCandidate(
     throw new Error(`ProvisionalCandidate already resolved: ${candidateId}`);
   }
 
-  const beforeCount = deps.graph.countVisibleNodes();
-  const ingest = applyIngestCreate(
+  const ingest = confirmUserIngest(
     {
       concept: candidate.summary.slice(0, 48),
       intro: candidate.summary,
@@ -105,10 +104,6 @@ export function confirmCandidate(
     },
     deps,
   );
-
-  if (deps.graph.countVisibleNodes() <= beforeCount) {
-    throw new Error("Ingest did not create a visible node");
-  }
 
   const updatedQueue = queue.map((c) =>
     c.id === candidateId ? { ...c, status: "confirmed" as const } : c,

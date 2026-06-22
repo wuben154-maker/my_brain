@@ -102,6 +102,10 @@ export class MobileStorage {
     );
   }
 
+  deleteMeta(key: string): void {
+    this.driver.exec("DELETE FROM app_meta WHERE key = ?", [key]);
+  }
+
   saveGraphSnapshot(snapshot: GraphSnapshot): void {
     this.driver.runInTransaction(() => {
       this.driver.exec("DELETE FROM graph_edges");
@@ -117,8 +121,8 @@ export class MobileStorage {
             JSON.stringify(node.sourceLinks),
             node.archived ? 1 : 0,
             node.createdAt,
-            null,
-            null,
+            node.confirmedAt ?? null,
+            node.ingestSource ?? null,
           ],
         );
       }
@@ -140,7 +144,11 @@ export class MobileStorage {
         source_links_json: string;
         archived: number;
         created_at: string;
-      }>("SELECT id, concept, intro, source_links_json, archived, created_at FROM graph_nodes")
+        confirmed_at: string | null;
+        ingest_source: string | null;
+      }>(
+        "SELECT id, concept, intro, source_links_json, archived, created_at, confirmed_at, ingest_source FROM graph_nodes",
+      )
       .map((row) => ({
         id: row.id,
         concept: row.concept,
@@ -148,6 +156,8 @@ export class MobileStorage {
         sourceLinks: parseJson<string[]>(row.source_links_json, []),
         archived: row.archived === 1,
         createdAt: row.created_at,
+        confirmedAt: row.confirmed_at ?? undefined,
+        ingestSource: row.ingest_source ?? undefined,
       }));
     const edges = this.driver
       .queryAll<{
@@ -369,11 +379,13 @@ export class MobileStorage {
     return parseJson<PendingIngestProposal | null>(row.payload_json, null);
   }
 
-  saveAdaptiveSignals(signals: AdaptiveSignal[]): void {
+  saveAdaptiveSignals(signals: AdaptiveSignal[], cursor?: Record<string, unknown> | null): void {
     this.driver.exec(
-      `INSERT INTO adaptive_radar_state (id, signals_json) VALUES (1, ?)
-       ON CONFLICT(id) DO UPDATE SET signals_json = excluded.signals_json`,
-      [JSON.stringify(signals)],
+      `INSERT INTO adaptive_radar_state (id, signals_json, cursor_json) VALUES (1, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         signals_json = excluded.signals_json,
+         cursor_json = excluded.cursor_json`,
+      [JSON.stringify(signals), cursor ? JSON.stringify(cursor) : null],
     );
   }
 
@@ -385,6 +397,16 @@ export class MobileStorage {
       return [];
     }
     return parseJson<AdaptiveSignal[]>(row.signals_json, []);
+  }
+
+  loadAdaptiveRadarCursor(): Record<string, unknown> | null {
+    const row = this.driver.queryOne<{ cursor_json: string | null }>(
+      "SELECT cursor_json FROM adaptive_radar_state WHERE id = 1",
+    );
+    if (!row?.cursor_json) {
+      return null;
+    }
+    return parseJson<Record<string, unknown> | null>(row.cursor_json, null);
   }
 
   saveLearningTraces(traces: LearningTraceRecord[]): void {
@@ -485,6 +507,11 @@ export class MobileStorage {
     }
   }
 
+  /** Dev/demo reset — clears ring buffer without exporting prior events. */
+  clearDiagnosticEvents(): void {
+    this.driver.exec("DELETE FROM diagnostic_events");
+  }
+
   listDiagnosticEvents(): Array<{
     intent: string;
     outcome: string;
@@ -524,5 +551,37 @@ export class MobileStorage {
       worldItems: this.loadWorldItems(),
       providerConfig: this.loadProviderConfig(),
     };
+  }
+
+  /** M7A atomic restore — all exported entities commit together or roll back. */
+  restoreBackupBundle(input: {
+    profile: UserModeProfile | null;
+    coldStartComplete: boolean;
+    correctionState: ProfileCorrectionState;
+    graph: GraphSnapshot;
+    history: GraphChangeRecord[];
+    provisional: ProvisionalCandidate[];
+    pendingIngest: PendingIngestProposal | null;
+    signals: AdaptiveSignal[];
+    learningTraces: LearningTraceRecord[];
+    worldItems: WorldItemRecord[];
+    providerConfig: ProviderConfigSnapshot;
+    radarCursor?: Record<string, unknown> | null;
+  }): void {
+    this.driver.runInTransaction(() => {
+      this.saveGraphSnapshot(input.graph);
+      this.driver.exec("DELETE FROM graph_history");
+      for (const entry of input.history) {
+        this.saveHistoryEntry(entry);
+      }
+      this.saveUserModeProfile(input.profile, input.coldStartComplete);
+      this.saveCorrectionState(input.correctionState);
+      this.saveProvisionalCandidates(input.provisional);
+      this.savePendingIngestProposal(input.pendingIngest);
+      this.saveLearningTraces(input.learningTraces);
+      this.saveWorldItems(input.worldItems);
+      this.saveAdaptiveSignals(input.signals, input.radarCursor ?? null);
+      this.saveProviderConfig(input.providerConfig);
+    });
   }
 }

@@ -1,4 +1,10 @@
 import type { GraphRepository, HistoryRepository } from "../graph/types.js";
+import type { InMemoryGraphRepository } from "../graph/memoryRepository.js";
+import { restoreSnapshotFromChange } from "../graph/memoryRepository.js";
+import {
+  runAutoCurateBoundary,
+  type AutoCurateResult,
+} from "./autoCurateBoundary.js";
 
 export interface IngestInput {
   concept: string;
@@ -17,43 +23,12 @@ export interface IngestResult {
   changeId: string;
 }
 
-export interface AutoCurateResult {
-  summary: string;
-  edgesAdded: number;
-}
-
+/** @deprecated Use runAutoCurateBoundary — LIVE-05 replaces the hook body. */
 export function runAutoCurateAfterIngest(
   nodeId: string,
   deps: IngestDeps,
 ): AutoCurateResult {
-  const snapshot = deps.graph.getSnapshot();
-  const visible = snapshot.nodes.filter((n) => !n.archived);
-  if (visible.length < 2) {
-    return { summary: "已入库，本次无结构整理", edgesAdded: 0 };
-  }
-
-  const anchor = visible.find((n) => n.id !== nodeId);
-  if (!anchor) {
-    return { summary: "已入库，本次无结构整理", edgesAdded: 0 };
-  }
-
-  const before = deps.graph.getSnapshot();
-  deps.graph.addEdge({
-    fromId: nodeId,
-    toId: anchor.id,
-    relation: "related_to",
-  });
-  const after = deps.graph.getSnapshot();
-
-  deps.history.pushChange({
-    kind: "auto_curate_merge",
-    summary: `自动关联「${anchor.concept}」`,
-    before,
-    after,
-    createdAt: new Date().toISOString(),
-  });
-
-  return { summary: `自动关联「${anchor.concept}」`, edgesAdded: 1 };
+  return runAutoCurateBoundary(nodeId, deps);
 }
 
 /** User-confirmed ingest — sole creator of permanent nodes in M1. */
@@ -73,7 +48,7 @@ export function applyIngestCreate(input: IngestInput, deps: IngestDeps): IngestR
     createdAt: new Date().toISOString(),
   });
 
-  const autoCurate = runAutoCurateAfterIngest(node.id, deps);
+  const autoCurate = runAutoCurateBoundary(node.id, deps);
 
   return {
     nodeId: node.id,
@@ -81,9 +56,6 @@ export function applyIngestCreate(input: IngestInput, deps: IngestDeps): IngestR
     changeId: ingestChange.id,
   };
 }
-
-import type { InMemoryGraphRepository } from "../graph/memoryRepository.js";
-import { restoreSnapshotFromChange } from "../graph/memoryRepository.js";
 
 /** Undo last graph change — requires InMemoryGraphRepository for snapshot restore. */
 export function undoLastGraphChangeInMemory(
@@ -97,3 +69,10 @@ export function undoLastGraphChangeInMemory(
   restoreSnapshotFromChange(graph, change);
   return change.summary;
 }
+
+export {
+  getAutoCurateBoundary,
+  runAutoCurateBoundary,
+  setAutoCurateBoundary,
+} from "./autoCurateBoundary.js";
+export type { AutoCurateBoundary, AutoCurateResult } from "./autoCurateBoundary.js";

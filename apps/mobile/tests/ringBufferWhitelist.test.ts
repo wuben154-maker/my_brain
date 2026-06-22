@@ -35,6 +35,37 @@ describe("ringBufferWhitelist", () => {
         transcript: "用户说了什么",
       }),
     ).toBe(false);
+    expect(
+      isWhitelistedDiagnosticEvent({
+        intent: "ingest",
+        outcome: "fail",
+        reasonCode: "x",
+        body: "图谱片段正文",
+      }),
+    ).toBe(false);
+    expect(
+      isWhitelistedDiagnosticEvent({
+        intent: "profile",
+        outcome: "fail",
+        reasonCode: "x",
+        profileProse: "用户画像敏感长文",
+      }),
+    ).toBe(false);
+  });
+
+  it("allows route and version metadata for crash localization", () => {
+    expect(
+      isWhitelistedDiagnosticEvent({
+        intent: "crash",
+        outcome: "fail",
+        reasonCode: "unhandled_error",
+        route: "settings-screen",
+        screen: "SettingsScreen",
+        appVersion: "0.1.0",
+        buildNumber: "42",
+        platform: "ios",
+      }),
+    ).toBe(true);
   });
 
   it("export scan fails when forbidden keys present", () => {

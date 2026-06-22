@@ -10,5 +10,10 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint:boundaries": "node scripts/lint-boundaries.mjs",
     "test": "pnpm -w exec vitest run packages/core"
+  },
+  "main": "./src/index.ts",
+  "reactNative": "./src/index.ts",
+  "dependencies": {
+    "fflate": "^0.8.2"
   }
 }

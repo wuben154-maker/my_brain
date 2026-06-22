@@ -27,10 +27,11 @@ describe("ocrBoundary — on-device preferred, cloud disabled", () => {
   it("OCR failure saves image ref + editable placeholder, no transcript", () => {
     const ocr = attemptOnDeviceOcr({
       imageRef: "file://mock/screenshot-fail.png",
-      mockOcrText: null,
+      metadata: { mime: "image/png", fileName: "screenshot.png" },
     });
     expect(ocr.status).toBe("failed");
     expect(ocr.summary).toContain("可编辑");
+    expect(ocr.summary).toContain("image/png");
     expect(ocr.editablePlaceholder).toBe(true);
     expect(ocr.imageRef).toBe("file://mock/screenshot-fail.png");
   });
@@ -50,7 +51,7 @@ describe("ocrBoundary — on-device preferred, cloud disabled", () => {
     const graph = new InMemoryGraphRepository();
     const ocr = attemptOnDeviceOcr({
       imageRef: "file://mock/ocr.png",
-      mockOcrText: null,
+      metadata: { mime: "image/jpeg" },
     });
     const candidate = buildOcrProvisionalCandidate(ocr, { graph });
     expect(candidate.sourceType).toBe("image_mock");

@@ -1,0 +1,47 @@
+{
+  "graphChanges": [
+    {
+      "id": "chg-creator-1",
+      "kind": "node_created",
+      "summary": "素材链接确认入库",
+      "before": { "nodes": [], "edges": [] },
+      "after": {
+        "nodes": [
+          {
+            "id": "node-creator-1",
+            "concept": "论文素材集",
+            "intro": "三篇引用待整理",
+            "sourceLinks": ["https://example.com/paper"],
+            "archived": false,
+            "createdAt": "2026-06-13T15:00:00Z"
+          }
+        ],
+        "edges": []
+      },
+      "createdAt": "2026-06-13T15:00:00Z",
+      "undone": false
+    }
+  ],
+  "captures": [
+    {
+      "id": "cap-creator-1",
+      "sourceType": "link",
+      "summary": "设计系统参考链接",
+      "evidenceRefs": ["https://example.com/design"],
+      "createdAt": "2026-06-13T14:00:00Z",
+      "status": "confirmed",
+      "linkUrl": "https://example.com/design"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "node-creator-1",
+      "concept": "论文素材集",
+      "intro": "三篇引用待整理",
+      "sourceLinks": ["https://example.com/paper"],
+      "archived": false,
+      "createdAt": "2026-06-13T15:00:00Z"
+    }
+  ],
+  "edges": []
+}

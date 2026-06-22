@@ -1,0 +1,29 @@
+{
+  "extends": "./tsconfig.s08.json",
+  "include": [
+    "screens/SettingsScreen.tsx",
+    "screens/Settings.test.tsx",
+    "components/ProfileReview.tsx",
+    "components/ProfileReview.test.tsx",
+    "components/SettingsSection.tsx",
+    "components/DeveloperDiagnosticsFold.tsx",
+    "components/M3VoiceDiagnosticsPanel.tsx",
+    "components/M4SharePayloadDiagnosticsPanel.tsx",
+    "components/M6DiagnosticExportPanel.tsx",
+    "components/M7ABackupPanel.tsx",
+    "components/M7BSyncPanel.tsx",
+    "components/ui/SettingRow.tsx",
+    "components/ui/GlassCard.tsx",
+    "components/ui/SectionHeader.tsx",
+    "components/ui/PageHeader.tsx",
+    "navigation/BackButton.tsx",
+    "navigation/NavigationContext.tsx",
+    "storage/storageSession.ts",
+    "theme/ThemeProvider.tsx",
+    "theme/tokens.ts",
+    "stores/mobileAppStore.ts",
+    "stores/persistHydrate.ts",
+    "voice/VoiceSession.ts",
+    "env/readAppEnv.ts"
+  ]
+}

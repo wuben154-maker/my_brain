@@ -9,20 +9,82 @@
       "ios",
       "android"
     ],
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#05070f"
+      "backgroundColor": "#14161C"
     },
     "android": {
       "package": "app.mybrain.personal",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#14161C"
+      },
       "allowBackup": true,
-      "fullBackupContent": "@xml/backup_rules"
+      "fullBackupContent": "@xml/backup_rules",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "intentFilters": [
+        {
+          "action": "SEND",
+          "category": [
+            "DEFAULT"
+          ],
+          "data": [
+            {
+              "mimeType": "text/plain"
+            }
+          ]
+        },
+        {
+          "action": "SEND",
+          "category": [
+            "DEFAULT"
+          ],
+          "data": [
+            {
+              "mimeType": "image/*"
+            }
+          ]
+        },
+        {
+          "action": "SEND",
+          "category": [
+            "DEFAULT"
+          ],
+          "data": [
+            {
+              "mimeType": "text/plain",
+              "scheme": "https"
+            }
+          ]
+        },
+        {
+          "action": "VIEW",
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ],
+          "data": [
+            {
+              "scheme": "mybrain",
+              "host": "visual-fixture",
+              "pathPrefix": "/"
+            }
+          ]
+        }
+      ]
     },
     "ios": {
       "bundleIdentifier": "app.mybrain.personal",
+      "displayName": "my_brain",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "CFBundleDisplayName": "my_brain",
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "my_brain 需要麦克风权限以实现可打断的语音对话；拒绝后仍可使用文字三意图。"
       }
     },
     "plugins": [
@@ -33,12 +95,18 @@
           "enableFTS": false
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {
         "projectId": "3b839cf3-3224-46b3-a62f-0805f301bd20"
-      }
+      },
+      "tokenExchangeUrl": "",
+      "voiceProviderMode": "live",
+      "privacyPolicyUrl": "https://mybrain.local/dev/privacy-policy-draft",
+      "privacyPolicyScope": "dev-draft",
+      "privacyPolicyLocalPath": "docs/legal/privacy-policy-draft.md"
     },
     "owner": "gogogogogo"
   }

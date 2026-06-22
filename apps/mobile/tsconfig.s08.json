@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.s07.json",
+  "include": [
+    "screens/MemoryReviewScreen.tsx",
+    "screens/MemoryReviewScreen.test.tsx",
+    "memory/MemoryWeather.tsx",
+    "memory/MemoryWeather.test.tsx",
+    "memory/MemoryReplay.tsx",
+    "memory/MemoryReplay.test.tsx",
+    "memory/ReverseQuestion.tsx",
+    "memory/ReverseQuestion.test.tsx",
+    "memory/buildExperiences.ts",
+    "memory/m5CaptureBridge.ts",
+    "components/WeeklyBrainReviewCard.tsx",
+    "components/ui/GlassCard.tsx",
+    "components/ui/PageHeader.tsx",
+    "components/ui/VoiceOrb.tsx",
+    "components/DegradedModeBanner.tsx",
+    "navigation/BackButton.tsx",
+    "navigation/NavigationContext.tsx",
+    "theme/ThemeProvider.tsx",
+    "theme/tokens.ts",
+    "stores/mobileAppStore.ts",
+    "stores/persistHydrate.ts"
+  ]
+}

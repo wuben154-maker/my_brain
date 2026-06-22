@@ -11,6 +11,37 @@ vi.mock("expo-constants", () => ({
   },
 }));
 
+vi.mock("../env/readAppEnv", () => ({
+  readMobileAppEnv: vi.fn(() => ({
+    runtime: "mobile",
+    providerModes: { voice: "mock", llm: "mock", newsRadar: "mock" },
+  })),
+}));
+
+vi.mock("expo-secure-store", () => ({
+  getItemAsync: vi.fn(async () => null),
+  setItemAsync: vi.fn(async () => undefined),
+  deleteItemAsync: vi.fn(async () => undefined),
+}));
+
+const setVoiceDisconnected = vi.fn();
+const clearVoiceDisconnected = vi.fn();
+
+vi.mock("../stores/mobileAppStore", () => ({
+  useMobileAppStore: (selector: (state: {
+    setVoiceDisconnected: typeof setVoiceDisconnected;
+  }) => unknown) =>
+    selector({
+      setVoiceDisconnected: (active: boolean) => {
+        if (active) {
+          setVoiceDisconnected();
+        } else {
+          clearVoiceDisconnected();
+        }
+      },
+    }),
+}));
+
 vi.mock("react-native", () => {
   const RN = (tag: string) =>
     function MockComponent({
@@ -47,6 +78,8 @@ import { resetVoiceSessionSingleton } from "../voice/VoiceSession";
 describe("M3VoiceDiagnosticsPanel", () => {
   beforeEach(() => {
     resetVoiceSessionSingleton();
+    setVoiceDisconnected.mockClear();
+    clearVoiceDisconnected.mockClear();
   });
 
   afterEach(() => cleanup());
@@ -96,5 +129,17 @@ describe("M3VoiceDiagnosticsPanel", () => {
     expect(evidence).toContain("bargeInStopLatencyMs:");
     expect(evidence).toContain("result: stopped");
     expect(evidence).toContain("platform: android");
+  });
+
+  it("simulate disconnect drives voice_disconnected via store callback", async () => {
+    render(<M3VoiceDiagnosticsPanel />);
+    fireEvent.click(screen.getByTestId("m3-voice-connect"));
+    await waitFor(() => {
+      expect(clearVoiceDisconnected).toHaveBeenCalled();
+    });
+    fireEvent.click(screen.getByTestId("m3-voice-simulate-disconnect"));
+    await waitFor(() => {
+      expect(setVoiceDisconnected).toHaveBeenCalled();
+    });
   });
 });

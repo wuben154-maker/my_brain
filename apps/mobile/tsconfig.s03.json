@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "navigation/routes.ts",
+    "navigation/navigationBridge.ts",
+    "navigation/NavigationContext.tsx",
+    "navigation/BackButton.tsx",
+    "screens/PlaceholderScreen.tsx",
+    "screens/TodayScreen.tsx",
+    "screens/CaptureInboxScreen.tsx",
+    "screens/BrainMapScreen.tsx",
+    "screens/MemoryReviewScreen.tsx",
+    "theme/ThemeProvider.tsx",
+    "theme/tokens.ts",
+    "components/ui/PageHeader.tsx"
+  ]
+}

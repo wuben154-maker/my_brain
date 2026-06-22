@@ -27,6 +27,36 @@ export function createMemorySecureTokenStore(): SecureTokenStore {
   };
 }
 
+async function loadSecureStore() {
+  return import("expo-secure-store");
+}
+
+/** Production adapter — short-lived voice tokens via expo-secure-store (ADR 0002). */
+export function createExpoSecureTokenStore(): SecureTokenStore {
+  return {
+    async get(key) {
+      const SecureStore = await loadSecureStore();
+      const raw = await SecureStore.getItemAsync(key);
+      if (!raw) {
+        return null;
+      }
+      try {
+        return JSON.parse(raw) as SecureTokenRecord;
+      } catch {
+        return null;
+      }
+    },
+    async set(key, value) {
+      const SecureStore = await loadSecureStore();
+      await SecureStore.setItemAsync(key, JSON.stringify(value));
+    },
+    async delete(key) {
+      const SecureStore = await loadSecureStore();
+      await SecureStore.deleteItemAsync(key);
+    },
+  };
+}
+
 export function voiceTokenStorageKey(): string {
   return VOICE_TOKEN_KEY;
 }

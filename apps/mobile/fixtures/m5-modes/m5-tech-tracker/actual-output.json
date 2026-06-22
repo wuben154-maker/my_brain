@@ -1,0 +1,21 @@
+{
+  "fixtureId": "m5-tech-tracker",
+  "generatedAt": "2026-06-15T08:00:00Z",
+  "experiences": {
+    "memoryWeather": {
+      "visible": true,
+      "outputKind": "trend",
+      "evidenceRefsMin": 1
+    },
+    "memoryReplay": {
+      "visible": true,
+      "outputKind": "ingest_timeline",
+      "evidenceRefsMin": 1
+    },
+    "reverseQuestion": {
+      "visible": true,
+      "outputKind": "relation_why",
+      "evidenceRefsMin": 2
+    }
+  }
+}

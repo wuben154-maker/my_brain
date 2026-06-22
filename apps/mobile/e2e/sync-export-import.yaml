@@ -1,0 +1,17 @@
+# M7A sync-export-import — machine template (PENDING_DEVICE for second-instance UI)
+# Evidence target: docs/evals/m7a-backup-evidence.md
+appId: app.mybrain.personal
+tags:
+  - M7A
+  - PENDING_DEVICE
+  - sync-export-import
+---
+- launchApp
+- tapOn:
+    id: "settings-tab"
+- tapOn:
+    id: "m7a-export-backup"
+- tapOn:
+    id: "m7a-import-backup"
+- assertVisible:
+    id: "m7a-backup-status"

@@ -1,0 +1,31 @@
+# M4 — iOS Share Extension + App Group handoff (template E2E)
+# PENDING_DEVICE: requires Mac prebuild + Share Extension target + App Group entitlements.
+# Machine/mock path uses Settings → M4 diagnostics fixture injection instead.
+appId: app.mybrain.personal
+tags:
+  - m4
+  - ios
+  - share-extension
+  - PENDING_DEVICE
+---
+# PENDING_DEVICE: Safari Share → my_brain Extension → cold start main app
+- launchApp
+- assertVisible:
+    id: "living-brain-home"
+# Mock/prep fallback — in-app fixture simulates App Group JSON handoff
+- tapOn:
+    id: "settings-entry"
+- assertVisible:
+    id: "m4-share-payload-diagnostics-panel"
+- tapOn:
+    id: "m4-share-fixture-share-ios-text-ok"
+- assertVisible:
+    id: "provisional-queue-sheet"
+- assertNotVisible:
+    id: "permanent-node-created-indicator"
+- tapOn:
+    id: "intent-skip"
+# PENDING_DEVICE: Extension must not contain API keys — see noSecretsScaffold.test.ts
+- assertVisible:
+    id: "voice-disconnected-banner"
+# TODO(device): record iPhone model + iOS + Safari/Notes share Extension evidence

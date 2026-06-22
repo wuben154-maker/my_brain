@@ -16,6 +16,19 @@
         "ios": {
           "simulator": false
         }
+      },
+      "appetize": {
+        "distribution": "internal",
+        "node": "20.18.3",
+        "env": {
+          "EXPO_USE_PNPM": "1"
+        },
+        "android": {
+          "buildType": "apk"
+        },
+        "ios": {
+          "simulator": true
+        }
       }
     }
   }

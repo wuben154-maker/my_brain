@@ -1,0 +1,49 @@
+{
+  "version": "demo_graph_v1",
+  "nodes": [
+    {
+      "id": "demo-node-realtime-api",
+      "concept": "OpenAI Realtime API",
+      "intro": "语音到语音实时接口，支持 barge-in 打断。",
+      "sourceLinks": ["https://platform.openai.com/docs/guides/realtime"],
+      "archived": false,
+      "createdAt": "2026-06-01T10:00:00.000Z",
+      "confirmedAt": "2026-06-01T10:05:00.000Z",
+      "ingestSource": "demo_fixture"
+    },
+    {
+      "id": "demo-node-vector-db",
+      "concept": "向量检索",
+      "intro": "把概念嵌入向量空间，用于相似度召回。",
+      "sourceLinks": ["demo://fixture/vector-search"],
+      "archived": false,
+      "createdAt": "2026-06-01T10:10:00.000Z",
+      "confirmedAt": "2026-06-01T10:12:00.000Z",
+      "ingestSource": "demo_fixture"
+    },
+    {
+      "id": "demo-node-rust-async",
+      "concept": "Rust async",
+      "intro": "异步运行时与 Future 组合，适合 IO 密集任务。",
+      "sourceLinks": ["demo://fixture/rust-async"],
+      "archived": false,
+      "createdAt": "2026-06-01T10:20:00.000Z",
+      "confirmedAt": "2026-06-01T10:22:00.000Z",
+      "ingestSource": "demo_fixture"
+    }
+  ],
+  "edges": [
+    {
+      "id": "demo-edge-realtime-vector",
+      "fromId": "demo-node-realtime-api",
+      "toId": "demo-node-vector-db",
+      "relation": "related_to"
+    },
+    {
+      "id": "demo-edge-vector-rust",
+      "fromId": "demo-node-vector-db",
+      "toId": "demo-node-rust-async",
+      "relation": "builds_on"
+    }
+  ]
+}

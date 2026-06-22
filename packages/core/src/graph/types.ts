@@ -6,6 +6,9 @@ export interface GraphNode {
   sourceLinks: string[];
   archived: boolean;
   createdAt: string;
+  /** M2/M7 ingest gate — set when user confirmed ingest. */
+  confirmedAt?: string;
+  ingestSource?: string;
 }
 
 export interface GraphEdge {
@@ -39,10 +42,14 @@ export interface GraphChangeRecord {
 
 export interface GraphRepository {
   getSnapshot(): GraphSnapshot;
+  /** Bounded slice for M5 / home rendering — avoids cloning entire large libraries. */
+  getM5CandidateSnapshot?(budget?: number): GraphSnapshot;
   countVisibleNodes(): number;
   createNode(input: Omit<GraphNode, "id" | "createdAt" | "archived">): GraphNode;
   archiveNode(nodeId: string): void;
   addEdge(input: Omit<GraphEdge, "id">): GraphEdge;
+  /** Replace full graph state — used by curation apply and undo restore. */
+  replaceSnapshot(snapshot: GraphSnapshot): void;
 }
 
 export interface HistoryRepository {

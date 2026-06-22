@@ -1,0 +1,18 @@
+# M7A encrypted-backup — machine template (PENDING_DEVICE for passphrase UI)
+# Evidence target: docs/evals/m7a-backup-evidence.md
+appId: app.mybrain.personal
+tags:
+  - M7A
+  - PENDING_DEVICE
+  - encrypted-backup
+---
+- launchApp
+- tapOn:
+    id: "settings-tab"
+- tapOn:
+    id: "m7a-encrypted-export"
+- inputText: "user-passphrase"
+- tapOn:
+    id: "m7a-encrypted-import"
+- assertVisible:
+    id: "m7a-backup-status"

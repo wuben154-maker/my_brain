@@ -1,0 +1,46 @@
+{
+  "graphChanges": [
+    {
+      "id": "chg-life-1",
+      "kind": "node_created",
+      "summary": "咖啡馆灵感入库",
+      "before": { "nodes": [], "edges": [] },
+      "after": {
+        "nodes": [
+          {
+            "id": "node-life-1",
+            "concept": "周末咖啡馆",
+            "intro": "记下配色灵感",
+            "sourceLinks": [],
+            "archived": false,
+            "createdAt": "2026-06-11T16:00:00Z"
+          }
+        ],
+        "edges": []
+      },
+      "createdAt": "2026-06-11T16:00:00Z",
+      "undone": false
+    }
+  ],
+  "captures": [
+    {
+      "id": "cap-life-1",
+      "sourceType": "text",
+      "summary": "雨天散步想法",
+      "evidenceRefs": ["capture:cap-life-1"],
+      "createdAt": "2026-06-11T15:00:00Z",
+      "status": "pending"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "node-life-1",
+      "concept": "周末咖啡馆",
+      "intro": "记下配色灵感",
+      "sourceLinks": [],
+      "archived": false,
+      "createdAt": "2026-06-11T16:00:00Z"
+    }
+  ],
+  "edges": []
+}

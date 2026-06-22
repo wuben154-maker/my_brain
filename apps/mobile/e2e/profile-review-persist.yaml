@@ -1,0 +1,26 @@
+# M7B profile-review-persist — cross-device correction strategy (PENDING_DEVICE)
+# Evidence target: docs/evals/m7b-sync-evidence.md
+appId: app.mybrain.personal
+tags:
+  - M7B
+  - PENDING_DEVICE
+  - profile-review-persist
+  - machine
+---
+- launchApp
+- tapOn:
+    id: "settings-entry"
+- tapOn:
+    id: "settings-open-profile-review"
+- assertVisible:
+    id: "profile-review"
+- tapOn:
+    id: "settings-entry"
+- tapOn:
+    id: "m7b-sync-merge"
+- assertVisible:
+    id: "m7b-sync-conflict-panel"
+- tapOn:
+    id: "m7b-keep-local-correction"
+- assertVisible:
+    id: "m7b-sync-status"

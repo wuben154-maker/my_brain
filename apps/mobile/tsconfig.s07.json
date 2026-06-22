@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.s06.json",
+  "include": [
+    "screens/BrainMapScreen.tsx",
+    "screens/BrainMapScreen.test.tsx",
+    "components/ConstellationField.tsx",
+    "components/NodeDetailSheet.tsx",
+    "components/brainMapModel.ts",
+    "components/ui/ConstellationStar.tsx",
+    "components/DegradedModeBanner.tsx",
+    "components/ui/PageHeader.tsx",
+    "navigation/BackButton.tsx",
+    "navigation/NavigationContext.tsx",
+    "theme/ThemeProvider.tsx",
+    "theme/tokens.ts",
+    "stores/mobileAppStore.ts",
+    "stores/persistHydrate.ts"
+  ]
+}

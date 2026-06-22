@@ -52,7 +52,17 @@ describe("MigrationGate", () => {
       />,
     );
     expect(screen.getByTestId("migration-error-screen")).toBeTruthy();
+    expect(screen.getByTestId("migration-schema-v1")).toBeTruthy();
+    expect(screen.getByText("暂时无法打开")).toBeTruthy();
+    expect(screen.queryByText(/SchemaMigrationError/)).toBeNull();
     screen.getByTestId("migration-retry").click();
     expect(onRetry).toHaveBeenCalled();
+  });
+
+  it("shows product copy while migrating without gate name", () => {
+    render(<MigrationGate status="migrating" schemaVersion={2} />);
+    expect(screen.getByText("正在整理本地记忆")).toBeTruthy();
+    expect(screen.getByTestId("migration-schema-v2")).toBeTruthy();
+    expect(screen.queryByText(/MigrationGate/)).toBeNull();
   });
 });

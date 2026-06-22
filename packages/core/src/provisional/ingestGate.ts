@@ -1,6 +1,6 @@
 /**
  * M4 ingest gate — capture paths may only create provisional candidates.
- * Permanent graph nodes require confirmCandidate → applyIngestCreate.
+ * Permanent graph nodes require confirmCandidate → confirmUserIngest.
  */
 
 import type { GraphRepository } from "../graph/types.js";

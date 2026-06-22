@@ -1,22 +1,27 @@
-import type { MobilePersistedBundle } from "@my-brain/core";
+import type { GraphNode, MobilePersistedBundle } from "@my-brain/core";
 import {
   InMemoryGraphRepository,
   InMemoryHistoryRepository,
-  createDefaultDegradedState,
   createEmptyCorrectionState,
+  deriveDegradedFromProviderSnapshot,
   generateAdaptiveSignals,
-  buildMemoryWeatherV0,
 } from "@my-brain/core";
 
+import { buildMobileM5Experiences } from "../memory/buildExperiences";
+import { wireM5CaptureBridge } from "../memory/m5CaptureBridge";
 import { useMobileAppStore } from "./mobileAppStore";
 import { useProvisionalStore } from "./provisionalStore";
 import { getStorageSession } from "../storage/storageSession";
 
-function visibleFromGraph(graph: InMemoryGraphRepository) {
-  return graph.getSnapshot().nodes.filter((n) => !n.archived).slice(0, 80);
+export function visibleNodesFromGraph(graph: InMemoryGraphRepository): GraphNode[] {
+  return graph.getM5CandidateSnapshot().nodes;
 }
 
-export function hydrateMobileStores(bundle: MobilePersistedBundle, hasApiKey: boolean): void {
+export function hydrateMobileStores(
+  bundle: MobilePersistedBundle,
+  hasApiKey: boolean,
+  demoMode = false,
+): void {
   const graph = new InMemoryGraphRepository();
   graph.replaceSnapshot(bundle.graph);
   const history = new InMemoryHistoryRepository();
@@ -39,29 +44,54 @@ export function hydrateMobileStores(bundle: MobilePersistedBundle, hasApiKey: bo
         ? generateAdaptiveSignals(profile, correctionState.suppressionList)
         : [];
 
+  const degraded = deriveDegradedFromProviderSnapshot(
+    bundle.providerConfig,
+    hasApiKey,
+    bundle.coldStartComplete,
+  );
+
+  const { phase: currentPhase, storageReady: storageWasReady } = useMobileAppStore.getState();
+  // Returning users enter main route immediately; first boot may show in-app launch once.
+  const phase = bundle.coldStartComplete
+    ? "adaptive_live"
+    : currentPhase === "launch" && !storageWasReady
+      ? "launch"
+      : "empty_invite";
+
   useMobileAppStore.setState({
-    phase: bundle.coldStartComplete ? "adaptive_live" : "empty_invite",
+    phase,
     coldStartComplete: bundle.coldStartComplete,
     userProfile: profile,
     correctionState,
     signals,
+    learningTraces: bundle.learningTraces,
     graph,
     history,
-    visibleNodes: visibleFromGraph(graph),
-    weatherHeadline: profile
-      ? buildMemoryWeatherV0(profile, graph.countVisibleNodes()).headline
-      : "",
-    degraded: createDefaultDegradedState(hasApiKey),
+    visibleNodes: visibleNodesFromGraph(graph),
+    m5Experiences: profile
+      ? buildMobileM5Experiences({
+          profile,
+          graph,
+          history,
+          captures: bundle.provisional,
+          learningTraces: bundle.learningTraces,
+        })
+      : null,
+    replayCursor: null,
+    degraded,
     storageReady: true,
     pendingIngestProposal: bundle.pendingIngest,
     providerStatus: bundle.providerConfig,
     persistWarnings: [],
+    demoMode,
   });
 
   useProvisionalStore.setState({
     candidates: bundle.provisional,
     lastExplanation: null,
   });
+
+  wireM5CaptureBridge();
 }
 
 export function persistMobileState(): void {
@@ -80,6 +110,7 @@ export function persistMobileState(): void {
   session.storage.saveCorrectionState(state.correctionState);
   session.storage.saveProvisionalCandidates(provisional.candidates);
   session.storage.saveAdaptiveSignals(state.signals);
+  session.storage.saveLearningTraces(state.learningTraces);
   if (state.pendingIngestProposal) {
     session.storage.savePendingIngestProposal(state.pendingIngestProposal);
   } else {

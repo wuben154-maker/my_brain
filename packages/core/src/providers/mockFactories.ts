@@ -1,3 +1,4 @@
+import { mockStructuredJsonValue, parseStructuredJsonResponse } from "./structuredJsonParse.js";
 import type {
   LlmProvider,
   NewsSource,
@@ -30,6 +31,21 @@ export function createMockLlmProvider(id = "mock-llm"): LlmProvider {
     id,
     async summarize(text: string) {
       return `mock-summary:${text.slice(0, 48)}`;
+    },
+    async explain(topic: string, context?: string) {
+      const contextSuffix = context ? `:context=${context.slice(0, 32)}` : "";
+      return `mock-explain:${topic.slice(0, 48)}${contextSuffix}`;
+    },
+    async generateStructuredJson(request) {
+      const raw = JSON.stringify(mockStructuredJsonValue(request.prompt));
+      return parseStructuredJsonResponse(raw, request);
+    },
+    async testConnection() {
+      return {
+        status: "degraded",
+        errorCode: "MISSING_API_KEY",
+        message: "Mock LLM — no live connection",
+      };
     },
   };
 }

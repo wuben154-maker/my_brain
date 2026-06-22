@@ -1,0 +1,36 @@
+{
+  "graphChanges": [
+    {
+      "id": "chg-project-1",
+      "kind": "node_created",
+      "summary": "MVP 里程碑节点创建",
+      "before": { "nodes": [], "edges": [] },
+      "after": {
+        "nodes": [
+          {
+            "id": "node-project-1",
+            "concept": "MVP 发布",
+            "intro": "双端 dev build 可演示",
+            "sourceLinks": [],
+            "archived": false,
+            "createdAt": "2026-06-12T09:00:00Z"
+          }
+        ],
+        "edges": []
+      },
+      "createdAt": "2026-06-12T09:00:00Z",
+      "undone": false
+    }
+  ],
+  "nodes": [
+    {
+      "id": "node-project-1",
+      "concept": "MVP 发布",
+      "intro": "双端 dev build 可演示",
+      "sourceLinks": [],
+      "archived": false,
+      "createdAt": "2026-06-12T09:00:00Z"
+    }
+  ],
+  "edges": []
+}

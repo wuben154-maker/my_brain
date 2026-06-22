@@ -1,3 +1,4 @@
+import { M5_VISIBLE_NODE_BUDGET } from "../memory/types.js";
 import type {
   GraphChangeRecord,
   GraphEdge,
@@ -25,6 +26,23 @@ export class InMemoryGraphRepository implements GraphRepository {
 
   countVisibleNodes(): number {
     return this.nodes.filter((n) => !n.archived).length;
+  }
+
+  getM5CandidateSnapshot(budget = M5_VISIBLE_NODE_BUDGET): GraphSnapshot {
+    const visible = this.nodes.filter((node) => !node.archived);
+    const selected =
+      visible.length <= budget
+        ? visible
+        : [...visible]
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+            .slice(0, budget);
+    const ids = new Set(selected.map((node) => node.id));
+    return {
+      nodes: selected.map((node) => ({ ...node, sourceLinks: [...node.sourceLinks] })),
+      edges: this.edges
+        .filter((edge) => ids.has(edge.fromId) && ids.has(edge.toId))
+        .map((edge) => ({ ...edge })),
+    };
   }
 
   createNode(
@@ -62,7 +80,6 @@ export class InMemoryGraphRepository implements GraphRepository {
     return edge;
   }
 
-  /** Test helper — replace entire graph state. */
   replaceSnapshot(snapshot: GraphSnapshot): void {
     this.nodes = cloneSnapshot(snapshot).nodes;
     this.edges = cloneSnapshot(snapshot).edges;

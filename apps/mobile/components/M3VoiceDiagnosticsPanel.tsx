@@ -3,6 +3,7 @@ import { Platform, Pressable, Share, StyleSheet, Text, View } from "react-native
 import Constants from "expo-constants";
 
 import { resetVoiceSessionSingleton, useVoiceSession } from "../voice/VoiceSession";
+import { useMobileAppStore } from "../stores/mobileAppStore";
 import { colors } from "../theme/tokens";
 
 const M3_DIAG_DEVICE_ID = "m3-voice-diagnostics";
@@ -45,7 +46,15 @@ function formatEvidenceTemplate(fields: {
 }
 
 export function M3VoiceDiagnosticsPanel() {
-  const voice = useVoiceSession({ deviceId: M3_DIAG_DEVICE_ID });
+  const setVoiceDisconnected = useMobileAppStore((s) => s.setVoiceDisconnected);
+  const platform = Platform.OS;
+  const voice = useVoiceSession({
+    deviceId: M3_DIAG_DEVICE_ID,
+    platformOs: platform === "ios" ? "ios" : "android",
+    skipMicPermissionCheck: true,
+    onDegradedVoice: () => setVoiceDisconnected(true),
+    onClearDegradedVoice: () => setVoiceDisconnected(false),
+  });
   const [connected, setConnected] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [bargeInStartedAt, setBargeInStartedAt] = useState<number | null>(null);
@@ -53,7 +62,6 @@ export function M3VoiceDiagnosticsPanel() {
   const [lastBargeInResult, setLastBargeInResult] = useState<string>("pending");
   const bargeInStartedAtRef = useRef<number | null>(null);
 
-  const platform = Platform.OS;
   const osVersion = String(Platform.Version);
   const build = resolveRuntimeBuildLabel();
   const transportPlaying = voice.isPlaying();

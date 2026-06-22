@@ -1,0 +1,27 @@
+# M6 — degraded/mock identifiers visible in Settings + banner
+appId: app.mybrain.personal
+tags:
+  - m6
+  - m1
+  - degraded
+  - machine
+---
+- launchApp
+- assertVisible:
+    id: "living-brain-home"
+- assertVisible:
+    id: "degraded-mode-banner"
+- tapOn:
+    id: "settings-entry"
+- assertVisible:
+    id: "settings-screen"
+- assertVisible:
+    id: "provider-status-panel"
+- assertVisible:
+    id: "settings-voice-disconnected"
+- assertVisible:
+    id: "m3-voice-mock-banner"
+- assertVisible:
+    id: "m4-share-mock-banner"
+- assertVisible:
+    id: "m6-diagnostic-mock-banner"

@@ -59,6 +59,7 @@ describe("ProfileReview", () => {
       confidence: 0.7,
     });
     render(<ProfileReview />);
+    expect(screen.getByText(/来源：从对话推断/)).toBeTruthy();
     fireEvent.click(screen.getByTestId("profile-suppress-mode-learner"));
     expect(useMobileAppStore.getState().correctionState.suppressionList).toContain(
       "mode-learner",

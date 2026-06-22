@@ -36,29 +36,60 @@ function truncateSummary(text: string): string {
   return `${trimmed.slice(0, MAX_OCR_SUMMARY_LEN - 1)}…`;
 }
 
+export interface ImageCaptureMetadata {
+  mime?: string;
+  fileName?: string;
+  width?: number;
+  height?: number;
+}
+
+function metadataSummary(meta: ImageCaptureMetadata | undefined): string {
+  if (!meta) {
+    return FAILED_SUMMARY_PLACEHOLDER;
+  }
+  const parts: string[] = [];
+  if (meta.fileName?.trim()) {
+    parts.push(meta.fileName.trim());
+  }
+  if (meta.mime?.trim()) {
+    parts.push(meta.mime.trim());
+  }
+  if (meta.width && meta.height) {
+    parts.push(`${meta.width}×${meta.height}`);
+  }
+  if (parts.length === 0) {
+    return FAILED_SUMMARY_PLACEHOLDER;
+  }
+  return `（可编辑）${parts.join(" · ")}`;
+}
+
 /**
- * Mock on-device OCR attempt. Cloud path is blocked unless OCR_POLICY.cloudOcrEnabled.
+ * On-device OCR attempt. Cloud path is blocked unless OCR_POLICY.cloudOcrEnabled.
+ * Production passes recognizedText from native OCR; metadata fills editable placeholder on failure.
  */
 export function attemptOnDeviceOcr(input: {
   imageRef: string;
-  /** Mock hook — production uses native OCR module. */
+  /** Native OCR output when available — not persisted as raw image bytes. */
+  recognizedText?: string | null;
+  /** Test-only hook — must not be used on production capture paths. */
   mockOcrText?: string | null;
+  metadata?: ImageCaptureMetadata;
   preferCloud?: boolean;
 }): OcrAttemptResult {
   if (input.preferCloud && !OCR_POLICY.cloudOcrEnabled) {
     return {
       status: "skipped_cloud_disabled",
-      summary: FAILED_SUMMARY_PLACEHOLDER,
+      summary: metadataSummary(input.metadata),
       imageRef: input.imageRef,
       editablePlaceholder: true,
     };
   }
 
-  const raw = input.mockOcrText ?? null;
+  const raw = input.recognizedText ?? input.mockOcrText ?? null;
   if (!raw || !raw.trim()) {
     return {
       status: "failed",
-      summary: FAILED_SUMMARY_PLACEHOLDER,
+      summary: metadataSummary(input.metadata),
       imageRef: input.imageRef,
       editablePlaceholder: true,
     };

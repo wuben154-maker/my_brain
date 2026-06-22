@@ -1,4 +1,4 @@
-const { getDefaultConfig } = require("expo/metro-config");
+﻿const { getDefaultConfig } = require("expo/metro-config");
 const fs = require("fs");
 const path = require("path");
 
@@ -9,6 +9,14 @@ const config = getDefaultConfig(projectRoot);
 
 // Allow Metro to follow workspace packages outside apps/mobile.
 config.watchFolders = [monorepoRoot];
+config.resolver.nodeModulesPaths = [
+  path.resolve(projectRoot, "node_modules"),
+  path.resolve(monorepoRoot, "node_modules"),
+];
+
+config.resolver.disableHierarchicalLookup = true;
+config.resolver.unstable_enableSymlinks = true;
+
 
 const defaultResolveRequest = config.resolver.resolveRequest;
 
@@ -71,3 +79,5 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 };
 
 module.exports = config;
+
+

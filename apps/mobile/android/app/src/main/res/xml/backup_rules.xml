@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+  <!-- Include-only: only non-secret shared prefs; SQLite/files not backed up -->
+  <include domain="sharedpref" path="." />
+  <exclude domain="sharedpref" path="SecureStore" />
+</full-backup-content>

@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.s04b.json",
+  "include": [
+    "screens/TodayScreen.tsx",
+    "screens/TodayScreen.test.tsx",
+    "components/TodayEntryCard.tsx",
+    "components/todayEntryModel.ts",
+    "components/DegradedModeBanner.tsx",
+    "components/ui/PageHeader.tsx",
+    "components/ui/ContextDecisionBar.tsx",
+    "components/ui/VoiceOrb.tsx",
+    "components/ui/GlassCard.tsx",
+    "navigation/BackButton.tsx",
+    "navigation/NavigationContext.tsx",
+    "navigation/routes.ts",
+    "hooks/useConversationSession.ts",
+    "theme/ThemeProvider.tsx",
+    "theme/tokens.ts",
+    "stores/mobileAppStore.ts",
+    "stores/provisionalStore.ts",
+    "stores/persistHydrate.ts",
+    "config/m5FeatureFlags.ts"
+  ]
+}

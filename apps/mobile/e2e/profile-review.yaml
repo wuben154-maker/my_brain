@@ -1,0 +1,23 @@
+# M6 — ProfileReview correction persists (mock session; device persistence in persistence.yaml)
+appId: app.mybrain.personal
+tags:
+  - m6
+  - m1-m2
+  - profile-review
+  - machine
+---
+- launchApp
+- assertVisible:
+    id: "living-brain-home"
+- tapOn:
+    id: "start-cold-start"
+- tapOn:
+    id: "cold-fixture-cold-learner"
+- tapOn:
+    id: "cold-start-send"
+- tapOn:
+    id: "settings-entry"
+- tapOn:
+    id: "settings-open-profile-review"
+- assertVisible:
+    id: "profile-review"

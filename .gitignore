@@ -16,9 +16,36 @@ src-tauri/target
 credentials.json
 apps/mobile/credentials/
 
-# Expo prebuild outputs (generated locally or in CI)
+# Expo / React Native local outputs
 apps/mobile/ios/
 apps/mobile/build/
+apps/mobile/.expo/
+apps/mobile/.expo-export-tmp/
+apps/mobile/.demo-reset/
+.expo/
+
+# Android local machine paths (SDK location varies per developer)
+apps/mobile/android/local.properties
+
+# Native module / Gradle build caches
+apps/mobile/modules/**/android/build/
+apps/mobile/modules/**/android/.gradle/
+
+# Mobile device QA artifacts (adb / screenshots / logcat)
+apps/mobile/.adb-*/
+apps/mobile/.adb-*
+**/.adb-*.xml
+**/.adb-*.png
+**/.adb-*.txt
+
+# Repo-local temp / gate scratch (never publish)
+.tmp-*
+.ck*-gate-run.log
+.m*-gate-*.log
+.gate-test-output.txt
+.gradle-release-build.log
+.companion-*
+tmp-ios-build-*/
 
 # Accidental Expo scaffold; canonical mobile app lives in apps/mobile/
 my_brain_mobile/
@@ -28,14 +55,22 @@ artifacts/visual-feedback/*
 !artifacts/visual-feedback/.gitkeep
 
 # Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
+**/.idea/
 .DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# Cursor one-off patch scripts (local agent harness)
+.cursor/_*.mjs
+.cursor/current-spec.json
